@@ -1,0 +1,13 @@
+{
+  "source": "https://pele.run/examples.md",
+  "retrieved": "2026-11-05",
+  "pele": {
+    "repository": "https://github.com/obsidianmd/pele",
+    "version": "1.13.0",
+    "commit": "3a2f075ee0c3d914f0fad3545fc0f193693975ac"
+  },
+  "markdownSha256": "b658d7d83ddab153dca975da80ccb0a00706ff79063e9644ca71dcf2e7630277",
+  "examples": 58,
+  "types": 32,
+  "renders": 232
+}

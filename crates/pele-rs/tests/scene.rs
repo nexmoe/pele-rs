@@ -64,3 +64,54 @@ fn missing_fonts_and_unsupported_resources_are_explicit_errors() {
     rendered.svg = "<svg><image href=\"/secret\"/></svg>".into();
     assert!(matches!(SvgScene::new(rendered, fonts()), Err(e) if e.code == ErrorCode::Unsupported));
 }
+
+fn emoji_fonts() -> Arc<usvg::fontdb::Database> {
+    let mut db = (*fonts()).clone();
+    // The system fallback order that triggered the report: placeholder before real emoji.
+    db.load_font_data(include_bytes!("fonts/last-resort.ttf").to_vec());
+    db.load_font_data(include_bytes!("fonts/emoji.ttf").to_vec());
+    Arc::new(db)
+}
+
+#[test]
+fn emoji_measurement_keeps_real_latin_and_emoji_advances() {
+    let fonts = emoji_fonts();
+    let measurer = FontMeasurer::new(fonts.clone(), "Pele Test", "Pele Test").unwrap();
+    for emoji in ['🌋', '🤓'] {
+        let width = measurer.width(&format!("AB{emoji}"), 20., Style::NONE);
+        assert!(
+            (width - 44.).abs() < 0.01,
+            "AB{emoji}: {width}, expected 24 Latin + 20 emoji"
+        );
+    }
+    assert_eq!(fonts.faces().count(), 3, "host font database was mutated");
+}
+
+#[test]
+fn scene_keeps_embedded_color_emoji_instead_of_placeholder_outlines() {
+    fn images(group: &usvg::Group) -> usize {
+        group
+            .children()
+            .iter()
+            .map(|node| match node {
+                usvg::Node::Group(group) => images(group),
+                usvg::Node::Text(text) => images(text.flattened()),
+                usvg::Node::Image(_) => 1,
+                _ => 0,
+            })
+            .sum()
+    }
+    let options = RenderOptions {
+        font_family: Some("Pele Test".into()),
+        ..Default::default()
+    };
+    for emoji in ['🌋', '🤓'] {
+        let rendered = pele_rs::render(&format!("flowchart LR\nA[AB{emoji}]"), &options).unwrap();
+        let scene = SvgScene::new(rendered, emoji_fonts()).unwrap();
+        assert_eq!(
+            images(scene.tree().root()),
+            1,
+            "missing embedded {emoji} bitmap"
+        );
+    }
+}

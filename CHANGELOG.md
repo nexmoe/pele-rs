@@ -7,6 +7,7 @@ before 1.0, a minor version may break the API.
 
 ### Added
 
+- Independent replay of all 58 official website examples at four widths (232 reference outputs), plus portable native emoji font regression fixtures.
 - Rust replay of 178,887 official Pele render calls and 19,308 utility/layout calls, with pinned provenance, explicit exclusions and reproducible fixture capture.
 - Official text emphasis options, adaptive rendering, contrast-aware labels and edge casings, built-in vector tree icons, and complete block link chains.
 
@@ -20,6 +21,7 @@ before 1.0, a minor version may break the API.
 
 ### Fixed
 
+- Exclude LastResort placeholder fonts from native scene shaping and measurement so mixed Latin/emoji labels retain their real glyphs, advances and embedded color bitmaps.
 - Match reference floating-point evaluation in iterative Venn layout, YAML metadata parsing and layered graph ordering.
 - Keep the native API dependency-free by default, deterministic and bounded by explicit nesting limits.
 

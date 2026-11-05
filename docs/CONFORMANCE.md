@@ -18,6 +18,13 @@ layout, including mutated nodes and edge routes. Every fixture retains its offic
 official checkout are needed only to regenerate them. The original Rust parser compatibility,
 security, host integration and snapshot tests remain in place.
 
+The official website's 58 examples have a separate corpus in `tests/website/`: 232 render
+references at natural width and `maxWidth` 320, 640 and 1024. `tests/website.rs` compares their
+SVG text, styles and geometry directly against the pinned official renderer, including the
+volcano emoji mindmap. `tests/scene.rs` independently checks native mixed Latin/emoji font
+measurement and embedded color glyphs using redistributable synthetic fonts. Neither test
+requires a browser or consuming application.
+
 Successful render comparisons require the same diagram type, links, SVG elements, text,
 attributes, classes, colors, styles, markers and geometry. Attribute order and XML quoting are
 irrelevant. Coordinates permit 0.011 SVG units for the reference's two-decimal rounding, or a

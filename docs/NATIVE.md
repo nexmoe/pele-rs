@@ -57,6 +57,13 @@ No font discovery or file loading is performed by pele-rs. Wrap this measurer in
 `CachingMeasurer`: a cache miss parses a small text-only SVG, while hits reuse its advance.
 Use the same family names and font database for layout, scene construction and painting.
 
+The adapter excludes LastResort placeholder faces from its copy of the host font database.
+Those faces claim broad Unicode coverage and can cause usvg to replace a mixed Latin/emoji
+run with placeholder boxes. The host's original database is never modified. Supply a real
+emoji font for the desired glyphs. Color fonts can produce embedded image nodes inside the
+flattened text tree; a native painter must draw these nodes too. With resvg, enable its
+`raster-images` feature to display bitmap emoji such as Apple Color Emoji.
+
 ## Optional vector scene adapter
 
 Enable `features = ["scene"]` to use `ParsedDiagram::scene` or `scene::SvgScene::new`.
@@ -70,8 +77,9 @@ the group semantics and paint at the target zoom/device scale; stretching a cach
 path mask can still blur it. `rendered()` retains the SVG export and dimensions.
 
 Scenes resolve CSS variables to concrete colors. Pass a palette when rendering for a dark or
-custom appearance. Scenes containing text require a nonempty host font database. Images and
-HTML math are rejected explicitly; SVG math and host-provided SVG icons are supported. Resource
+custom appearance. Scenes containing text require a nonempty usable host font database.
+Source SVG images and HTML math are rejected explicitly; bitmap glyphs embedded in host
+fonts, SVG math and host-provided SVG icons are supported. Resource
 resolvers are disabled, so scene construction never reads external files or URLs.
 
 A future layout-native scene can eliminate SVG serialization and parsing. That requires

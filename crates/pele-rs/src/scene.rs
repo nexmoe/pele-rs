@@ -3,12 +3,33 @@
 //! This adapter parses SVG once with usvg; it is not a layout-native scene IR. Hosts walk the
 //! tree's groups, paths and text, preserving transforms, clipping, gradients and opacity.
 //! Painting at a new zoom does not call the Mermaid parser, layout, or SVG parser again.
-//! Fonts are supplied by the host. No fonts, images, files or URLs are loaded by this module.
+//! Fonts are supplied by the host. No system fonts, external images, files or URLs are loaded.
 
 use crate::{Error, ErrorCode, Palette, ParsedDiagram, RenderOptions, Rendered};
 use std::sync::Arc;
 
 pub use usvg;
+
+// Placeholder fonts claim broad Unicode coverage but do not contain the real glyphs.
+// usvg may replace an entire mixed Latin/emoji run when LastResort claims every character.
+// Keep measurement and scene shaping consistent without mutating the host's database.
+fn usable_fonts(mut fonts: Arc<usvg::fontdb::Database>) -> Arc<usvg::fontdb::Database> {
+    let placeholders: Vec<_> = fonts
+        .faces()
+        .filter(|face| {
+            face.post_script_name == "LastResort"
+                || face.families.iter().any(|(name, _)| name == "Last Resort")
+        })
+        .map(|face| face.id)
+        .collect();
+    if !placeholders.is_empty() {
+        let db = Arc::make_mut(&mut fonts);
+        for id in placeholders {
+            db.remove_face(id);
+        }
+    }
+    fonts
+}
 
 /// An owned vector tree and its SVG export. Safe to move to a background worker or share.
 pub struct SvgScene {
@@ -19,6 +40,7 @@ pub struct SvgScene {
 /// Measures with the same shaping and fallback implementation as usvg/resvg. A unique text
 /// run is shaped through a tiny SVG; wrap this in `CachingMeasurer` to reuse the result.
 /// The host supplies font bytes and family names; no system font discovery is performed.
+/// LastResort placeholder faces are excluded from both measurement and scene shaping.
 pub struct FontMeasurer {
     fonts: Arc<usvg::fontdb::Database>,
     family: String,
@@ -31,6 +53,7 @@ impl FontMeasurer {
         family: impl Into<String>,
         mono: impl Into<String>,
     ) -> Result<Self, Error> {
+        let fonts = usable_fonts(fonts);
         if fonts.faces().next().is_none() {
             return Err(Error::new(
                 ErrorCode::Semantic,
@@ -122,6 +145,7 @@ impl SvgScene {
             )
             .with_kind(rendered.kind));
         }
+        let fonts = usable_fonts(fonts);
         if rendered.svg.contains("<text") && fonts.faces().next().is_none() {
             return Err(Error::new(
                 ErrorCode::Semantic,
