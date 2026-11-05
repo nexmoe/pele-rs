@@ -12,7 +12,7 @@ pele-rs = { git = "https://github.com/nexmoe/pele-rs" }
 New in this derivative: reusable `parse` / `ParsedDiagram::render` for every diagram type; bounded `CachingMeasurer`; original-source diagnostics; chart palette compatibility; numeric validation; and optional `scene::SvgScene` / `scene::FontMeasurer` for native painters. The `scene` feature uses usvg; default builds remain dependency-free. See [native integration](docs/NATIVE.md) for API boundaries and examples. This version has not been published to crates.io.
 
 
-pele-rs renders [Mermaid](https://mermaid.js.org) diagrams to SVG in pure Rust — no JavaScript runtime, no headless browser, no Node.js. It is a port of [pele](https://github.com/obsidianmd/pele), a small, dependency-free TypeScript renderer, and targets Mermaid 12.1.0 syntax with pele's own layout and visual style.
+pele-rs renders [Mermaid](https://mermaid.js.org) diagrams to SVG in pure Rust — no JavaScript runtime, no headless browser, no Node.js. It is a port of [pele](https://github.com/obsidianmd/pele), a small, dependency-free TypeScript renderer, and targets Mermaid 12.2.0 syntax with pele's own layout and visual style.
 
 > **Status:** alpha. Every diagram type of Mermaid 12.2.0 is supported; the table below says what each one reads. See the [roadmap](docs/ROADMAP.md).
 
@@ -54,7 +54,7 @@ pele-rs renders [Mermaid](https://mermaid.js.org) diagrams to SVG in pure Rust �
 
 ## Goals
 
-- Pure Rust, synchronous, no runtime dependencies, no I/O in the library.
+- Pure Rust and synchronous, with no I/O. Default builds have no runtime dependencies; the optional scene adapter uses usvg.
 - Mermaid syntax compatibility, with its own clean layout and visual style.
 - Deterministic output: the same input and options give byte-identical SVG.
 - Themeable output: colors and fonts are CSS variables in the SVG.

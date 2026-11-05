@@ -14,7 +14,7 @@ pele-rs = { git = "https://github.com/nexmoe/pele-rs" }
 
 pele-rs は [Mermaid](https://mermaid.js.org) のダイアグラムを純粋な Rust で SVG に変換します。JavaScript ランタイム、ヘッドレスブラウザ、Node.js は不要です。小さく依存関係のない TypeScript 製レンダラー [pele](https://github.com/obsidianmd/pele) の移植で、Mermaid 12.2.0 の構文を対象とし、pele 独自のレイアウトとビジュアルスタイルを採用しています。
 
-> **ステータス:** alpha。Mermaid 12.1.0 のすべてのダイアグラムに対応しています。下の表は、それぞれが読み取る記法をまとめたものです。[ロードマップ](docs/ROADMAP.md)を参照してください。
+> **ステータス:** alpha。Mermaid 12.2.0 のすべてのダイアグラムに対応しています。下の表は、それぞれが読み取る記法をまとめたものです。[ロードマップ](docs/ROADMAP.md)を参照してください。
 
 | ダイアグラムの種類 | 状況 |
 |---|---|
@@ -54,7 +54,7 @@ pele-rs は [Mermaid](https://mermaid.js.org) のダイアグラムを純粋な 
 
 ## 目標
 
-- 純粋な Rust、同期処理、実行時の依存関係なし。ライブラリ自体は I/O を行いません。
+- 純粋な Rust、同期処理、I/O なし。既定のビルドには実行時依存関係がなく、オプションのシーンアダプターは usvg を使用します。
 - Mermaid 構文との互換性を保ちつつ、独自のすっきりしたレイアウトとビジュアルスタイルを採用。
 - 決定的な出力：同じ入力とオプションからはバイト単位で同一の SVG を生成。
 - テーマ変更が可能：色とフォントは SVG 内の CSS 変数。

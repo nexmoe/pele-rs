@@ -14,7 +14,7 @@ pele-rs = { git = "https://github.com/nexmoe/pele-rs" }
 
 pele-rs 以纯 Rust 将 [Mermaid](https://mermaid.js.org) 图表转换为 SVG，无需 JavaScript 运行时、无头浏览器或 Node.js。它移植自 [pele](https://github.com/obsidianmd/pele)（一个小巧、无依赖的 TypeScript 渲染器），支持 Mermaid 12.2.0 语法，并采用 pele 自己的布局与视觉风格。
 
-> **状态：** alpha。已支持 Mermaid 12.1.0 的所有图表类型，下表列出各类型可读取的语法。请参阅[开发路线图](docs/ROADMAP.md)。
+> **状态：** alpha。已支持 Mermaid 12.2.0 的所有图表类型，下表列出各类型可读取的语法。请参阅[开发路线图](docs/ROADMAP.md)。
 
 | 图表类型 | 状态 |
 |---|---|
@@ -54,7 +54,7 @@ pele-rs 以纯 Rust 将 [Mermaid](https://mermaid.js.org) 图表转换为 SVG，
 
 ## 目标
 
-- 纯 Rust、同步执行、没有运行时依赖，库本身不做 I/O。
+- 纯 Rust、同步执行，库本身不做 I/O。默认构建没有运行时依赖，可选场景适配器使用 usvg。
 - 兼容 Mermaid 语法，并采用自己简洁的布局与视觉风格。
 - 输出具有确定性：相同的输入和选项会生成逐字节相同的 SVG。
 - 可自定义主题：颜色和字体是 SVG 中的 CSS 变量。
