@@ -2,19 +2,16 @@
 
 [English](README.md) | [繁體中文](README.zh-TW.md) | **简体中文** | [日本語](README.ja.md)
 
-这是 [fermaid](https://github.com/tenyi/fermaid) 的独立衍生项目，面向原生编辑器优化，保留原始 Git 历史、署名和许可证，并非 Obsidian 官方项目。当前版本请从 Git 安装：
+pele-rs 是原生 Rust 的 Mermaid → SVG 渲染库，面向编辑器、桌面应用和命令行工具，提供同步渲染，无需 JavaScript 运行时、浏览器或 Node.js。
 
 ```toml
 [dependencies]
 pele-rs = { git = "https://github.com/nexmoe/pele-rs" }
 ```
 
-渲染参考固定为 **Pele 1.13.0**。Rust 测试回放 **178,887 条官方渲染调用**和 **19,308 条工具函数／布局调用**，比较 SVG 结构、样式与坐标。SVG 类名与 CSS 变量现使用官方的 `pele-*` / `--pele-*` 命名。数值容差、排除项、浏览器行为边界和复现步骤见[兼容验证说明](docs/CONFORMANCE.md)。
+提供可复用的 `parse` / `ParsedDiagram::render`、有界 `CachingMeasurer`、原始源码错误定位、主题调色板和数值校验。可选 `scene` 功能通过 usvg 提供 `SvgScene` 与 `FontMeasurer` 适配器，默认构建没有运行时依赖。API 边界及示例见[原生集成说明](docs/NATIVE.md)。当前 0.6.0 版本通过 Git 分发，尚未发布到 crates.io。
 
-新增所有图种的 `parse` / `ParsedDiagram::render` 复用接口、有界 `CachingMeasurer`、原始源码错误定位、图表调色板兼容和数值校验。可选 `scene` 功能通过 usvg 提供 `SvgScene` 矢量树及匹配 resvg 的 `FontMeasurer`，默认构建仍无运行时依赖。参见[原生集成说明](docs/NATIVE.md)。当前版本尚未发布到 crates.io。
-
-
-pele-rs 以纯 Rust 将 [Mermaid](https://mermaid.js.org) 图表转换为 SVG，无需 JavaScript 运行时、无头浏览器或 Node.js。它移植自 [pele](https://github.com/obsidianmd/pele)（一个小巧、无依赖的 TypeScript 渲染器），支持 Mermaid 12.2.0 语法，并采用 pele 自己的布局与视觉风格。
+全部 33 种图表以 Mermaid 12.2.0 为语法目标，布局和 SVG 样式兼容 Pele。参考版本固定为 **Pele 1.13.0**；Rust 测试回放 **178,887 条官方渲染调用**和 **19,308 条工具函数／布局调用**，比较结构、样式与坐标。SVG 使用 `pele-*` / `--pele-*` 命名，方便复用主题。数值容差、排除项、浏览器行为边界和复现步骤见[兼容验证说明](docs/CONFORMANCE.md)。
 
 > **状态：** alpha。已支持 Mermaid 12.2.0 的所有图表类型，下表列出各类型可读取的语法。请参阅[开发路线图](docs/ROADMAP.md)。
 
@@ -137,11 +134,12 @@ node tools/oracle/diff.mjs ../pele   # 与 Mermaid 自身的解析器做差异�
 
 ## 致谢
 
-pele-rs 的算法、文本测量数据与限制移植自 Obsidian 团队 kepano 的 [pele](https://github.com/obsidianmd/pele)（MIT）。图表语法以及用作测试的解析器规范来自 [Mermaid](https://github.com/mermaid-js/mermaid)（MIT）。详见 [NOTICE](NOTICE)。
+渲染算法和文本测量数据参考 kepano 的 [Pele](https://github.com/obsidianmd/pele)，图表语法及解析器规范来自 [Mermaid](https://github.com/mermaid-js/mermaid)。原始版权、实现来源和第三方许可集中保留于 [NOTICE](NOTICE)。pele-rs 独立开发维护，与 Obsidian 无隶属关系。
 
 ## 许可证
 
 可任选以下任一许可证使用：
+
 - [MIT](LICENSE-MIT)
 - [Apache-2.0](LICENSE-APACHE)
 - [BSD-3-Clause](LICENSE-BSD3)

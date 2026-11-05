@@ -1,7 +1,6 @@
 # License
 
-fermaid is free software, multi-licensed under any of the following licenses, at
-your option.
+pele-rs is available under your choice of the following licenses:
 
 | License | Full text |
 |---|---|
@@ -10,19 +9,11 @@ your option.
 | BSD 3-Clause | [LICENSE-BSD3](LICENSE-BSD3) |
 | Zero-Clause BSD (0BSD) | [LICENSE-0BSD](LICENSE-0BSD) |
 
-You may choose any one of these licenses to govern your use of fermaid. The
-license you pick applies to the whole work, not to parts of it.
+The project retains its original licensing choices. Third-party portions retain their
+copyright notices and applicable license terms, including the MIT-licensed Pele and Mermaid
+material and the V8/fdlibm code used for Venn arithmetic. See [NOTICE](NOTICE) for provenance,
+copyright holders and the relevant terms.
 
-## Notices
-
-fermaid ports algorithms and data from [pele](https://github.com/obsidianmd/pele)
-and targets the diagram syntax of [Mermaid](https://github.com/mermaid-js/mermaid).
-Both are under the MIT License. See [NOTICE](NOTICE) for the attribution, the
-list of what was ported from where, and the upstream licenses.
-
-## Apache-2.0
-
-Apache License, Version 2.0 requires that recipients of a distribution receive
-a copy of the license, and that modified files carry prominent notices. The
-full text is in [LICENSE-APACHE](LICENSE-APACHE); the appendix that describes
-how to apply the license to your work is part of that file.
+Copyright notices for the original implementation remain in the license texts. Copyright
+notices for pele-rs contributions are additional and do not replace them. Include the relevant
+license texts and NOTICE when redistributing the library or CLI.

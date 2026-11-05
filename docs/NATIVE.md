@@ -1,9 +1,8 @@
 # Native editor integration
 
-pele-rs is an independent derivative of [fermaid 0.5.1](https://github.com/tenyi/fermaid),
-retaining its Git history and legal notices. The upstream layout and style reference is Pele
-1.13.0; see [official conformance](CONFORMANCE.md) for measured coverage and explicit differences.
-This is not an official Obsidian project.
+pele-rs provides native Rust diagram rendering for editors and desktop applications.
+Its layout and SVG style reference is Pele 1.13.0; see
+[official conformance](CONFORMANCE.md) for measured coverage and explicit differences.
 The package is `pele-rs`, the Rust import is `pele_rs`, and the binary is `pele-rs`.
 Version 0.6.0 is available from Git; it has not been published to crates.io.
 
@@ -92,7 +91,8 @@ SVG classes and CSS variables use the official `pele` prefix, so Pele themes can
 
 The existing snapshots, parser compatibility cases and differential harness are retained.
 The fixed parser/layout reference is recorded in `upstream.json`; updating it is a deliberate
-compatibility task. The historical upstream roadmap is retained separately in `ROADMAP.md`.
+compatibility task. Current development priorities are in [ROADMAP.md](ROADMAP.md), and
+original implementation attribution is retained in [NOTICE](../NOTICE).
 
 ## Verification
 

@@ -2,19 +2,16 @@
 
 [English](README.md) | **繁體中文** | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
-這是 [fermaid](https://github.com/tenyi/fermaid) 的獨立衍生專案，針對原生編輯器最佳化，保留原始 Git 歷史、署名和授權，並非 Obsidian 官方專案。目前版本請從 Git 安裝：
+pele-rs 是原生 Rust 的 Mermaid → SVG 渲染函式庫，面向編輯器、桌面應用程式和命令列工具，提供同步渲染，無需 JavaScript 執行環境、瀏覽器或 Node.js。
 
 ```toml
 [dependencies]
 pele-rs = { git = "https://github.com/nexmoe/pele-rs" }
 ```
 
-渲染參考固定為 **Pele 1.13.0**。Rust 測試重播 **178,887 筆官方渲染呼叫**和 **19,308 筆工具函式／版面配置呼叫**，比較 SVG 結構、樣式與座標。SVG 類別與 CSS 變數現使用官方的 `pele-*` / `--pele-*` 命名。數值容差、排除項、瀏覽器行為界線和重現步驟見[相容驗證說明](docs/CONFORMANCE.md)。
+提供可重用的 `parse` / `ParsedDiagram::render`、有界 `CachingMeasurer`、原始碼錯誤定位、主題調色盤和數值驗證。可選的 `scene` 功能透過 usvg 提供 `SvgScene` 與 `FontMeasurer` 轉接器，預設建置沒有執行時期相依套件。API 界線及範例見[原生整合說明](docs/NATIVE.md)。目前 0.6.0 版本透過 Git 發布，尚未發布至 crates.io。
 
-新增所有圖種的 `parse` / `ParsedDiagram::render` 重用介面、有界 `CachingMeasurer`、原始碼錯誤定位、圖表調色盤相容與數值驗證。選用的 `scene` 功能透過 usvg 提供 `SvgScene` 向量樹及符合 resvg 的 `FontMeasurer`；預設建置仍無執行期相依套件。參見[原生整合說明](docs/NATIVE.md)。目前版本尚未發布至 crates.io。
-
-
-pele-rs 以純 Rust 將 [Mermaid](https://mermaid.js.org) 圖表轉換為 SVG，不需要 JavaScript 執行環境、無頭瀏覽器或 Node.js。它移植自 [pele](https://github.com/obsidianmd/pele)（一個小巧、無相依套件的 TypeScript 渲染器），支援 Mermaid 12.2.0 語法，並採用 pele 自己的版面配置與視覺風格。
+全部 33 種圖表以 Mermaid 12.2.0 為語法目標，版面配置和 SVG 樣式相容於 Pele。參考版本固定為 **Pele 1.13.0**；Rust 測試重播 **178,887 筆官方渲染呼叫**和 **19,308 筆工具函式／版面配置呼叫**，比較結構、樣式與座標。SVG 使用 `pele-*` / `--pele-*` 命名，方便重用主題。數值容差、排除項、瀏覽器行為界線和重現步驟見[相容驗證說明](docs/CONFORMANCE.md)。
 
 > **狀態：** alpha。已支援 Mermaid 12.2.0 的所有圖表類型，下表列出各類型可讀取的語法。請參閱[開發路線圖](docs/ROADMAP.md)。
 
@@ -137,11 +134,12 @@ node tools/oracle/diff.mjs ../pele   # 與 Mermaid 自身的解析器做差異�
 
 ## 致謝
 
-pele-rs 的演算法、文字量測資料與限制移植自 Obsidian 團隊 kepano 的 [pele](https://github.com/obsidianmd/pele)（MIT）。圖表語法以及作為測試的解析器規格來自 [Mermaid](https://github.com/mermaid-js/mermaid)（MIT）。詳見 [NOTICE](NOTICE)。
+渲染演算法和文字量測資料參考 kepano 的 [Pele](https://github.com/obsidianmd/pele)，圖表語法及剖析器規格來自 [Mermaid](https://github.com/mermaid-js/mermaid)。原始著作權、實作來源和第三方授權集中保留於 [NOTICE](NOTICE)。pele-rs 獨立開發維護，與 Obsidian 無隸屬關係。
 
 ## 授權
 
 可任選以下任一授權協議使用：
+
 - [MIT](LICENSE-MIT)
 - [Apache-2.0](LICENSE-APACHE)
 - [BSD-3-Clause](LICENSE-BSD3)

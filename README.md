@@ -2,19 +2,16 @@
 
 **English** | [繁體中文](README.zh-TW.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
-An independent derivative of [fermaid](https://github.com/tenyi/fermaid), optimized for native editors. The original Git history, authorship and licenses are retained; this is not an official Obsidian project. Install this version from Git:
+pele-rs renders Mermaid diagrams to SVG in native Rust. It is built for editors, desktop applications and command-line tools, with synchronous rendering and no JavaScript runtime, browser or Node.js dependency.
 
 ```toml
 [dependencies]
 pele-rs = { git = "https://github.com/nexmoe/pele-rs" }
 ```
 
-New in this derivative: reusable `parse` / `ParsedDiagram::render` for every diagram type; bounded `CachingMeasurer`; original-source diagnostics; chart palette compatibility; numeric validation; and optional `scene::SvgScene` / `scene::FontMeasurer` for native painters. The `scene` feature uses usvg; default builds remain dependency-free. See [native integration](docs/NATIVE.md) for API boundaries and examples. This version has not been published to crates.io.
+The library provides reusable `parse` / `ParsedDiagram::render` APIs, bounded `CachingMeasurer`, original-source diagnostics, theme palettes and numeric validation. The optional `scene` feature provides usvg-backed `SvgScene` and `FontMeasurer` adapters; default builds have no runtime dependencies. See [native integration](docs/NATIVE.md) for API boundaries and examples. Version 0.6.0 is currently distributed through Git and has not been published to crates.io.
 
-The rendering reference is pinned to **Pele 1.13.0**. Rust tests replay **178,887 official render calls** and **19,308 utility/layout calls**, comparing SVG structure, styles and coordinates. SVG classes and CSS variables now use the official `pele-*` / `--pele-*` names. See [conformance and reproduction](docs/CONFORMANCE.md) for tolerances, exclusions and browser-only boundaries.
-
-
-pele-rs renders [Mermaid](https://mermaid.js.org) diagrams to SVG in pure Rust — no JavaScript runtime, no headless browser, no Node.js. It is a port of [pele](https://github.com/obsidianmd/pele), a small, dependency-free TypeScript renderer, and targets Mermaid 12.2.0 syntax with pele's own layout and visual style.
+All 33 diagram types target Mermaid 12.2.0 syntax with Pele-compatible layout and SVG styling. The reference is pinned to **Pele 1.13.0**. Rust tests replay **178,887 official render calls** and **19,308 utility/layout calls**, comparing structure, styles and coordinates. SVG uses the `pele-*` / `--pele-*` namespace for theme compatibility. See [conformance and reproduction](docs/CONFORMANCE.md) for tolerances, exclusions and browser-only boundaries.
 
 > **Status:** alpha. Every diagram type of Mermaid 12.2.0 is supported; the table below says what each one reads. See the [roadmap](docs/ROADMAP.md).
 
@@ -137,11 +134,12 @@ The minimum supported Rust version is 1.85.
 
 ## Credits
 
-pele-rs's algorithms, text metrics and limits are ported from [pele](https://github.com/obsidianmd/pele) by kepano (MIT), from the Obsidian team. The diagram syntax and the parser specifications used as tests come from [Mermaid](https://github.com/mermaid-js/mermaid) (MIT). See [NOTICE](NOTICE).
+The rendering algorithms and text metrics build on [Pele](https://github.com/obsidianmd/pele) by kepano; the diagram syntax and parser specifications come from [Mermaid](https://github.com/mermaid-js/mermaid). Original copyrights, implementation provenance and third-party licenses are retained in [NOTICE](NOTICE). pele-rs is developed independently and is not affiliated with Obsidian.
 
 ## License
 
 Multi-licensed under your choice of:
+
 - [MIT](LICENSE-MIT)
 - [Apache-2.0](LICENSE-APACHE)
 - [BSD-3-Clause](LICENSE-BSD3)

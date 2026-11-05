@@ -1,10 +1,11 @@
-fermaid is multi-licensed under any of the following licenses, at your option:
+pele-rs is multi-licensed under any of the following licenses, at your option:
 
 1. MIT License (LICENSE-MIT)
 2. Apache License, Version 2.0 (LICENSE-APACHE)
 3. BSD 3-Clause License (LICENSE-BSD3)
 4. Zero-Clause BSD License (LICENSE-0BSD)
 
-You may choose any of these licenses to govern your use of fermaid.
+You may choose any of these licenses to govern your use of pele-rs.
 
-See NOTICE for third-party components, attribution, and upstream licenses.
+Third-party portions retain their original notices and applicable licenses.
+See NOTICE for component attribution and license terms.

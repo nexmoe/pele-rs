@@ -1,8 +1,11 @@
 pele-rs
-Independent derivative of tenyi/fermaid v0.5.1
-Upstream: https://github.com/tenyi/fermaid
-Base commit: a92da98d33bb7d086d19b295b0c5f77f0d66be1f
+Copyright (c) 2026 The pele-rs Contributors
 Changes Copyright (c) 2026 Nexmoe
+
+Implementation provenance
+Initial Rust implementation: tenyi/fermaid v0.5.1
+Source: https://github.com/tenyi/fermaid
+Base commit: a92da98d33bb7d086d19b295b0c5f77f0d66be1f
 
 pele-rs alignment reference: Pele 1.13.0
 Commit: 3a2f075ee0c3d914f0fad3545fc0f193693975ac
