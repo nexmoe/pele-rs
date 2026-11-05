@@ -9,6 +9,8 @@
 pele-rs = { git = "https://github.com/nexmoe/pele-rs" }
 ```
 
+渲染參考固定為 **Pele 1.13.0**。Rust 測試重播 **178,887 筆官方渲染呼叫**和 **19,308 筆工具函式／版面配置呼叫**，比較 SVG 結構、樣式與座標。SVG 類別與 CSS 變數現使用官方的 `pele-*` / `--pele-*` 命名。數值容差、排除項、瀏覽器行為界線和重現步驟見[相容驗證說明](docs/CONFORMANCE.md)。
+
 新增所有圖種的 `parse` / `ParsedDiagram::render` 重用介面、有界 `CachingMeasurer`、原始碼錯誤定位、圖表調色盤相容與數值驗證。選用的 `scene` 功能透過 usvg 提供 `SvgScene` 向量樹及符合 resvg 的 `FontMeasurer`；預設建置仍無執行期相依套件。參見[原生整合說明](docs/NATIVE.md)。目前版本尚未發布至 crates.io。
 
 
@@ -42,7 +44,7 @@ pele-rs 以純 Rust 將 [Mermaid](https://mermaid.js.org) 圖表轉換為 SVG，
 | C4 圖（`C4Context`、`C4Container`、`C4Component`、`C4Dynamic`、`C4Deployment`） | 已支援：`title`、`accTitle` 與 `accDescr`、人員、系統、容器與元件及其邊界與關聯，以及 `UpdateLayoutConfig` 敘述 |
 | 用例圖（`usecase-beta`） | 已支援：`title`、`accTitle` 與 `accDescr`、角色與用例及其間的關聯；以及 `usecase` 的設定鍵 `nodeSpacing` 與 `rankSpacing` |
 | 資訊圖（`info`） | 已支援：`title`、`accTitle` 與 `accDescr`、版本與數行文字 |
-| 韋恩圖（`venn-beta`） | 已支援：各圓與其標籤；以及 `venn` 的設定鍵 `width`、`height` 與 `padding` |
+| 韋恩圖（`venn-beta`） | 已支援：集合、交集區域、標籤、區域樣式與依內容調整尺寸的版面配置 |
 | 樹狀檢視圖（`treeView-beta`） | 已支援：以方塊繪製字符畫成的樹、標籤前的圖示、`classDef` 與 `class`；以及 `treeView` 的設定鍵 `rowIndent`、`paddingX`、`paddingY`、`lineThickness`、`showIcons`、`defaultIconPack`、`filenameIcons` 與 `extensionIcons` |
 | Cynefin 圖（`cynefin-beta:`） | 已支援：`title`、`accTitle` 與 `accDescr`、四個區域中的項目與其間的轉換；以及 `cynefin` 的設定鍵 `width`、`height`、`showDomainDescriptions`、`boundaryAmplitude` 與 `seed` |
 | 石川圖（`ishikawa`） | 已支援：各層級的原因與主脊 |
@@ -95,15 +97,15 @@ SVG 的顏色與字型取自 CSS 自訂屬性，並內建預設值，因此網�
 
 ```css
 svg {
-  --pele-rs-bg: #1e1e1e;
-  --pele-rs-fg: #dcddde;
-  --pele-rs-line: #999;
-  --pele-rs-accent: #7f6df2;
-  --pele-rs-font: "Inter", sans-serif;
+  --pele-bg: #1e1e1e;
+  --pele-fg: #dcddde;
+  --pele-line: #999;
+  --pele-accent: #7f6df2;
+  --pele-font: "Inter", sans-serif;
 }
 ```
 
-可用的變數：`--pele-rs-bg`、`--pele-rs-fg`、`--pele-rs-muted`、`--pele-rs-line`、`--pele-rs-surface`、`--pele-rs-surface-alt`、`--pele-rs-border`、`--pele-rs-accent`、`--pele-rs-radius`、`--pele-rs-font`、`--pele-rs-font-mono`，以及用於圓餅圖扇形等資料序列顏色的 `--pele-rs-series-1` 到 `--pele-rs-series-8`。
+可用的變數：`--pele-bg`、`--pele-fg`、`--pele-muted`、`--pele-line`、`--pele-surface`、`--pele-surface-alt`、`--pele-border`、`--pele-accent`、`--pele-radius`、`--pele-font`、`--pele-font-mono`，以及用於圓餅圖扇形等資料序列顏色的 `--pele-series-1` 到 `--pele-series-8`。
 
 ### 不支援 CSS 變數的檢視器
 

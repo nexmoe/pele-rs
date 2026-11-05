@@ -69,8 +69,8 @@ fn try_render(src: &str) -> Option<String> {
 fn draws_the_sections_and_the_leaves() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Treemap);
-    assert_eq!(count(&out.svg, "pele-rs-node pele-rs-section"), 2);
-    assert_eq!(count(&out.svg, "pele-rs-node pele-rs-leaf"), 4);
+    assert_eq!(count(&out.svg, "pele-node pele-section"), 2);
+    assert_eq!(count(&out.svg, "pele-node pele-leaf"), 4);
     assert_eq!(count(&out.svg, "<rect "), 6);
     assert!(out.svg.contains(">Item A1<"), "{}", out.svg);
     assert!(out.svg.contains(">Category B<"), "{}", out.svg);
@@ -83,8 +83,8 @@ fn draws_the_sections_and_the_leaves() {
 fn draws_the_tree_of_the_sections() {
     let out = render(NESTED);
     // Three sections and four leaves.
-    assert_eq!(count(&out.svg, "pele-rs-node pele-rs-section"), 3);
-    assert_eq!(count(&out.svg, "pele-rs-node pele-rs-leaf"), 4);
+    assert_eq!(count(&out.svg, "pele-node pele-section"), 3);
+    assert_eq!(count(&out.svg, "pele-node pele-leaf"), 4);
     // The leaves of a section are drawn inside it.
     let products = out.svg.find("data-id=\"Products\"").unwrap();
     let phones = out.svg.find("data-id=\"Phones\"").unwrap();
@@ -97,8 +97,8 @@ fn reads_the_styles_of_a_class() {
     assert!(out.svg.contains("fill:red"), "{}", out.svg);
     assert!(out.svg.contains("stroke:#FFD600"), "{}", out.svg);
     // The class of an item is written in its class list.
-    assert!(out.svg.contains("pele-rs-section class1"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-leaf class1"), "{}", out.svg);
+    assert!(out.svg.contains("pele-section class1"), "{}", out.svg);
+    assert!(out.svg.contains("pele-leaf class1"), "{}", out.svg);
 }
 
 #[test]
@@ -109,14 +109,13 @@ fn reads_the_title_and_the_accessible_text() {
     );
     assert!(out.svg.contains(">My Treemap<"), "{}", out.svg);
     assert!(
-        out.svg
-            .contains("<title id=\"pele-rs-title\">Sales</title>"),
+        out.svg.contains("<title id=\"pele-title\">Sales</title>"),
         "{}",
         out.svg
     );
     assert!(
         out.svg
-            .contains("<desc id=\"pele-rs-desc\">Revenue by category</desc>"),
+            .contains("<desc id=\"pele-desc\">Revenue by category</desc>"),
         "{}",
         out.svg
     );
@@ -148,7 +147,7 @@ fn fits_a_narrow_host() {
     let narrow = narrow(FULL);
     assert!(narrow.width <= 360.0, "{}", narrow.width);
     assert!(narrow.height > 0.0);
-    assert_eq!(count(&narrow.svg, "pele-rs-leaf"), 4);
+    assert_eq!(count(&narrow.svg, "pele-leaf"), 4);
 }
 
 #[test]

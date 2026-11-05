@@ -2,9 +2,7 @@
 //! between the frames. Ported from pele's `diagrams/eventmodeling/render.ts`, whose layout
 //! pele-rs keeps.
 //!
-//! Mermaid reads the notes and the given/when/then specifications but never draws them, and
-//! pele's port draws them as cards under the lanes. pele-rs follows Mermaid and leaves them
-//! out; the model keeps them, so that a caller can still read them.
+//! Notes and given/when/then specifications are drawn as cards, matching Pele.
 
 use crate::DiagramKind;
 use crate::diagram::{Input, Output};
@@ -120,24 +118,24 @@ fn lines(rows: &[String], x: f64, y: f64, step: f64, attrs: &str) -> String {
 
 /// An arrowhead whose tip is at (x, y), pointing along (dx, dy).
 fn marker(x: f64, y: f64, dx: f64, dy: f64) -> String {
-    let nx = -dy;
-    let ny = dx;
-    let bx = x - dx * ARROW;
-    let by = y - dy * ARROW;
-    let half = ARROW * 0.42;
-    format!(
-        "<path class=\"pele-rs-marker\" d=\"M{},{}L{},{}L{},{}Z\" fill=\"var(--_l)\" stroke=\"none\"/>",
-        num(x),
-        num(y),
-        num(bx + nx * half),
-        num(by + ny * half),
-        num(bx - nx * half),
-        num(by - ny * half)
-    )
+    crate::svg::markers::marker("arrow_point", x, y, dx, dy, "var(--_l)")
 }
 
 /// Draws an event modeling diagram.
 pub(crate) fn render_event_model(model: &EventModel, input: &Input<'_>) -> Result<Output, Error> {
+    Ok(crate::diagrams::common::fit::turn_to_fit(
+        input.options,
+        |down| {
+            if down {
+                vertical_event_model(model, input)
+            } else {
+                horizontal_event_model(model, input)
+            }
+        },
+    ))
+}
+
+fn horizontal_event_model(model: &EventModel, input: &Input<'_>) -> Output {
     let options = input.options;
     let measurer = input.measurer;
     let size = options.font_size.unwrap_or(16.0);
@@ -250,7 +248,7 @@ pub(crate) fn render_event_model(model: &EventModel, input: &Input<'_>) -> Resul
         band.y = y;
         band.h += 2.0 * LANE_PAD;
         lanes_svg += &format!(
-            "<g class=\"pele-rs-em-lane\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" \
+            "<g class=\"pele-cluster pele-em-lane\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" \
              fill=\"var(--_s)\"{ROUNDED}/>{}</g>",
             esc_text(&band.text),
             num(left),
@@ -262,7 +260,7 @@ pub(crate) fn render_event_model(model: &EventModel, input: &Input<'_>) -> Resul
                 left + LANE_PAD + band.label.width / 2.0,
                 y + band.h / 2.0,
                 &format!(
-                    " class=\"pele-rs-em-lane-label\" font-size=\"{}\" font-weight=\"var(--_hw)\" \
+                    " class=\"pele-cluster-label\" font-size=\"{}\" font-weight=\"var(--_hw)\" \
                      fill=\"var(--_m)\"",
                     num(small)
                 )
@@ -270,7 +268,7 @@ pub(crate) fn render_event_model(model: &EventModel, input: &Input<'_>) -> Resul
         );
         y += band.h + LANE_GAP;
     }
-    let bottom = if bands.is_empty() { top } else { y - LANE_GAP };
+    let mut bottom = if bands.is_empty() { top } else { y - LANE_GAP };
 
     let mut nodes = String::new();
     for item in &mut placed {
@@ -301,7 +299,7 @@ pub(crate) fn render_event_model(model: &EventModel, input: &Input<'_>) -> Resul
             item.x + item.w / 2.0,
             name_y,
             &format!(
-                " class=\"pele-rs-label\" font-size=\"{}\" font-weight=\"var(--_hw)\"",
+                " class=\"pele-label\" font-size=\"{}\" font-weight=\"var(--_hw)\"",
                 num(name_size)
             ),
         ) + &lines(
@@ -310,18 +308,14 @@ pub(crate) fn render_event_model(model: &EventModel, input: &Input<'_>) -> Resul
             item.y + BOX_PAD_Y + item.name.height + 6.0 + mono_step / 2.0 + mono * 0.35,
             mono_step,
             &format!(
-                " class=\"pele-rs-em-data\" font-family=\"{FONT_MONO}\" font-size=\"{}\"",
+                " class=\"pele-em-data\" font-family=\"{FONT_MONO}\" font-size=\"{}\"",
                 num(mono)
             ),
         );
         nodes += &format!(
-            "<g class=\"pele-rs-node pele-rs-em-{}{}\" data-id=\"{}\">{shape}{text}</g>",
+            "<g class=\"pele-node pele-em-{}{}\" data-id=\"{}\">{shape}{text}</g>",
             item_box.kind.name(),
-            if item_box.reset {
-                " pele-rs-em-reset"
-            } else {
-                ""
-            },
+            if item_box.reset { " pele-em-reset" } else { "" },
             esc_text(&item_box.id)
         );
     }
@@ -413,30 +407,96 @@ pub(crate) fn render_event_model(model: &EventModel, input: &Input<'_>) -> Resul
             (d, marker(tx, ty, 0.0, dir))
         };
         edges += &format!(
-            "<g class=\"pele-rs-edge\" data-id=\"{}-{}\"><path d=\"{d}\" fill=\"none\" \
+            "<g class=\"pele-edge\" data-id=\"{}-{}\"><path d=\"{d}\" fill=\"none\" \
              stroke=\"var(--_l)\"/>{head}</g>",
             esc_text(&relation.source),
             esc_text(&relation.target)
         );
     }
 
-    let width = lane_width.max(title.width);
+    let small_step = (small * 1.5).round();
+    let mut cards = String::new();
+    let mut cards_right = 0.0_f64;
+    let mut card = |kind: &str, heading: &str, frame: &str, rows: Vec<String>| {
+        let name = model
+            .boxes
+            .iter()
+            .find(|b| b.id == frame)
+            .map_or(String::new(), |b| format!(" {}", b.name));
+        let head = layout_label(
+            Some(&format!("{heading} · {frame}{name}")),
+            false,
+            measurer,
+            small,
+            4000.0,
+            Style::BOLD,
+        );
+        let w = head.width.max(widest(&rows, small, measurer, Style::NONE)) + 2.0 * BOX_PAD_X;
+        let h = 2.0 * BOX_PAD_Y + head.height + rows.len() as f64 * small_step;
+        let cy = bottom
+            + if cards.is_empty() && bands.is_empty() {
+                0.0
+            } else {
+                8.0
+            };
+        cards += &format!(
+            "<g class=\"pele-em-{kind}\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"var(--_bg)\" stroke=\"var(--_b)\"{ROUNDED}/>{}{}</g>",
+            esc_text(frame),
+            num(left),
+            num(cy),
+            num(w),
+            num(h),
+            label_svg(
+                &head,
+                left + BOX_PAD_X + head.width / 2.0,
+                cy + BOX_PAD_Y + head.height / 2.0,
+                &format!(" font-size=\"{}\" font-weight=\"var(--_hw)\"", num(small))
+            ),
+            lines(
+                &rows,
+                left + BOX_PAD_X,
+                cy + BOX_PAD_Y + head.height + small_step / 2.0 + small * 0.35,
+                small_step,
+                &format!(" font-size=\"{}\"", num(small))
+            )
+        );
+        bottom = cy + h;
+        cards_right = cards_right.max(w);
+    };
+    for note in &model.notes {
+        card("note", "Note", &note.frame, hard_wrap(&note.text, 80));
+    }
+    for spec in &model.specifications {
+        card(
+            "specification",
+            "Given / When / Then",
+            &spec.frame,
+            spec_rows(spec)
+                .into_iter()
+                .flat_map(|s| hard_wrap(&s, 80))
+                .collect(),
+        );
+    }
+    let width = (if bands.is_empty() { 0.0 } else { lane_width })
+        .max(cards_right)
+        .max(title.width);
     let total_width = (width + 2.0 * pad).ceil();
     let total_height = (bottom + pad).ceil();
     let content = label_svg(
         &title,
         total_width / 2.0,
         pad + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
     ) + &lanes_svg
         + &edges
-        + &nodes;
+        + &nodes
+        + &cards;
 
     let acc = Accessible {
-        title: model.title.clone(),
-        descr: None,
+        title: model.acc_title.clone(),
+        descr: model.acc_descr.clone(),
     };
-    Ok(Output {
+    Output {
         svg: svg_document(
             DiagramKind::EventModeling,
             total_width,
@@ -449,5 +509,319 @@ pub(crate) fn render_event_model(model: &EventModel, input: &Input<'_>) -> Resul
         width: total_width,
         height: total_height,
         links: Vec::new(),
-    })
+    }
+}
+
+fn spec_rows(spec: &super::db::Specification) -> Vec<String> {
+    let mut rows = vec![format!("Given  {}", spec.given.join(", "))];
+    if !spec.when.is_empty() {
+        rows.push(format!("When  {}", spec.when.join(", ")));
+    }
+    rows.push(format!("Then  {}", spec.then.join(", ")));
+    rows
+}
+
+fn vertical_event_model(model: &EventModel, input: &Input<'_>) -> Output {
+    use crate::diagrams::common::literal::{break_label, left_label_svg, literal_label};
+    let options = input.options;
+    let measurer = input.measurer;
+    let size = options.font_size.unwrap_or(16.0);
+    let small = (size * 0.875).round();
+    let mono = (size * 0.75).round();
+    let pad = options.padding.unwrap_or(8.0);
+    let room = 160.0_f64.max(options.max_width.unwrap_or(320.0) - 2.0 * pad);
+    let index_of = |id: &str| model.boxes.iter().position(|b| b.id == id);
+    let mut passed = vec![false; model.boxes.len()];
+    let mut runs: Vec<(usize, usize, usize)> = Vec::new();
+    for r in &model.relations {
+        let (Some(s), Some(t)) = (index_of(&r.source), index_of(&r.target)) else {
+            continue;
+        };
+        if s == t {
+            continue;
+        }
+        if s.abs_diff(t) < 2 {
+            passed[s.max(t)] = true;
+            continue;
+        }
+        if let Some(run) = runs.iter_mut().find(|run| run.0 == t) {
+            run.1 = run.1.min(s);
+            run.2 = run.2.max(s);
+        } else {
+            runs.push((t, s.min(t), s.max(t)));
+        }
+    }
+    runs.sort_by_key(|run| run.1);
+    let mut rail_ends: Vec<usize> = Vec::new();
+    let mut rail_of = vec![0; model.boxes.len()];
+    for (target, from, to) in runs {
+        let rail = rail_ends
+            .iter()
+            .position(|&end| end < from)
+            .unwrap_or(rail_ends.len());
+        if rail == rail_ends.len() {
+            rail_ends.push(to);
+        } else {
+            rail_ends[rail] = to;
+        }
+        rail_of[target] = rail;
+    }
+    let gutter = 24.0 + 8.0 * rail_ends.len().saturating_sub(1) as f64;
+    let card_width = 120.0_f64.max(room - gutter);
+    let text_room = card_width - 2.0 * BOX_PAD_X;
+    let title = layout_label(
+        model.title.as_deref(),
+        false,
+        measurer,
+        size,
+        room,
+        Style::BOLD,
+    );
+    let mut y = pad
+        + if title.height > 0.0 {
+            title.height + 12.0
+        } else {
+            0.0
+        };
+    let mut bottom = pad + title.height;
+    let mut width = title.width.max(card_width + gutter);
+    let mut nodes = String::new();
+    let mut edges = String::new();
+    let mut cards = String::new();
+    let mut placed: Vec<(f64, f64, f64, f64)> = Vec::new();
+    let text = |raw: &str, font_size: f64, style: Style| {
+        literal_label(&decode_entities(raw), measurer, font_size, text_room, style)
+    };
+    for (index, b) in model.boxes.iter().enumerate() {
+        let lane_room = text_room - if passed[index] { 20.0 } else { 0.0 };
+        let lane_text = &model
+            .lanes
+            .iter()
+            .find(|l| l.index == b.lane)
+            .unwrap()
+            .label;
+        let lane = break_label(
+            layout_label(
+                Some(lane_text),
+                false,
+                measurer,
+                small,
+                lane_room,
+                Style::BOLD,
+            ),
+            measurer,
+            lane_room,
+        );
+        let name = layout_label(
+            Some(&b.name),
+            false,
+            measurer,
+            small,
+            text_room - 36.0,
+            Style::BOLD,
+        );
+        let data = b
+            .data
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .map(|raw| text(raw, mono, Style::MONO));
+        let w = card_width
+            .max(lane.width + 2.0 * BOX_PAD_X)
+            .max(name.width + 2.0 * BOX_PAD_X + 36.0)
+            .max(data.as_ref().map_or(0.0, |l| l.width) + 2.0 * BOX_PAD_X);
+        let h = 2.0 * BOX_PAD_Y + name.height + data.as_ref().map_or(0.0, |l| l.height + 6.0);
+        let cy = y + lane.height + 12.0;
+        let frame = format!(
+            "x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\"",
+            num(pad),
+            num(cy),
+            num(w),
+            num(h)
+        );
+        nodes += &format!(
+            "<g class=\"pele-cluster pele-em-lane\" data-id=\"{}\">{}<g class=\"pele-node pele-em-{}{}\" data-id=\"{}\"><rect {frame} fill=\"var(--_bg)\" stroke=\"var(--_b)\"{ROUNDED}/>",
+            esc_text(lane_text),
+            left_label_svg(
+                &lane,
+                pad + BOX_PAD_X,
+                y,
+                &format!(
+                    " class=\"pele-cluster-label\" font-size=\"{}\" font-weight=\"var(--_hw)\" fill=\"var(--_m)\"",
+                    num(small)
+                )
+            ),
+            b.kind.name(),
+            if b.reset { " pele-em-reset" } else { "" },
+            esc_text(&b.id)
+        );
+        if let Some(series) = series(b.kind) {
+            let color = series_color(series);
+            nodes += &format!(
+                "<rect {frame} fill=\"{color}\" fill-opacity=\"0.22\" stroke=\"{color}\"{ROUNDED}/>"
+            );
+        }
+        nodes += &label_svg(
+            &name,
+            pad + BOX_PAD_X + name.width / 2.0,
+            cy + BOX_PAD_Y + name.height / 2.0,
+            &format!(
+                " class=\"pele-label\" font-size=\"{}\" font-weight=\"var(--_hw)\"",
+                num(small)
+            ),
+        );
+        nodes += &format!(
+            "<text class=\"pele-em-frame\" x=\"{}\" y=\"{}\" text-anchor=\"end\" font-size=\"{}\" fill=\"var(--_m)\">{}</text>",
+            num(pad + w - BOX_PAD_X),
+            num(cy + BOX_PAD_Y + small),
+            num(mono),
+            esc(&b.id)
+        );
+        if let Some(data) = data {
+            nodes += &lines(
+                &label_rows(&data),
+                pad + BOX_PAD_X,
+                cy + BOX_PAD_Y + name.height + 6.0 + data.line_height / 2.0 + mono * 0.35,
+                data.line_height,
+                &format!(
+                    " class=\"pele-em-data\" font-family=\"{FONT_MONO}\" font-size=\"{}\"",
+                    num(mono)
+                ),
+            );
+        }
+        nodes += "</g></g>";
+        placed.push((cy, h, w, lane.width));
+        width = width.max(w + gutter);
+        bottom = cy + h;
+        y = bottom + 28.0;
+    }
+    for relation in &model.relations {
+        let (Some(si), Some(ti)) = (index_of(&relation.source), index_of(&relation.target)) else {
+            continue;
+        };
+        if si == ti {
+            continue;
+        }
+        let (s, t) = (placed[si], placed[ti]);
+        let down = t.0 > s.0;
+        let dir = if down { 1.0 } else { -1.0 };
+        let sy = if down { s.0 + s.1 } else { s.0 };
+        let ty = if down { t.0 } else { t.0 + t.1 };
+        let (d, head) = if si.abs_diff(ti) == 1 {
+            let cx =
+                pad + (s.2.min(t.2) / 2.0).max(BOX_PAD_X + if down { t.3 } else { s.3 } + 16.0);
+            (
+                format!("M{},{}V{}", num(cx), num(sy), num(ty - dir * (ARROW - 1.0))),
+                marker(cx, ty, 0.0, dir),
+            )
+        } else {
+            let rail = pad + width - gutter + 12.0 + 8.0 * rail_of[ti] as f64;
+            let from = s.0 + s.1 / 2.0 - 5.0;
+            let to = t.0 + t.1 / 2.0 + 5.0;
+            (
+                format!(
+                    "M{},{}H{}V{}H{}",
+                    num(pad + s.2),
+                    num(from),
+                    num(rail),
+                    num(to),
+                    num(pad + t.2 + ARROW - 1.0)
+                ),
+                marker(pad + t.2, to, -1.0, 0.0),
+            )
+        };
+        edges += &format!(
+            "<g class=\"pele-edge\" data-id=\"{}-{}\"><path d=\"{d}\" fill=\"none\" stroke=\"var(--_l)\"/>{head}</g>",
+            esc_text(&relation.source),
+            esc_text(&relation.target)
+        );
+    }
+    let mut card = |kind: &str, heading: &str, frame: &str, raw: &str| {
+        let name = model
+            .boxes
+            .iter()
+            .find(|b| b.id == frame)
+            .map_or(String::new(), |b| format!(" {}", b.name));
+        let head = layout_label(
+            Some(&format!("{heading} · {frame}{name}")),
+            false,
+            measurer,
+            small,
+            text_room,
+            Style::BOLD,
+        );
+        let body = text(raw, small, Style::NONE);
+        let w = card_width
+            .max(head.width + 2.0 * BOX_PAD_X)
+            .max(body.width + 2.0 * BOX_PAD_X);
+        let h = 2.0 * BOX_PAD_Y + head.height + body.height;
+        cards += &format!(
+            "<g class=\"pele-em-{kind}\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"var(--_bg)\" stroke=\"var(--_b)\"{ROUNDED}/>{}{}</g>",
+            esc_text(frame),
+            num(pad),
+            num(y),
+            num(w),
+            num(h),
+            label_svg(
+                &head,
+                pad + BOX_PAD_X + head.width / 2.0,
+                y + BOX_PAD_Y + head.height / 2.0,
+                &format!(" font-size=\"{}\" font-weight=\"var(--_hw)\"", num(small))
+            ),
+            lines(
+                &label_rows(&body),
+                pad + BOX_PAD_X,
+                y + BOX_PAD_Y + head.height + body.line_height / 2.0 + small * 0.35,
+                body.line_height,
+                &format!(" font-size=\"{}\"", num(small))
+            )
+        );
+        bottom = y + h;
+        y = bottom + 8.0;
+        width = width.max(w);
+    };
+    for note in &model.notes {
+        card("note", "Note", &note.frame, &note.text);
+    }
+    for spec in &model.specifications {
+        card(
+            "specification",
+            "Given / When / Then",
+            &spec.frame,
+            &spec_rows(spec).join("\n"),
+        );
+    }
+    let total_width = (width + 2.0 * pad).ceil();
+    let height = (bottom + pad).ceil();
+    let content = label_svg(
+        &title,
+        total_width / 2.0,
+        pad + title.height / 2.0,
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+    ) + &edges
+        + &nodes
+        + &cards;
+    Output {
+        svg: svg_document(
+            DiagramKind::EventModeling,
+            total_width,
+            height,
+            size,
+            options,
+            &Accessible {
+                title: model.acc_title.clone(),
+                descr: model.acc_descr.clone(),
+            },
+            &content,
+        ),
+        width: total_width,
+        height,
+        links: Vec::new(),
+    }
+}
+fn label_rows(label: &Label) -> Vec<String> {
+    label
+        .lines
+        .iter()
+        .map(|line| line.iter().map(|span| span.text.as_str()).collect())
+        .collect()
 }

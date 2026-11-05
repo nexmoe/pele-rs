@@ -8,7 +8,6 @@ use super::db::{VennModel, VennSubset};
 use super::layout::{Circle, Spot, find_spot, layout_circles, region_path};
 use crate::DiagramKind;
 use crate::diagram::{Input, Output};
-use crate::preprocess::{Config, Value};
 use crate::svg::{
     Accessible, ResolvedStyle, esc_text, label_svg, num, resolve_style, series_color, svg_document,
 };
@@ -20,21 +19,7 @@ const RADIUS: f64 = 100.0;
 /// How much the diagram may grow to hold what is written in it.
 const MAX_GROWTH: f64 = 1.6;
 
-/// A number from the configuration of the diagram, as Mermaid's `venn` section holds it.
-fn setting(config: &Config, key: &str, min: f64) -> Option<f64> {
-    let venn = match config.get("venn") {
-        Some(Value::Map(venn)) => venn,
-        _ => return None,
-    };
-    match venn.get(key) {
-        Some(Value::Number(value)) if value.is_finite() && *value >= min => Some(*value),
-        _ => None,
-    }
-}
-
-/// A line of text in a region.
 struct Line {
-    /// The id of a text node, or nothing for the label of the region itself.
     id: Option<String>,
     raw: String,
     size: f64,
@@ -51,6 +36,7 @@ struct Region {
     /// What is written in the region: its label first, then its texts.
     lines: Vec<Line>,
     style: ResolvedStyle,
+    across: bool,
 }
 
 /// One key for a list of set ids. Ids may hold any character, so they are not simply joined.
@@ -87,12 +73,7 @@ pub(crate) fn render_venn(model: &VennModel, input: &Input<'_>) -> Output {
     let size = options.font_size.unwrap_or(16.0);
     let small = (size * 0.875).round();
     let tiny = (size * 0.8125).round();
-    // The padding of the diagram, and the canvas it is drawn in when the configuration names one.
-    let pad = setting(input.config, "padding", 0.0)
-        .or(options.padding)
-        .unwrap_or(8.0);
-    let canvas_width = setting(input.config, "width", 1.0);
-    let canvas_height = setting(input.config, "height", 1.0);
+    let pad = options.padding.unwrap_or(8.0);
 
     let circles = layout_circles(&model.subsets);
     let mut index: HashMap<&str, usize> = HashMap::new();
@@ -203,7 +184,8 @@ pub(crate) fn render_venn(model: &VennModel, input: &Input<'_>) -> Output {
             .collect();
         let mut spot = find_spot(&circles, &inside, &outside);
         // A region that other circles cover, or all but cover, is written across them instead.
-        if spot.margin < circles[smallest].r * 0.2 {
+        let across = !outside.is_empty() && spot.margin < circles[smallest].r * 0.2;
+        if across {
             spot = find_spot(&circles, &inside, &[]);
         }
         let mut lines: Vec<Line> = Vec::new();
@@ -223,6 +205,7 @@ pub(crate) fn render_venn(model: &VennModel, input: &Input<'_>) -> Output {
             sets,
             inside,
             spot,
+            across,
             lines,
             style,
         });
@@ -262,7 +245,7 @@ pub(crate) fn render_venn(model: &VennModel, input: &Input<'_>) -> Output {
             width = width.max(line.label.width);
             height += line.label.height;
         }
-        let need = width.hypot(height) / 2.0 + 4.0;
+        let need = crate::util::hypot(width, height) / 2.0 + 4.0;
         growth = growth.max((need / (region.spot.margin * scale)).min(MAX_GROWTH));
     }
     scale *= growth;
@@ -322,21 +305,10 @@ pub(crate) fn render_venn(model: &VennModel, input: &Input<'_>) -> Output {
         0.0
     };
     let inner = (max_x - min_x).max(title.width);
-    // The diagram is as big as its content, or as big as the canvas the configuration names, and
-    // is centred in it.
-    let content_width = max_x - min_x;
-    let content_height = max_y - min_y;
-    let natural_width = (inner + 2.0 * pad).ceil();
-    let natural_height = (content_height + title_height + 2.0 * pad).ceil();
-    let width = canvas_width
-        .map_or(natural_width, |w| w.max(natural_width))
-        .ceil();
-    let height = canvas_height
-        .map_or(natural_height, |h| h.max(natural_height))
-        .ceil();
-    let ox = pad + (width - 2.0 * pad - content_width) / 2.0 - min_x;
-    let oy =
-        pad + title_height + (height - title_height - 2.0 * pad - content_height) / 2.0 - min_y;
+    let ox = pad + (inner - (max_x - min_x)) / 2.0 - min_x;
+    let oy = pad + title_height - min_y;
+    let width = (inner + 2.0 * pad).ceil();
+    let height = (max_y - min_y + title_height + 2.0 * pad).ceil();
     let placed: Vec<Circle> = circles
         .iter()
         .map(|circle| Circle {
@@ -355,7 +327,7 @@ pub(crate) fn render_venn(model: &VennModel, input: &Input<'_>) -> Output {
             .find(|region| region.sets.len() == 1 && region.sets[0] == circle.id)
             .map_or_else(ResolvedStyle::default, |region| region.style.clone());
         sets += &format!(
-            "<circle class=\"pele-rs-venn-set\" data-id=\"{}\" cx=\"{}\" cy=\"{}\" r=\"{}\" \
+            "<circle class=\"pele-venn-set\" data-id=\"{}\" cx=\"{}\" cy=\"{}\" r=\"{}\" \
              fill=\"{color}\" fill-opacity=\"0.2\" stroke=\"{color}\"{}/>",
             esc_text(&circle.id),
             num(circle.x),
@@ -376,7 +348,7 @@ pub(crate) fn render_venn(model: &VennModel, input: &Input<'_>) -> Output {
             let d = region_path(&own, num);
             if !d.is_empty() {
                 overlaps += &format!(
-                    "<path class=\"pele-rs-venn-overlap\" data-id=\"{id}\" d=\"{d}\" \
+                    "<path class=\"pele-venn-overlap\" data-id=\"{id}\" d=\"{d}\" \
                      fill=\"none\"{}/>",
                     region.style.shape
                 );
@@ -391,30 +363,53 @@ pub(crate) fn render_venn(model: &VennModel, input: &Input<'_>) -> Output {
         }
         let x = region.spot.x * scale + ox;
         let mut y = region.spot.y * scale + oy - total / 2.0;
+        let mut fill = if !region.across
+            && region.sets.len() == 1
+            && (region.style.shape.contains("\"fill-opacity:")
+                || region.style.shape.contains(";fill-opacity:"))
+        {
+            region.style.shape.as_str()
+        } else {
+            ""
+        };
+        if !region.across {
+            for other in &regions {
+                if other.sets.len() > 1
+                    && !other.style.shape.is_empty()
+                    && other.sets.iter().all(|id| region.sets.contains(id))
+                {
+                    fill = &other.style.shape;
+                }
+            }
+        }
         let mut content = String::new();
         for line in &region.lines {
+            let own = line
+                .id
+                .as_ref()
+                .map_or_else(|| region.style.text.clone(), |id| style_of(id).text);
+            let color = crate::svg::ink::ink(fill, &own);
             let attrs = match &line.id {
                 None => format!(
-                    " class=\"pele-rs-label\"{}{}",
+                    " class=\"pele-label\"{}{}{own}",
                     if line.size == size {
                         String::new()
                     } else {
                         format!(" font-size=\"{}\"", num(line.size))
                     },
-                    region.style.text
+                    color.map_or_else(String::new, |c| format!(" fill=\"{c}\""))
                 ),
                 Some(id) => format!(
-                    " class=\"pele-rs-venn-text\" data-id=\"{}\" font-size=\"{}\" \
-                     fill=\"var(--_m)\"{}",
+                    " class=\"pele-venn-text\" data-id=\"{}\" font-size=\"{}\" fill=\"{}\"{own}",
                     esc_text(id),
                     num(tiny),
-                    style_of(id).text
+                    color.unwrap_or("var(--_m)")
                 ),
             };
             content += &label_svg(&line.label, x, y + line.label.height / 2.0, &attrs);
             y += line.label.height;
         }
-        labels += &format!("<g class=\"pele-rs-venn-region\" data-id=\"{id}\">{content}</g>");
+        labels += &format!("<g class=\"pele-venn-region\" data-id=\"{id}\">{content}</g>");
     }
 
     let mut body = String::new();
@@ -422,14 +417,14 @@ pub(crate) fn render_venn(model: &VennModel, input: &Input<'_>) -> Output {
         &title,
         width / 2.0,
         pad + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
     );
-    body += &format!("<g class=\"pele-rs-venn-sets\">{sets}</g>");
+    body += &format!("<g class=\"pele-venn-sets\">{sets}</g>");
     if !overlaps.is_empty() {
-        body += &format!("<g class=\"pele-rs-venn-overlaps\">{overlaps}</g>");
+        body += &format!("<g class=\"pele-venn-overlaps\">{overlaps}</g>");
     }
     if !labels.is_empty() {
-        body += &format!("<g class=\"pele-rs-venn-labels\">{labels}</g>");
+        body += &format!("<g class=\"pele-venn-labels\">{labels}</g>");
     }
     let svg = svg_document(
         DiagramKind::Venn,

@@ -43,11 +43,11 @@ fn draws_a_slice_a_percentage_and_a_legend_entry_per_section() {
         pele_rs::detect_type("pie\n \"a\": 1"),
         Some(DiagramKind::Pie)
     );
-    assert_eq!(count(&out.svg, "class=\"pele-rs-slice\""), 3);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-legend-item\""), 3);
+    assert_eq!(count(&out.svg, "class=\"pele-slice\""), 3);
+    assert_eq!(count(&out.svg, "class=\"pele-legend-item\""), 3);
     assert!(out.svg.contains(">79%<"));
     assert!(out.svg.contains(">Pets<"));
-    assert!(out.svg.contains("var(--pele-rs-series-1,"));
+    assert!(out.svg.contains("var(--pele-series-1,"));
 }
 
 #[test]
@@ -58,8 +58,8 @@ fn shows_values_in_the_legend_with_show_data() {
 #[test]
 fn leaves_out_slices_under_one_percent_but_keeps_them_in_the_legend() {
     let svg = svg("pie\n \"Big\" : 1000\n \"Tiny\" : 1");
-    assert_eq!(count(&svg, "class=\"pele-rs-slice\""), 1);
-    assert_eq!(count(&svg, "class=\"pele-rs-legend-item\""), 2);
+    assert_eq!(count(&svg, "class=\"pele-slice\""), 1);
+    assert_eq!(count(&svg, "class=\"pele-legend-item\""), 2);
 }
 
 #[test]
@@ -90,7 +90,7 @@ fn moves_the_labels_of_thin_slices_outside_the_rim_apart() {
     let svg =
         svg("pie\n \"Calcium\" : 2\n \"Potassium\" : 2.4\n \"Magnesium\" : 46\n \"Test\" : 50");
     let group = svg
-        .split("<g class=\"pele-rs-slice-labels\"")
+        .split("<g class=\"pele-slice-labels\"")
         .skip(1)
         .find(|g| !g.split('>').next().unwrap_or("").contains("fill="))
         .expect("labels outside the rim");
@@ -144,7 +144,7 @@ fn rejects_negative_values_with_mermaids_message() {
 #[test]
 fn keeps_the_first_value_of_a_repeated_label() {
     let svg = svg("pie showData\n \"A\" : 1\n \"A\" : 2\n \"B\" : 3");
-    assert_eq!(count(&svg, "class=\"pele-rs-legend-item\""), 2);
+    assert_eq!(count(&svg, "class=\"pele-legend-item\""), 2);
     assert!(svg.contains(">A [1]<"));
 }
 
@@ -245,8 +245,8 @@ fn escapes_text_everywhere_it_is_written() {
     assert!(!svg.contains("<s>") && !svg.contains("<t>") && !svg.contains("<b>"));
     assert!(svg.contains("data-id=\"&lt;s&gt;\""));
     assert!(svg.contains("data-id=\"x&quot;y\""));
-    assert!(svg.contains("<title id=\"pele-rs-title\">&lt;t&gt;</title>"));
-    assert!(svg.contains("<desc id=\"pele-rs-desc\">a&amp;b</desc>"));
+    assert!(svg.contains("<title id=\"pele-title\">&lt;t&gt;</title>"));
+    assert!(svg.contains("<desc id=\"pele-desc\">a&amp;b</desc>"));
 }
 
 #[test]

@@ -24,7 +24,7 @@ use crate::svg::{
 use crate::text::Style;
 use crate::text::entities::decode_entities;
 use crate::text::label::{Label, has_math, label_line, layout_label, line_middle};
-use crate::url::{link_url, rel_attr, sanitize_url};
+use crate::url::rel_attr;
 use crate::util::{is_space, round};
 use crate::{DiagramKind, Link};
 
@@ -72,6 +72,7 @@ struct View<'a> {
     cols: Vec<f64>,
     row_size: f64,
     key_size: f64,
+    mono: Style,
     /// Whether self-relationships loop out of the bottom side rather than the right.
     below: bool,
 }
@@ -85,16 +86,20 @@ struct Loop {
 
 /// Writes a measured label starting at x, with the baseline of its first line at y. A line that
 /// holds math is written as a label of its own, and an icon is written beside the text.
-fn text_left(label: &Label, x: f64, y: f64, attrs: &str) -> String {
+fn text_left(label: &Label, x: f64, y: f64, attrs: &str, mono: Style) -> String {
     let lines = &label.lines;
     if lines.is_empty() {
         return String::new();
     }
     if let [line] = lines.as_slice() {
         if let [only] = line.as_slice() {
-            if only.is_plain() && only.style.is_empty() {
+            if only.is_plain()
+                && only.style == mono
+                && !(mono.has(Style::MONO) && only.text.contains("  "))
+            {
                 return format!(
-                    "<text{attrs} x=\"{}\" y=\"{}\">{}</text>",
+                    "<text{} x=\"{}\" y=\"{}\">{}</text>",
+                    text_style(attrs, mono),
                     num(x),
                     num(y),
                     esc(&only.text)
@@ -282,6 +287,15 @@ fn draw(db: &ErDb, input: &Input<'_>, turned: bool) -> Output {
         if style.italic {
             base |= Style::ITALIC;
         }
+        let mono = if options
+            .monospace
+            .contains(&crate::MonospacePart::Attributes)
+            && !style.text.contains("font-family:")
+        {
+            Style::MONO
+        } else {
+            Style::NONE
+        };
         let name_size = style.font_size.unwrap_or(size);
         let row_size = style.font_size.unwrap_or(small);
         let key_size = style.font_size.unwrap_or_else(|| round(size * 0.75));
@@ -313,6 +327,7 @@ fn draw(db: &ErDb, input: &Input<'_>, turned: bool) -> Output {
             cols: Vec::new(),
             row_size,
             key_size,
+            mono,
             below,
         };
         let mut reach: f64 = 0.0;
@@ -357,7 +372,7 @@ fn draw(db: &ErDb, input: &Input<'_>, turned: bool) -> Output {
                             measurer,
                             row_size,
                             NO_WRAP,
-                            base,
+                            base | mono,
                         ),
                         layout_label(
                             Some(&cell_text(&attribute.name)),
@@ -365,7 +380,7 @@ fn draw(db: &ErDb, input: &Input<'_>, turned: bool) -> Output {
                             measurer,
                             row_size,
                             NO_WRAP,
-                            base,
+                            base | mono,
                         ),
                         layout_label(
                             Some(&attribute.keys.join(", ")),
@@ -373,7 +388,7 @@ fn draw(db: &ErDb, input: &Input<'_>, turned: bool) -> Output {
                             measurer,
                             key_size,
                             NO_WRAP,
-                            base,
+                            base | mono,
                         ),
                         layout_label(
                             Some(&cell_text(&attribute.comment)),
@@ -500,6 +515,7 @@ fn draw(db: &ErDb, input: &Input<'_>, turned: bool) -> Output {
         }
     }
 
+    let mut fills = Vec::new();
     let mut clusters = String::new();
     let mut nodes_out = String::new();
     for (i, view) in views.iter_mut().enumerate() {
@@ -511,10 +527,21 @@ fn draw(db: &ErDb, input: &Input<'_>, turned: bool) -> Output {
             view.h = c.h;
             let x = c.x - c.w / 2.0;
             let y = c.y - c.h / 2.0;
+            if crate::svg::ink::paints(&view.style.shape) {
+                fills.push(crate::svg::fills::Fill {
+                    bounds: [x, y, x + c.w, y + c.h],
+                    shape: view.style.shape.clone(),
+                });
+            }
+            let opacity = if crate::svg::sets_fill(&view.style.shape) {
+                ""
+            } else {
+                " fill-opacity=\"0.5\""
+            };
             let title_x = cluster_title_x(c, view.label.width, &crossings, GROUP_PAD);
             let _ = write!(
                 clusters,
-                "<g class=\"pele-rs-cluster{classes}\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"var(--_a)\" fill-opacity=\"0.5\" stroke=\"var(--_b)\"{}/>{}</g>",
+                "<g class=\"pele-cluster{classes}\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"var(--_a)\"{opacity} stroke=\"var(--_b)\"{}/>{}</g>",
                 esc_text(&node.id),
                 num(x),
                 num(y),
@@ -526,7 +553,8 @@ fn draw(db: &ErDb, input: &Input<'_>, turned: bool) -> Output {
                     title_x,
                     y + 8.0 + view.label.height / 2.0,
                     &format!(
-                        " class=\"pele-rs-cluster-label\" fill=\"var(--_m)\"{}",
+                        " class=\"pele-cluster-label\"{}{}",
+                        crate::svg::ink::ink_fill(&view.style, Some("var(--_m)")),
                         view.style.text
                     )
                 )
@@ -538,6 +566,14 @@ fn draw(db: &ErDb, input: &Input<'_>, turned: bool) -> Output {
         let x0 = -w / 2.0;
         let y0 = -h / 2.0;
         let text = &view.style.text;
+        let color = crate::svg::ink::ink_fill(&view.style, None);
+        let muted = crate::svg::ink::ink_fill(&view.style, Some("var(--_m)"));
+        let shade = match crate::svg::ink::ink(&view.style.shape, "") {
+            Some(crate::svg::ink::ON_LIGHT) => crate::svg::ink::ON_DARK,
+            Some(crate::svg::ink::ON_DARK) => crate::svg::ink::ON_LIGHT,
+            _ => "var(--_bg)",
+        };
+
         let shape = format!(
             "x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\"",
             num(x0),
@@ -553,16 +589,16 @@ fn draw(db: &ErDb, input: &Input<'_>, turned: bool) -> Output {
             } else {
                 y0 + view.head_h / 2.0
             },
-            &format!(" class=\"pele-rs-label\"{text}"),
+            &format!(" class=\"pele-label\"{color}{text}"),
         );
         let display = decode_entities(if node.alias.is_empty() {
             node.label
         } else {
             node.alias
         });
-        if format!("{classes} ").contains(" internal-link ") && !name.is_empty() {
+        if format!("{classes} ").contains(" internal-link ") && !name.is_empty() && options.links {
             // The name ends up in an href, so it gets the same check as a URL.
-            let safe = link_url(&sanitize_url(&display), options).is_some();
+            let safe = crate::url::internal_link(&display, options);
             let target = esc(&display);
             let href = if safe {
                 format!(" href=\"{target}\"{}", rel_attr(options))
@@ -622,28 +658,32 @@ fn draw(db: &ErDb, input: &Input<'_>, turned: bool) -> Output {
                     kind,
                     x0 + view.cols[0],
                     baseline,
-                    &format!(" class=\"pele-rs-er-type\" fill=\"var(--_m)\"{text}"),
+                    &format!(" class=\"pele-er-type\" {muted}{text}"),
+                    view.mono,
                 );
                 cells += &text_left(
                     attribute,
                     x0 + view.cols[1],
                     baseline,
-                    &format!(" class=\"pele-rs-er-name\"{text}"),
+                    &format!(" class=\"pele-er-name\"{color}{text}"),
+                    view.mono,
                 );
                 cells += &text_left(
                     keys,
                     x0 + view.cols[2],
                     baseline,
                     &format!(
-                        " class=\"pele-rs-er-keys\" font-size=\"{}\" fill=\"var(--_m)\"{text}",
+                        " class=\"pele-er-keys\" font-size=\"{}\" {muted}{text}",
                         num(view.key_size)
                     ),
+                    view.mono,
                 );
                 cells += &text_left(
                     comment,
                     x0 + view.cols[3],
                     baseline,
-                    &format!(" class=\"pele-rs-er-comment\" fill=\"var(--_m)\"{text}"),
+                    &format!(" class=\"pele-er-comment\" {muted}{text}"),
+                    Style::NONE,
                 );
                 y += row.h;
             }
@@ -651,7 +691,7 @@ fn draw(db: &ErDb, input: &Input<'_>, turned: bool) -> Output {
             // Over a fill the diagram chose, the shading is a tint of that fill. The opacity
             // is on the group because the two parts of the last row overlap.
             format!(
-                "<rect {shape}{}/><g class=\"pele-rs-er-stripes\" fill=\"var(--_bg)\"{}>{stripes}</g><path class=\"pele-rs-er-divider\" d=\"M{},{divider_y}H{}\" stroke=\"{line_color}\"/><rect {shape} fill=\"none\" stroke=\"var(--_b)\"{}/>{name}<g class=\"pele-rs-er-attributes\" font-size=\"{}\">{cells}</g>",
+                "<rect {shape}{}/><g class=\"pele-er-stripes\" fill=\"{shade}\"{}>{stripes}</g><path class=\"pele-er-divider\" d=\"M{},{divider_y}H{}\" stroke=\"{line_color}\"/><rect {shape} fill=\"none\" stroke=\"var(--_b)\"{}/>{name}<g class=\"pele-er-attributes\" font-size=\"{}\">{cells}</g>",
                 rounded(&format!("{BOX_ATTRS}{}", view.style.shape)),
                 if view.style.shape.contains("fill:") {
                     " opacity=\"0.6\""
@@ -666,7 +706,7 @@ fn draw(db: &ErDb, input: &Input<'_>, turned: bool) -> Output {
         };
         let _ = write!(
             nodes_out,
-            "<g class=\"pele-rs-node pele-rs-entity{classes}\" data-id=\"{}\" transform=\"translate({},{})\">{body}</g>",
+            "<g class=\"pele-node pele-entity{classes}\" data-id=\"{}\" transform=\"translate({},{})\">{body}</g>",
             esc_text(node.label),
             num(c.x),
             num(c.y)
@@ -688,12 +728,13 @@ fn draw(db: &ErDb, input: &Input<'_>, turned: bool) -> Output {
         }
     }
 
+    let mut casings = String::new();
     let mut edges_out = String::new();
     let mut labels_out = String::new();
     for i in 0..cedges.len() {
         let edge = drawn[i];
         let label = &edge_labels[i];
-        let (d, start, end);
+        let (d, mut start, mut end);
         if let Some((k, j)) = loop_of[i] {
             let lp = &loops[k].1[j];
             let ce = &cedges[i];
@@ -774,9 +815,29 @@ fn draw(db: &ErDb, input: &Input<'_>, turned: bool) -> Output {
             start = er_marker(edge.arrow_start, path.sx, path.sy, path.sdx, path.sdy);
             end = er_marker(edge.arrow_end, path.ex, path.ey, path.edx, path.edy);
         }
+        let under = crate::svg::fills::fill_under(&d, &[], &fills);
+        let over = match &under {
+            crate::svg::fills::Coverage::Outside => None,
+            crate::svg::fills::Coverage::Crossed => Some(String::new()),
+            crate::svg::fills::Coverage::Inside(fill) => {
+                Some(crate::svg::fills::edge_ink(fill, ""))
+            }
+        };
+        if over.as_deref() == Some("") {
+            casings += &crate::svg::fills::casing(&d, &(start.clone() + &end), "", false);
+        }
+        if let crate::svg::fills::Coverage::Inside(fill) = under {
+            if over.as_ref().is_some_and(|s| !s.is_empty()) {
+                start = crate::svg::fills::hollow_on(&start, fill);
+                end = crate::svg::fills::hollow_on(&end, fill);
+            }
+        }
+        let over_attr = over
+            .filter(|s| !s.is_empty())
+            .map_or_else(String::new, |s| format!(" stroke=\"{s}\""));
         let _ = write!(
             edges_out,
-            "<g class=\"pele-rs-edge pele-rs-er-{}\" data-id=\"{}\"><path d=\"{d}\"{}/>{start}{end}</g>",
+            "<g class=\"pele-edge pele-er-{}\" data-id=\"{}\"{over_attr}><path d=\"{d}\"{}/>{start}{end}</g>",
             if edge.dashed {
                 "non-identifying"
             } else {
@@ -799,25 +860,26 @@ fn draw(db: &ErDb, input: &Input<'_>, turned: bool) -> Output {
         &title,
         width / 2.0,
         pad + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
     );
     if !clusters.is_empty() {
-        let _ = write!(content, "<g class=\"pele-rs-clusters\">{clusters}</g>");
+        let _ = write!(content, "<g class=\"pele-clusters\">{clusters}</g>");
     }
+    content += &crate::svg::fills::casings_svg(&casings);
     if !edges_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">{edges_out}</g>"
+            "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">{edges_out}</g>"
         );
     }
     if !labels_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-edge-labels\" font-size=\"{}\">{labels_out}</g>",
+            "<g class=\"pele-edge-labels\" font-size=\"{}\">{labels_out}</g>",
             num(small)
         );
     }
-    let _ = write!(content, "<g class=\"pele-rs-nodes\">{nodes_out}</g>");
+    let _ = write!(content, "<g class=\"pele-nodes\">{nodes_out}</g>");
 
     let acc = Accessible {
         title: db.acc_title.clone(),

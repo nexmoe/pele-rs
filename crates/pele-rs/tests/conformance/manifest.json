@@ -1,0 +1,185 @@
+{
+  "reference": {
+    "repository": "https://github.com/obsidianmd/pele",
+    "version": "1.13.0",
+    "commit": "3a2f075ee0c3d914f0fad3545fc0f193693975ac"
+  },
+  "calls": 196828,
+  "cases": 178887,
+  "units": 19308,
+  "counts": {
+    "agentflow": {
+      "cases": 7884,
+      "rendered": 3638
+    },
+    "architecture": {
+      "cases": 5175,
+      "rendered": 1857
+    },
+    "block": {
+      "cases": 5515,
+      "rendered": 2875
+    },
+    "c4": {
+      "cases": 5785,
+      "rendered": 3211
+    },
+    "class": {
+      "cases": 5940,
+      "rendered": 3584
+    },
+    "cynefin": {
+      "cases": 2243,
+      "rendered": 1026
+    },
+    "er": {
+      "cases": 5807,
+      "rendered": 1972
+    },
+    "eventmodeling": {
+      "cases": 2605,
+      "rendered": 1099
+    },
+    "flowchart": {
+      "cases": 6968,
+      "rendered": 3859
+    },
+    "gantt": {
+      "cases": 5002,
+      "rendered": 3159
+    },
+    "gitGraph": {
+      "cases": 3101,
+      "rendered": 1475
+    },
+    "info": {
+      "cases": 1780,
+      "rendered": 557
+    },
+    "ishikawa": {
+      "cases": 4002,
+      "rendered": 3968
+    },
+    "journey": {
+      "cases": 2480,
+      "rendered": 1859
+    },
+    "kanban": {
+      "cases": 4734,
+      "rendered": 3190
+    },
+    "mindmap": {
+      "cases": 3826,
+      "rendered": 1922
+    },
+    "packet": {
+      "cases": 3208,
+      "rendered": 1200
+    },
+    "pie": {
+      "cases": 1306,
+      "rendered": 617
+    },
+    "quadrantChart": {
+      "cases": 3096,
+      "rendered": 1220
+    },
+    "radar": {
+      "cases": 3088,
+      "rendered": 1353
+    },
+    "railroad": {
+      "cases": 4765,
+      "rendered": 2668
+    },
+    "requirement": {
+      "cases": 5534,
+      "rendered": 1636
+    },
+    "sankey": {
+      "cases": 2957,
+      "rendered": 1865
+    },
+    "sequence": {
+      "cases": 6603,
+      "rendered": 4583
+    },
+    "state": {
+      "cases": 6200,
+      "rendered": 4731
+    },
+    "swimlane": {
+      "cases": 988,
+      "rendered": 580
+    },
+    "timeline": {
+      "cases": 4635,
+      "rendered": 3879
+    },
+    "treemap": {
+      "cases": 4786,
+      "rendered": 2288
+    },
+    "treeView": {
+      "cases": 2484,
+      "rendered": 2152
+    },
+    "unknown": {
+      "cases": 35489,
+      "rendered": 0
+    },
+    "usecase": {
+      "cases": 7395,
+      "rendered": 2950
+    },
+    "venn": {
+      "cases": 5664,
+      "rendered": 2167
+    },
+    "wardley": {
+      "cases": 3093,
+      "rendered": 1481
+    },
+    "xychart": {
+      "cases": 4749,
+      "rendered": 1517
+    }
+  },
+  "sha256": {
+    "agentflow.jsonl.gz": "ba57a804ebb35e95e5a2c4cdace717add028a5c5c88599ce160a24fb600cef5d",
+    "architecture.jsonl.gz": "fe0f47b61bfb87e94ef29d3f2a0b749947de304737e53a9b4d915f5df8e537b0",
+    "block.jsonl.gz": "9f6bf7beadbfb8b1e2f0b89af54084f71fdd78522e903d318fc5835ebda40e3a",
+    "c4.jsonl.gz": "c9e32170ee6c9f0524912a39e2049117ead37d29f1440c6a21d05e08fff2feb8",
+    "class.jsonl.gz": "c5d1b8ac05864497edad451dcc3239f5b0d1264b65b3217c4866b4ccdeeacc37",
+    "cynefin.jsonl.gz": "8ddf2c70d7d40de77f96249c7164fd30ab5dfe51236b98f609ef797b1d890ad9",
+    "er.jsonl.gz": "78ebec3a24bbaca8c63358f1d4d7f31d75c7d29b7aecfdfcba8c1c496f2b2bca",
+    "eventmodeling.jsonl.gz": "e7a273bc2c2d9fee03a1335d264e0e84848828926c3ca84c5b22dd6885a9262c",
+    "flowchart.jsonl.gz": "d6e013fd511d21303a4f11f98336e092a67853c816afd8ce76aa19bd236d53d6",
+    "gantt.jsonl.gz": "4e739a39ee66b57141fdcf86ec2d0c0fb8b791b326da48157431edffb9324f22",
+    "gitGraph.jsonl.gz": "4c2257673b599b3660040308bd5b0a80ab3b7eb00b7f25f5593c7505ae1cd40f",
+    "info.jsonl.gz": "75869fcf01b4cc79e102e6ab96088f09e770eadad06d5643c22728205d031138",
+    "ishikawa.jsonl.gz": "118ba7277a5fbefe2b7e1a35d34a956ff1042528873ca3e88a7ab755537d3b73",
+    "journey.jsonl.gz": "46a75f0adea6340b2a91e4087c2fec28f38251131483cb4d43c3e497513cff50",
+    "kanban.jsonl.gz": "dbe785302c9808d572689639e8f6df819f289646663993f5b43aea8fc7c6c4f3",
+    "mindmap.jsonl.gz": "e025abd90f2f22ac30772080eef79c8d9433e85e13b7a05af88979eaebb46932",
+    "packet.jsonl.gz": "84cd855f3af2a64a520fb1192362fdb28f994703a7e6ef49b793f899beaf9818",
+    "pie.jsonl.gz": "1b187844625c944127bbc012ced919f7ade31e133be45a8b22b96525c58c3f75",
+    "quadrantChart.jsonl.gz": "a6fd5a4323885de9db23121578f47be6a0ae20ac88265fb824e1e2f192c615e7",
+    "radar.jsonl.gz": "25277daf67311a639afe6828c72478d79410bb4aee01607c9f90e55cc2f1fa95",
+    "railroad.jsonl.gz": "18717c1cc23b8d31453a8684a97e16c9cb6bd6ca0a5f0e8ffc3739c67d057325",
+    "requirement.jsonl.gz": "d188d883dd285558bb7b453d2ab6e5c9b24dd08bec315af48cf182201a10d70a",
+    "sankey.jsonl.gz": "1ac1a417638e7a162b7fd6edcf280177cc4ec268fc7e2d0bd6500f698ba13d07",
+    "sequence.jsonl.gz": "94615efded23e96c7962ee7f0f51b51d7327540009a5fe0401bf4d72cc405d54",
+    "state.jsonl.gz": "77a7128ef217d55205062053ec349c8c2ab8d5777739be0017a85f25ca356f5f",
+    "swimlane.jsonl.gz": "cfa679bda071c2e946789e59dc610fbfd089e9a64ae7a3b7260d6c3518368179",
+    "timeline.jsonl.gz": "8dce9d17f425fba358831beefc191543e528c1756ccb4d9c64bdf621d7f544fa",
+    "treeView.jsonl.gz": "f32247ca5ccfcca90bc938749799233ca324b6170342757a099388f67b82026e",
+    "treemap.jsonl.gz": "7748211f388ae3d5bc81eaebf0fd23f66b799c90712b0ab008c00c8ee9e0740a",
+    "units.jsonl.gz": "e61d76a213244a08c5a9f44a3a31f878387624031d3c6a81cfbb58bab35e2704",
+    "unknown.jsonl.gz": "8072e4bcaf6c8ce6e04a3679b9341d81df7dba30804a21bed19c4beea019cd5a",
+    "usecase.jsonl.gz": "4dcd408a9aa190f99011461e96925e447a79a4e645a2d8c27d6fee85132b3b78",
+    "venn.jsonl.gz": "b0034c59892e3a0f575dfcf33e6b47a4510fb7b9e2a37464a746f8c4576404b5",
+    "wardley.jsonl.gz": "f19e9acbae80e9137418be2deda90b560e087e98ca5ab3e2f184d317d239791a",
+    "xychart.jsonl.gz": "40f277c1780c1f884e25ea1f43c5878b3f24cede0fe6d8634ab40ae721cac5de"
+  }
+}

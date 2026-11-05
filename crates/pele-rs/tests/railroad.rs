@@ -45,11 +45,11 @@ fn draws_a_railroad_diagram() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Railroad);
     // The two rules, each with its own group.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-rule\""), 2);
+    assert_eq!(count(&out.svg, "<g class=\"pele-rule\""), 2);
     // The terminals, the non-terminal and the special sequence.
-    assert_eq!(count(&out.svg, "pele-rs-terminal"), 3);
-    assert_eq!(count(&out.svg, "pele-rs-nonterminal"), 1);
-    assert_eq!(count(&out.svg, "pele-rs-special"), 1);
+    assert_eq!(count(&out.svg, "pele-terminal"), 3);
+    assert_eq!(count(&out.svg, "pele-nonterminal"), 1);
+    assert_eq!(count(&out.svg, "pele-special"), 1);
     // The text of the parts is written.
     assert!(out.svg.contains(">a<"), "{}", out.svg);
     assert!(out.svg.contains(">b<"), "{}", out.svg);
@@ -60,16 +60,16 @@ fn draws_a_railroad_diagram() {
 fn draws_the_four_notations() {
     // Mermaid's own notation.
     let own = svg("railroad-beta\nr = sequence(terminal(\"a\"), optional(terminal(\"b\")));\n");
-    assert!(own.contains("pele-rs-terminal"), "{own}");
+    assert!(own.contains("pele-terminal"), "{own}");
     // EBNF.
     let ebnf = svg("railroad-ebnf-beta\nr = \"a\" (\"b\" | \"c\")* ;\n");
-    assert!(ebnf.contains("pele-rs-terminal"), "{ebnf}");
+    assert!(ebnf.contains("pele-terminal"), "{ebnf}");
     // ABNF.
     let abnf = svg("railroad-abnf-beta\nr = 1*3\"a\" / \"b\" ;\n");
-    assert!(abnf.contains("pele-rs-terminal"), "{abnf}");
+    assert!(abnf.contains("pele-terminal"), "{abnf}");
     // PEG.
     let peg = svg("railroad-peg-beta\nr <- \"a\" / (\"b\" \"c\")* ;\n");
-    assert!(peg.contains("pele-rs-terminal"), "{peg}");
+    assert!(peg.contains("pele-terminal"), "{peg}");
     // The four are drawn differently.
     assert_ne!(own, ebnf);
     assert_ne!(ebnf, abnf);
@@ -103,15 +103,15 @@ fn reads_the_config() {
     let without = svg(
         "---\nconfig:\n  railroad:\n    showMarkers: false\n---\nrailroad-beta\nr = terminal(\"a\");\n",
     );
-    assert!(with.contains("pele-rs-marker"));
-    assert!(!without.contains("pele-rs-marker"));
+    assert!(with.contains("pele-marker"));
+    assert!(!without.contains("pele-marker"));
 }
 
 #[test]
 fn draws_a_title() {
     let out = render("---\ntitle: A grammar\n---\nrailroad-beta\nr = terminal(\"a\");\n");
     assert!(out.svg.contains(">A grammar<"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-title"));
+    assert!(out.svg.contains("pele-title"));
 }
 
 #[test]
@@ -175,7 +175,7 @@ fn fits_a_narrow_host() {
     assert!(narrow.width <= 360.0, "{}", narrow.width);
     assert!(narrow.height > 0.0);
     // The parts are still drawn.
-    assert_eq!(count(&narrow.svg, "<g class=\"pele-rs-rule\""), 2);
+    assert_eq!(count(&narrow.svg, "<g class=\"pele-rule\""), 2);
     let _ = wide;
 }
 

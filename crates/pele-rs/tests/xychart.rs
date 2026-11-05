@@ -53,7 +53,7 @@ fn try_render(src: &str) -> Option<String> {
 fn draws_lines_and_bars() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::XyChart);
-    assert_eq!(count(&out.svg, "pele-rs-xychart-line"), 3);
+    assert_eq!(count(&out.svg, "pele-series pele-line"), 3);
     assert_eq!(count(&out.svg, "<circle "), 18);
     // The title and the axis titles are drawn.
     assert!(out.svg.contains(">An Example Chart<"), "{}", out.svg);
@@ -68,7 +68,7 @@ fn draws_lines_and_bars() {
 #[test]
 fn draws_bars() {
     let out = render(BARS);
-    assert_eq!(count(&out.svg, "pele-rs-xychart-bars"), 1);
+    assert_eq!(count(&out.svg, "pele-bars"), 1);
     assert_eq!(count(&out.svg, "<rect "), 4);
     assert!(out.svg.contains(">Q1<"), "{}", out.svg);
     assert!(out.svg.contains(">Revenue<"), "{}", out.svg);
@@ -87,7 +87,7 @@ fn reads_the_orientation() {
 
 /// The path of the grid of a chart.
 fn grid_of(svg: &str) -> String {
-    svg.split("pele-rs-xychart-grid\" d=\"")
+    svg.split("pele-grid\" d=\"")
         .nth(1)
         .unwrap_or("")
         .split('"')
@@ -99,12 +99,12 @@ fn grid_of(svg: &str) -> String {
 #[test]
 fn reads_the_config() {
     let plain = svg(BARS);
-    assert!(!plain.contains("pele-rs-xychart-data-labels"), "{plain}");
+    assert!(!plain.contains("pele-data-labels"), "{plain}");
 
     let values = svg(&format!(
         "---\nconfig:\n  xyChart:\n    showDataLabel: true\n---\n{BARS}"
     ));
-    assert!(values.contains("pele-rs-xychart-data-labels"), "{values}");
+    assert!(values.contains("pele-data-labels"), "{values}");
     assert!(values.contains(">25<"), "{values}");
 
     // The size of the chart is read from the configuration.
@@ -124,7 +124,7 @@ fn reads_the_config() {
     let no_legend = svg(&format!(
         "---\nconfig:\n  xyChart:\n    showLegend: false\n---\n{BARS}"
     ));
-    assert!(!no_legend.contains("pele-rs-xychart-legend"), "{no_legend}");
+    assert!(!no_legend.contains("pele-legend"), "{no_legend}");
 
     // The orientation can come from the configuration.
     let turned = svg(&format!(
@@ -137,7 +137,7 @@ fn reads_the_config() {
 fn draws_a_title() {
     let out = render("---\ntitle: Energy use\n---\nxychart\nx-axis [a]\nline [1]\n");
     assert!(out.svg.contains(">Energy use<"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-title"));
+    assert!(out.svg.contains("pele-title"));
 }
 
 #[test]
@@ -145,14 +145,13 @@ fn reads_the_accessible_text() {
     let out =
         render("xychart\naccTitle: Sales\naccDescr: Revenue for Q1 to Q4\nx-axis [a]\nline [1]\n");
     assert!(
-        out.svg
-            .contains("<title id=\"pele-rs-title\">Sales</title>"),
+        out.svg.contains("<title id=\"pele-title\">Sales</title>"),
         "{}",
         out.svg
     );
     assert!(
         out.svg
-            .contains("<desc id=\"pele-rs-desc\">Revenue for Q1 to Q4</desc>"),
+            .contains("<desc id=\"pele-desc\">Revenue for Q1 to Q4</desc>"),
         "{}",
         out.svg
     );
@@ -188,7 +187,7 @@ fn fits_a_narrow_host() {
     assert!(narrow.width <= 360.0, "{}", narrow.width);
     assert!(narrow.height > 0.0);
     // The chart is still drawn.
-    assert_eq!(count(&narrow.svg, "pele-rs-xychart-line"), 3);
+    assert_eq!(count(&narrow.svg, "pele-series pele-line"), 3);
     let _ = wide;
 }
 

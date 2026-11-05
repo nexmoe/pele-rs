@@ -11,6 +11,8 @@ pele-rs = { git = "https://github.com/nexmoe/pele-rs" }
 
 New in this derivative: reusable `parse` / `ParsedDiagram::render` for every diagram type; bounded `CachingMeasurer`; original-source diagnostics; chart palette compatibility; numeric validation; and optional `scene::SvgScene` / `scene::FontMeasurer` for native painters. The `scene` feature uses usvg; default builds remain dependency-free. See [native integration](docs/NATIVE.md) for API boundaries and examples. This version has not been published to crates.io.
 
+The rendering reference is pinned to **Pele 1.13.0**. Rust tests replay **178,887 official render calls** and **19,308 utility/layout calls**, comparing SVG structure, styles and coordinates. SVG classes and CSS variables now use the official `pele-*` / `--pele-*` names. See [conformance and reproduction](docs/CONFORMANCE.md) for tolerances, exclusions and browser-only boundaries.
+
 
 pele-rs renders [Mermaid](https://mermaid.js.org) diagrams to SVG in pure Rust â€” no JavaScript runtime, no headless browser, no Node.js. It is a port of [pele](https://github.com/obsidianmd/pele), a small, dependency-free TypeScript renderer, and targets Mermaid 12.2.0 syntax with pele's own layout and visual style.
 
@@ -42,7 +44,7 @@ pele-rs renders [Mermaid](https://mermaid.js.org) diagrams to SVG in pure Rust â
 | C4 diagram (`C4Context`, `C4Container`, `C4Component`, `C4Dynamic`, `C4Deployment`) | Supported: `title`, `accTitle` and `accDescr`, persons, systems, containers and components with their boundaries and their relationships, and the `UpdateLayoutConfig` statement |
 | Use case diagram (`usecase-beta`) | Supported: `title`, `accTitle` and `accDescr`, actors and use cases with the relations between them; and the `usecase` config keys `nodeSpacing` and `rankSpacing` |
 | Information diagram (`info`) | Supported: `title`, `accTitle` and `accDescr`, the version and the lines of text |
-| Venn diagram (`venn-beta`) | Supported: the circles with their labels; and the `venn` config keys `width`, `height` and `padding` |
+| Venn diagram (`venn-beta`) | Supported: sets, unions, labels, region styles and content-sized layout |
 | Tree view diagram (`treeView-beta`) | Supported: the tree drawn with box-drawing characters, the icons in front of a label, `classDef` and `class`; and the `treeView` config keys `rowIndent`, `paddingX`, `paddingY`, `lineThickness`, `showIcons`, `defaultIconPack`, `filenameIcons` and `extensionIcons` |
 | Cynefin diagram (`cynefin-beta:`) | Supported: `title`, `accTitle` and `accDescr`, the items in the four regions and the transitions between them; and the `cynefin` config keys `width`, `height`, `showDomainDescriptions`, `boundaryAmplitude` and `seed` |
 | Ishikawa diagram (`ishikawa`) | Supported: the causes on the levels and the spine |
@@ -95,15 +97,15 @@ The SVG takes its colors and fonts from CSS custom properties, with built-in fal
 
 ```css
 svg {
-  --pele-rs-bg: #1e1e1e;
-  --pele-rs-fg: #dcddde;
-  --pele-rs-line: #999;
-  --pele-rs-accent: #7f6df2;
-  --pele-rs-font: "Inter", sans-serif;
+  --pele-bg: #1e1e1e;
+  --pele-fg: #dcddde;
+  --pele-line: #999;
+  --pele-accent: #7f6df2;
+  --pele-font: "Inter", sans-serif;
 }
 ```
 
-Available variables: `--pele-rs-bg`, `--pele-rs-fg`, `--pele-rs-muted`, `--pele-rs-line`, `--pele-rs-surface`, `--pele-rs-surface-alt`, `--pele-rs-border`, `--pele-rs-accent`, `--pele-rs-radius`, `--pele-rs-font`, `--pele-rs-font-mono`, and `--pele-rs-series-1` to `--pele-rs-series-8` for the colors of chart series such as pie slices.
+Available variables: `--pele-bg`, `--pele-fg`, `--pele-muted`, `--pele-line`, `--pele-surface`, `--pele-surface-alt`, `--pele-border`, `--pele-accent`, `--pele-radius`, `--pele-font`, `--pele-font-mono`, and `--pele-series-1` to `--pele-series-8` for the colors of chart series such as pie slices.
 
 ### Viewers without CSS variables
 

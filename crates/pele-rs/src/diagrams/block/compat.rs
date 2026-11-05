@@ -102,7 +102,7 @@ fn parsed(src: &str) -> String {
     // line break to the text it parses.
     match parse_block(&(encode_entities(src) + "\n"), 64) {
         Ok(parsed) => {
-            let model = super::db::build_block(&parsed, None).expect("the model is built");
+            let model = super::db::build_block(parsed, None).expect("the model is built");
             summary(&model)
         }
         Err(e) => format!("error:{}", error_code(e.code)),
@@ -184,7 +184,7 @@ fn oracle_dump() {
 #[test]
 fn keeps_the_order_of_the_blocks() {
     let parsed = parse_block("block\nA\nB\nC\n", 64).unwrap();
-    let model = super::db::build_block(&parsed, None).unwrap();
+    let model = super::db::build_block(parsed, None).unwrap();
     let ids: Vec<&str> = model.arena[model.root]
         .children
         .iter()
@@ -193,18 +193,20 @@ fn keeps_the_order_of_the_blocks() {
     assert_eq!(ids, ["A", "B", "C"]);
 }
 
-/// Mermaid keeps only the last link of a chain of three or more nodes.
+/// Pele 1.13 preserves every node and link, unlike Mermaid's last-link-only model.
 #[test]
-fn keeps_only_the_last_link_of_a_chain() {
+fn keeps_every_link_of_a_chain_like_pele() {
     let parsed = parse_block("block\nA --> B --> C\n", 64).unwrap();
-    let model = super::db::build_block(&parsed, None).unwrap();
+    let model = super::db::build_block(parsed, None).unwrap();
     let ids: Vec<&str> = model.arena[model.root]
         .children
         .iter()
         .map(|at| model.arena[*at].id.as_str())
         .collect();
-    assert_eq!(ids, ["id-1", "C"]);
-    assert_eq!(model.edges.len(), 1);
-    assert_eq!(model.edges[0].start, None);
-    assert_eq!(model.edges[0].end.as_deref(), Some("C"));
+    assert_eq!(ids, ["A", "B", "C"]);
+    assert_eq!(model.edges.len(), 2);
+    assert_eq!(model.edges[0].start.as_deref(), Some("A"));
+    assert_eq!(model.edges[0].end.as_deref(), Some("B"));
+    assert_eq!(model.edges[1].start.as_deref(), Some("B"));
+    assert_eq!(model.edges[1].end.as_deref(), Some("C"));
 }

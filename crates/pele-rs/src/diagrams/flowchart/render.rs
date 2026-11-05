@@ -29,7 +29,7 @@ use crate::svg::{
 use crate::text::entities::decode_entities;
 use crate::text::label::{Label, layout_label};
 use crate::text::{Style, icon_markup};
-use crate::url::{image_url, link_url, linked, rel_attr, safe_url, sanitize_url};
+use crate::url::{image_url, linked, rel_attr, safe_url};
 use crate::util::round;
 use crate::{DiagramKind, Link};
 
@@ -208,6 +208,14 @@ fn draw(db: &FlowDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
             .map_or(-1, |p| index.get(p).map_or(-1, |&i| i as i64));
     }
 
+    crate::layout::compound::inherit_crossed_directions(
+        &mut cnodes,
+        graph
+            .edges
+            .iter()
+            .filter_map(|e| Some((*index.get(e.start.as_str())?, *index.get(e.end.as_str())?))),
+    );
+
     let root_dir = if turned {
         Dir::TB
     } else {
@@ -330,6 +338,7 @@ fn draw(db: &FlowDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
         }
     }
 
+    let mut fills = Vec::new();
     let mut clusters = String::new();
     let mut struck_titles = String::new();
     let mut nodes_out = String::new();
@@ -345,13 +354,21 @@ fn draw(db: &FlowDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
         let classes = class_names(own_classes);
         let id = esc_text(&node.id);
         if c.is_group {
+            if crate::svg::ink::paints(&view.style.shape) {
+                fills.push(crate::svg::fills::Fill {
+                    bounds: [x - c.w / 2.0, y - c.h / 2.0, x + c.w / 2.0, y + c.h / 2.0],
+                    shape: view.style.shape.clone(),
+                });
+            }
             let title_x = cluster_title_x(c, view.label.width, &crossings, group_pad);
             let title_y = y - c.h / 2.0 + 8.0 + view.label.height / 2.0;
-            let title_attrs = format!(
-                " class=\"pele-rs-cluster-label\" fill=\"var(--_m)\"{}",
-                view.style.text
-            );
             let struck = title_crossed(c, view.label.width, title_x, &crossings);
+            let ink = if struck {
+                " fill=\"var(--_m)\"".to_string()
+            } else {
+                crate::svg::ink::ink_fill(&view.style, Some("var(--_m)"))
+            };
+            let title_attrs = format!(" class=\"pele-cluster-label\"{ink}{}", view.style.text);
             if struck {
                 let mut depth = 1;
                 let mut p = c.parent;
@@ -364,12 +381,17 @@ fn draw(db: &FlowDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
             }
             let _ = write!(
                 clusters,
-                "<g class=\"pele-rs-cluster{classes}\" data-id=\"{id}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" \
-                 fill=\"var(--_a)\" fill-opacity=\"0.5\" stroke=\"var(--_b)\"{}/>{}</g>",
+                "<g class=\"pele-cluster{classes}\" data-id=\"{id}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" \
+                 fill=\"var(--_a)\"{} stroke=\"var(--_b)\"{}/>{}</g>",
                 num(x - c.w / 2.0),
                 num(y - c.h / 2.0),
                 num(c.w),
                 num(c.h),
+                if crate::svg::sets_fill(&view.style.shape) {
+                    ""
+                } else {
+                    " fill-opacity=\"0.5\""
+                },
                 rounded(&view.style.shape),
                 if struck {
                     String::new()
@@ -440,19 +462,16 @@ fn draw(db: &FlowDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
             };
             let glyph = bx * 0.6;
             let (x, y) = (-glyph / 2.0, top + (bx - glyph) / 2.0);
-            // An icon the host has is drawn; for any other the box holds a dashed frame.
-            match icon_markup(measurer, icon) {
-                Some(markup) => format!("{frame}{}", icon_svg(icon, x, y, glyph, &markup)),
-                None => format!(
-                    "{frame}<g class=\"pele-rs-icon\" data-icon=\"{}\" transform=\"translate({},{})\"><rect width=\"{}\" \
-                     height=\"{}\" rx=\"4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-dasharray=\"3 3\"/></g>",
-                    esc_text(icon),
-                    num(x),
-                    num(y),
-                    num(glyph),
-                    num(glyph)
-                ),
-            }
+            format!(
+                "{frame}{}",
+                icon_svg(
+                    icon,
+                    x,
+                    y,
+                    glyph,
+                    &icon_markup(measurer, icon).unwrap_or_default()
+                )
+            )
         } else {
             draw_shape(
                 view.shape,
@@ -463,19 +482,27 @@ fn draw(db: &FlowDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
             )
         };
 
+        let ink = if node.img.is_none()
+            && node.icon.is_none()
+            && crate::svg::shapes::shape_filled(view.shape)
+        {
+            crate::svg::ink::ink_fill(&view.style, None)
+        } else {
+            String::new()
+        };
         let mut text = label_svg(
             &view.label,
             0.0,
             view.dy,
-            &format!(" class=\"pele-rs-label\"{}", view.style.text),
+            &format!(" class=\"pele-label\"{ink}{}", view.style.text),
         );
         let internal = format!("{classes} ").contains(" internal-link ");
-        if internal {
+        if internal && options.links {
             if let Some(label) = node.label.as_deref().filter(|l| !l.is_empty()) {
                 // The label is a note name, but it still ends up in an href, so it gets the same
                 // check as a URL.
                 let name = decode_entities(label);
-                let safe = link_url(&sanitize_url(&name), options).is_some();
+                let safe = crate::url::internal_link(&name, options);
                 let target = esc(&name);
                 let href = if safe {
                     format!(" href=\"{target}\"{}", rel_attr(options))
@@ -504,7 +531,7 @@ fn draw(db: &FlowDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
         }
         let _ = write!(
             nodes_out,
-            "<g class=\"pele-rs-node pele-rs-shape-{}{classes}\" data-id=\"{id}\" transform=\"translate({},{})\">{body}</g>",
+            "<g class=\"pele-node pele-shape-{}{classes}\" data-id=\"{id}\" transform=\"translate({},{})\">{body}</g>",
             view.shape,
             num(x),
             num(y)
@@ -531,6 +558,7 @@ fn draw(db: &FlowDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
         );
     }
 
+    let mut casings = String::new();
     let mut edges_out = String::new();
     let mut labels_out = String::new();
     let mut loop_seen: HashMap<usize, usize> = HashMap::new();
@@ -581,10 +609,35 @@ fn draw(db: &FlowDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
                     Some(arrives),
                 )
             };
-            let color = style
+            let line = style.as_ref().map_or("", |s| s.line.as_str());
+            let over = crate::svg::fills::over_fills(
+                &path.d,
+                &[path.sx, path.sy, path.ex, path.ey],
+                &fills,
+                line,
+            );
+            if over.as_deref() == Some("") {
+                casings += &crate::svg::fills::edge_casing(
+                    &path,
+                    &edge.arrow_start,
+                    &edge.arrow_end,
+                    line,
+                    edge.thickness.as_deref() == Some("thick"),
+                );
+            }
+            let color = over
                 .as_ref()
-                .and_then(|s| s.stroke.as_deref())
-                .map_or("var(--_l)".to_string(), esc);
+                .filter(|s| !s.is_empty())
+                .cloned()
+                .unwrap_or_else(|| {
+                    style
+                        .as_ref()
+                        .and_then(|s| s.stroke.as_deref())
+                        .map_or("var(--_l)".to_string(), esc)
+                });
+            let over_attr = over
+                .filter(|s| !s.is_empty())
+                .map_or_else(String::new, |s| format!(" stroke=\"{s}\""));
             let attrs = match edge.thickness.as_deref() {
                 Some("thick") => " stroke-width=\"2.5\"",
                 Some("dotted") => " stroke-dasharray=\"3 4\"",
@@ -597,7 +650,7 @@ fn draw(db: &FlowDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
                 .replace("flowchart-link", "");
             let _ = write!(
                 edges_out,
-                "<g class=\"pele-rs-edge{}\" data-id=\"{}\"{}><path d=\"{}\"{attrs}/>{}{}</g>",
+                "<g class=\"pele-edge{}\" data-id=\"{}\"{over_attr}{}><path d=\"{}\"{attrs}/>{}{}</g>",
                 class_names(&own),
                 esc_text(&edge.id),
                 style.as_ref().map_or("", |s| s.line.as_str()),
@@ -635,31 +688,32 @@ fn draw(db: &FlowDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
         &title,
         width / 2.0,
         pad + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
     );
     if !clusters.is_empty() {
-        let _ = write!(content, "<g class=\"pele-rs-clusters\">{clusters}</g>");
+        let _ = write!(content, "<g class=\"pele-clusters\">{clusters}</g>");
     }
+    content += &crate::svg::fills::casings_svg(&casings);
     if !edges_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">{edges_out}</g>"
+            "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">{edges_out}</g>"
         );
     }
     if !struck_titles.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-cluster-titles\">{struck_titles}</g>"
+            "<g class=\"pele-cluster-titles\">{struck_titles}</g>"
         );
     }
     if !labels_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-edge-labels\" font-size=\"{}\">{labels_out}</g>",
+            "<g class=\"pele-edge-labels\" font-size=\"{}\">{labels_out}</g>",
             num(edge_size)
         );
     }
-    let _ = write!(content, "<g class=\"pele-rs-nodes\">{nodes_out}</g>");
+    let _ = write!(content, "<g class=\"pele-nodes\">{nodes_out}</g>");
     let acc = Accessible {
         title: db.acc_title.clone(),
         descr: db.acc_descr.clone(),

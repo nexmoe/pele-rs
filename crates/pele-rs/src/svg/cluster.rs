@@ -78,7 +78,7 @@ pub(crate) fn struck_title(
         num(100.0 * (1.0 - 0.5f64.powi(depth.min(8) as i32)))
     );
     format!(
-        "<g class=\"pele-rs-cluster-title\" data-id=\"{id}\">{}{}</g>",
+        "<g class=\"pele-cluster-title\" data-id=\"{id}\">{}{}</g>",
         label_svg(
             label,
             x,

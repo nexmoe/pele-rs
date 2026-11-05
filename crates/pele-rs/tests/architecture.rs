@@ -47,13 +47,10 @@ fn draws_services_and_groups() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Architecture);
     // The two services and the one group.
-    assert_eq!(
-        count(&out.svg, "<g class=\"pele-rs-node pele-rs-service\""),
-        2
-    );
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-cluster\""), 1);
+    assert_eq!(count(&out.svg, "<g class=\"pele-node pele-service\""), 2);
+    assert_eq!(count(&out.svg, "<g class=\"pele-cluster\""), 1);
     // The edge between the two services.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-edge\""), 1);
+    assert_eq!(count(&out.svg, "<g class=\"pele-edge\""), 1);
     // The name of a service is the label of its icon, and the name of the group is its title.
     assert!(out.svg.contains(">Database<"), "{}", out.svg);
     assert!(out.svg.contains(">Server<"), "{}", out.svg);
@@ -67,24 +64,18 @@ fn draws_a_junction_as_a_dot() {
     let out = render(
         "architecture-beta\nservice a(server)[A]\njunction mid\nservice b(server)[B]\na:R -- L:mid\n",
     );
-    assert_eq!(
-        count(&out.svg, "<g class=\"pele-rs-node pele-rs-junction\""),
-        1
-    );
-    assert_eq!(
-        count(&out.svg, "<g class=\"pele-rs-node pele-rs-service\""),
-        2
-    );
+    assert_eq!(count(&out.svg, "<g class=\"pele-node pele-junction\""), 1);
+    assert_eq!(count(&out.svg, "<g class=\"pele-node pele-service\""), 2);
 }
 
 #[test]
 fn draws_the_arrowheads_of_the_edges() {
     // The arrow of an edge is written at the end it points to.
     let out = render(FULL);
-    assert_eq!(count(&out.svg, "pele-rs-marker"), 0);
+    assert_eq!(count(&out.svg, "pele-marker"), 0);
     let into =
         render("architecture-beta\nservice a(server)[A]\nservice b(server)[B]\na:R --> L:b\n");
-    assert_eq!(count(&into.svg, "pele-rs-marker"), 1);
+    assert_eq!(count(&into.svg, "pele-marker"), 1);
 }
 
 #[test]
@@ -93,7 +84,7 @@ fn draws_the_label_of_an_edge() {
         "architecture-beta\nservice a(server)[A]\nservice b(server)[B]\na:R - [reads] - L:b\n",
     );
     assert!(out.svg.contains(">reads<"), "{}", out.svg);
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-edge-label\""), 1);
+    assert_eq!(count(&out.svg, "<g class=\"pele-edge-label\""), 1);
 }
 
 #[test]
@@ -120,7 +111,7 @@ fn draws_a_title() {
         "---\ntitle: An architecture diagram\n---\narchitecture-beta\nservice a(server)[A]\n",
     );
     assert!(out.svg.contains(">An architecture diagram<"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-title"));
+    assert!(out.svg.contains("pele-title"));
 }
 
 #[test]
@@ -130,13 +121,13 @@ fn draws_the_accessibility_text() {
     );
     assert!(
         out.svg
-            .contains("<title id=\"pele-rs-title\">The services</title>"),
+            .contains("<title id=\"pele-title\">The services</title>"),
         "{}",
         out.svg
     );
     assert!(
         out.svg
-            .contains("<desc id=\"pele-rs-desc\">Two services and an edge</desc>"),
+            .contains("<desc id=\"pele-desc\">Two services and an edge</desc>"),
         "{}",
         out.svg
     );
@@ -212,10 +203,7 @@ fn fits_a_narrow_host() {
     assert!(narrow.width <= 360.0, "{}", narrow.width);
     assert!(narrow.height > 0.0);
     // The services are still drawn.
-    assert_eq!(
-        count(&narrow.svg, "<g class=\"pele-rs-node pele-rs-service\""),
-        2
-    );
+    assert_eq!(count(&narrow.svg, "<g class=\"pele-node pele-service\""), 2);
     let _ = wide;
 }
 

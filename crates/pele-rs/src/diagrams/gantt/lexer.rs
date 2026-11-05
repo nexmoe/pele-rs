@@ -221,10 +221,6 @@ pub(crate) fn tokenize(src: &[u16]) -> Tokens {
                     } else {
                         p = until(src, 10, p + 2);
                     }
-                } else if c != 125 && d == 37 {
-                    // Any character but `}` followed by `%` starts a comment that runs to the
-                    // end of the line.
-                    p = until(src, 10, p + 2);
                 } else if c == 10 {
                     let mut e = p + 1;
                     while at(src, e) == 10 {
@@ -400,6 +396,15 @@ fn keyword(src: &[u16], p: usize, c: u32) -> Option<(u8, usize, Option<S>)> {
         }
         _ => {}
     }
+    if keyword_at(src, p, "title") {
+        let mut e = p + 5;
+        while e < src.len() && at(src, e) != 10 && space(at(src, e)) {
+            e += 1;
+        }
+        if e == src.len() || at(src, e) == 10 {
+            return Some((NONE_KIND, e, None));
+        }
+    }
     for &(kw, rest, kind) in keywords(c | 32) {
         if !keyword_at(src, p, kw) {
             continue;
@@ -412,6 +417,9 @@ fn keyword(src: &[u16], p: usize, c: u32) -> Option<(u8, usize, Option<S>)> {
                 }
             }
             Rest::Text(stops) => {
+                if kind == t::TITLE && matches!(at(src, q), 10 | 13) {
+                    continue;
+                }
                 if space(at(src, q)) {
                     let e = src[q + 1..]
                         .iter()

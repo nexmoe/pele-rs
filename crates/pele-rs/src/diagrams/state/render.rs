@@ -77,14 +77,14 @@ impl K {
 
     fn class(self) -> &'static str {
         match self {
-            K::State | K::Described => "pele-rs-node pele-rs-state",
-            K::Start => "pele-rs-node pele-rs-state-start",
-            K::End => "pele-rs-node pele-rs-state-end",
-            K::Choice => "pele-rs-node pele-rs-state-choice",
-            K::Fork => "pele-rs-node pele-rs-state-fork",
-            K::Join => "pele-rs-node pele-rs-state-join",
-            K::Note => "pele-rs-note",
-            _ => "pele-rs-cluster pele-rs-state-composite",
+            K::State | K::Described => "pele-node pele-state",
+            K::Start => "pele-node pele-state-start",
+            K::End => "pele-node pele-state-end",
+            K::Choice => "pele-node pele-state-choice",
+            K::Fork => "pele-node pele-state-fork",
+            K::Join => "pele-node pele-state-join",
+            K::Note => "pele-note",
+            _ => "pele-cluster pele-state-composite",
         }
     }
 }
@@ -707,14 +707,14 @@ fn draw(db: &StateDb, input: &Input<'_>, turned: bool) -> Output {
                     if x {
                         let _ = write!(
                             dividers,
-                            "<path class=\"pele-rs-divider\" d=\"M{at},{}V{}\"/>",
+                            "<path class=\"pele-divider\" d=\"M{at},{}V{}\"/>",
                             num(top),
                             num(bottom)
                         );
                     } else {
                         let _ = write!(
                             dividers,
-                            "<path class=\"pele-rs-divider\" d=\"M{},{at}H{}\"/>",
+                            "<path class=\"pele-divider\" d=\"M{},{at}H{}\"/>",
                             num(left),
                             num(right)
                         );
@@ -730,7 +730,7 @@ fn draw(db: &StateDb, input: &Input<'_>, turned: bool) -> Output {
                     c.y - c.h / 2.0 + pad,
                     c.w,
                     c.h,
-                    &format!(" class=\"pele-rs-divider\" rx=\"{}\"", num(CORNER)),
+                    &format!(" class=\"pele-divider\" rx=\"{}\"", num(CORNER)),
                 ));
             }
         };
@@ -743,6 +743,7 @@ fn draw(db: &StateDb, input: &Input<'_>, turned: bool) -> Output {
         height - pad / 2.0,
     );
 
+    let mut fills = Vec::new();
     for &i in &order {
         let view = &views[i];
         let (Some(node), Some(style)) = (view.node, view.style.as_ref()) else {
@@ -755,20 +756,32 @@ fn draw(db: &StateDb, input: &Input<'_>, turned: bool) -> Output {
         let x = c.x + pad;
         let y = c.y + pad;
         let (w, h) = (view.w, view.h);
-        let label_attrs = format!(" class=\"pele-rs-label\"{}", style.text);
+        let ink = crate::svg::ink::ink_fill(style, None);
+        let label_attrs = format!(" class=\"pele-label\"{ink}{}", style.text);
         let mut body;
         match view.kind {
             K::Composite => {
                 let left = x - c.w / 2.0;
                 let top = y - c.h / 2.0;
+                if crate::svg::ink::paints(&style.shape) {
+                    fills.push(crate::svg::fills::Fill {
+                        bounds: [left, top, left + c.w, top + c.h],
+                        shape: style.shape.clone(),
+                    });
+                }
                 body = rect(
                     left,
                     top,
                     c.w,
                     c.h,
                     &format!(
-                        " rx=\"{}\" fill=\"var(--_a)\" fill-opacity=\"0.5\" stroke=\"var(--_b)\"{}",
+                        " rx=\"{}\" fill=\"var(--_a)\"{} stroke=\"var(--_b)\"{}",
                         num(CORNER),
+                        if crate::svg::sets_fill(&style.shape) {
+                            ""
+                        } else {
+                            " fill-opacity=\"0.5\""
+                        },
                         style.shape
                     ),
                 );
@@ -785,7 +798,7 @@ fn draw(db: &StateDb, input: &Input<'_>, turned: bool) -> Output {
                         &view.label,
                         title_x(c, view.label.width, &crossings) + pad,
                         top + view.title_h / 2.0,
-                        &format!(" class=\"pele-rs-cluster-label\"{}", style.text),
+                        &format!(" class=\"pele-cluster-label\"{ink}{}", style.text),
                     );
                 }
                 divide(
@@ -836,7 +849,7 @@ fn draw(db: &StateDb, input: &Input<'_>, turned: bool) -> Output {
                         0.0,
                         0.0,
                         &format!(
-                            " class=\"pele-rs-label\" font-size=\"{}\" fill=\"var(--_m)\"",
+                            " class=\"pele-label\" font-size=\"{}\" fill=\"var(--_m)\"",
                             num(small)
                         )
                     )
@@ -870,8 +883,9 @@ fn draw(db: &StateDb, input: &Input<'_>, turned: bool) -> Output {
                         &label_svg(&view.label, 0.0, at - view.label.height / 2.0, &label_attrs);
                     at += 14.0;
                     let attrs = format!(
-                        " class=\"pele-rs-state-description\" font-size=\"{}\"{}",
+                        " class=\"pele-state-description\" font-size=\"{}\"{}{}",
                         num(small),
+                        crate::svg::ink::ink_fill(style, None),
                         style.text
                     );
                     for line in &view.lines {
@@ -979,6 +993,7 @@ fn draw(db: &StateDb, input: &Input<'_>, turned: bool) -> Output {
         );
     }
 
+    let mut casings = String::new();
     let mut edges_out = String::new();
     let mut labels_out = String::new();
     let mut loop_seen = vec![0usize; states];
@@ -1098,17 +1113,32 @@ fn draw(db: &StateDb, input: &Input<'_>, turned: bool) -> Output {
             label_x = ce.label_x;
             label_y = ce.label_y;
         }
+        let over = crate::svg::fills::over_fills(&path.d, &[path.ex, path.ey], &fills, "");
+        if over.as_deref() == Some("") {
+            casings += &crate::svg::fills::edge_casing(&path, "none", end_type, "", false);
+        }
+        let color = over
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .unwrap_or("var(--_l)");
         let class = if edge.dashed {
-            "pele-rs-note-edge\" stroke=\"var(--_b)\" stroke-dasharray=\"3 4"
+            format!(
+                "pele-note-edge\" stroke=\"{}\" stroke-dasharray=\"3 4",
+                over.as_deref()
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or("var(--_b)")
+            )
+        } else if color != "var(--_l)" {
+            format!("pele-transition\" stroke=\"{color}")
         } else {
-            "pele-rs-transition"
+            "pele-transition".to_string()
         };
         let _ = write!(
             edges_out,
-            "<g class=\"pele-rs-edge {class}\" data-id=\"{}\"><path d=\"{}\"/>{}</g>",
+            "<g class=\"pele-edge {class}\" data-id=\"{}\"><path d=\"{}\"/>{}</g>",
             esc_text(&edge.id),
             path.d,
-            marker(end_type, path.ex, path.ey, path.edx, path.edy, "var(--_l)")
+            marker(end_type, path.ex, path.ey, path.edx, path.edy, color)
         );
         if label.width > 0.0 {
             labels_out += &edge_label_svg(&edge.id, label, label_x + pad, label_y + pad, "");
@@ -1117,30 +1147,31 @@ fn draw(db: &StateDb, input: &Input<'_>, turned: bool) -> Output {
 
     let mut content = String::new();
     if !clusters.is_empty() {
-        let _ = write!(content, "<g class=\"pele-rs-clusters\">{clusters}</g>");
+        let _ = write!(content, "<g class=\"pele-clusters\">{clusters}</g>");
     }
     if !dividers.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-dividers\" stroke-dasharray=\"4 4\"{RULE}>{dividers}</g>"
+            "<g class=\"pele-dividers\" stroke-dasharray=\"4 4\"{RULE}>{dividers}</g>"
         );
     }
+    content += &crate::svg::fills::casings_svg(&casings);
     if !edges_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">{edges_out}</g>"
+            "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">{edges_out}</g>"
         );
     }
     if !labels_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-edge-labels\" font-size=\"{}\">{labels_out}</g>",
+            "<g class=\"pele-edge-labels\" font-size=\"{}\">{labels_out}</g>",
             num(small)
         );
     }
     let _ = write!(
         content,
-        "<g class=\"pele-rs-nodes\">{nodes_out}{notes_out}</g>"
+        "<g class=\"pele-nodes\">{nodes_out}{notes_out}</g>"
     );
     let titled = with_title(
         db.title.as_deref(),

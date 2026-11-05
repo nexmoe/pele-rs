@@ -59,7 +59,7 @@ fn parse_args(args: impl IntoIterator<Item = String>) -> Result<Parsed, String> 
             "-o" | "--output" => parsed.output = Some(value(&arg)?),
             "--font-size" => parsed.options.font_size = Some(pixels(&value(&arg)?, "font size")?),
             "--max-width" => parsed.options.max_width = Some(pixels(&value(&arg)?, "width")?),
-            "--id-prefix" => parsed.options.id_prefix = value(&arg)?,
+            "--id-prefix" => parsed.options.id_prefix = Some(value(&arg)?),
             "--config" => {
                 let text = value(&arg)?;
                 parsed.options.config = Some(match text.strip_prefix('@') {
@@ -179,7 +179,7 @@ mod tests {
         assert_eq!(args.output.as_deref(), Some("out.svg"));
         assert_eq!(args.options.font_size, Some(14.0));
         assert_eq!(args.options.max_width, Some(320.0));
-        assert_eq!(args.options.id_prefix, "d1");
+        assert_eq!(args.options.id_prefix.as_deref(), Some("d1"));
     }
 
     #[test]

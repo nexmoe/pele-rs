@@ -54,12 +54,12 @@ fn draws_participants_messages_and_notes() {
     );
     assert_eq!(out.kind, DiagramKind::Sequence);
     // Each participant is drawn at the top and mirrored at the bottom.
-    assert_eq!(count(&out.svg, "pele-rs-actor-participant\""), 1);
-    assert_eq!(count(&out.svg, "pele-rs-actor-footer"), 2);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-edge pele-rs-message\""), 3);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-activation\""), 1);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-note\""), 1);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-lifeline\""), 2);
+    assert_eq!(count(&out.svg, "pele-actor-participant\""), 1);
+    assert_eq!(count(&out.svg, "pele-actor-footer"), 2);
+    assert_eq!(count(&out.svg, "class=\"pele-edge pele-message\""), 3);
+    assert_eq!(count(&out.svg, "class=\"pele-activation\""), 1);
+    assert_eq!(count(&out.svg, "class=\"pele-note\""), 1);
+    assert_eq!(count(&out.svg, "class=\"pele-lifeline\""), 2);
     assert!(out.svg.contains(">Alice<"));
     assert!(out.svg.contains(">shared<"));
     assert!(out.svg.contains("stroke-dasharray=\"4 4\""));
@@ -71,12 +71,12 @@ fn draws_blocks_boxes_numbers_and_lifecycles() {
         "sequenceDiagram\n autonumber\n box Aqua Team\n participant A\n participant B\n end\n loop every minute\n A->>B: ping\n end\n alt ok\n B->>A: pong\n else failed\n B-xA: error\n end\n rect rgb(200, 220, 255)\n A->>A: think\n end\n create participant C\n A->>C: spawn\n destroy C\n C-->>A: done\n",
     );
     for needle in [
-        "pele-rs-frame-loop",
-        "pele-rs-frame-alt",
-        "class=\"pele-rs-rect\"",
-        "class=\"pele-rs-cluster pele-rs-box\"",
-        "class=\"pele-rs-sequence-number\"",
-        "class=\"pele-rs-destroy\"",
+        "pele-frame-loop",
+        "pele-frame-alt",
+        "class=\"pele-rect\"",
+        "class=\"pele-cluster pele-box\"",
+        "class=\"pele-sequence-number\"",
+        "class=\"pele-destroy\"",
         ">[every minute]<",
         ">[failed]<",
     ] {
@@ -100,7 +100,7 @@ fn draws_every_participant_kind() {
         let svg = svg(&format!(
             "sequenceDiagram\n participant A@{{ \"type\": \"{kind}\" }}\n A->>A: x\n"
         ));
-        assert!(svg.contains(&format!("pele-rs-actor-{kind}")), "{kind}");
+        assert!(svg.contains(&format!("pele-actor-{kind}")), "{kind}");
         // The class says which kind it is; the drawing has to be that shape.
         match kind {
             "participant" | "collections" => {
@@ -196,18 +196,18 @@ fn enforces_limits() {
 #[test]
 fn reads_the_sequence_config() {
     let src = "sequenceDiagram\n A->>B: x\n B->>A: y\n";
-    assert_eq!(count(&svg(src), "pele-rs-actor-footer"), 2);
+    assert_eq!(count(&svg(src), "pele-actor-footer"), 2);
     let plain = svg(&format!(
         "---\nconfig:\n  sequence:\n    mirrorActors: false\n    showSequenceNumbers: true\n---\n{src}"
     ));
-    assert_eq!(count(&plain, "pele-rs-actor-footer"), 0);
-    assert_eq!(count(&plain, "class=\"pele-rs-sequence-number\""), 2);
+    assert_eq!(count(&plain, "pele-actor-footer"), 0);
+    assert_eq!(count(&plain, "class=\"pele-sequence-number\""), 2);
     let hidden = svg(
         "%%{init: {\"sequence\": {\"hideUnusedParticipants\": true}}}%%\nsequenceDiagram\n participant Q\n A->>B: x\n",
     );
     assert!(!hidden.contains("data-id=\"Q\""));
     // The participants that are used are still there.
-    assert_eq!(count(&hidden, "class=\"pele-rs-lifeline\""), 2, "{hidden}");
+    assert_eq!(count(&hidden, "class=\"pele-lifeline\""), 2, "{hidden}");
 }
 
 #[test]
@@ -496,10 +496,7 @@ fn draws_every_block_kind() {
         ),
     ] {
         let svg = svg(src);
-        assert!(
-            svg.contains(&format!("pele-rs-frame-{kind}")),
-            "{kind}: {svg}"
-        );
+        assert!(svg.contains(&format!("pele-frame-{kind}")), "{kind}: {svg}");
         assert_inert(&svg, src);
     }
     // The `and` of a `par` and the `option` of a `critical` carry their own labels.
@@ -513,7 +510,7 @@ fn draws_every_block_kind() {
 #[test]
 fn activates_and_deactivates_a_participant() {
     let svg = svg("sequenceDiagram\n participant A\n activate A\n A->>A: work\n deactivate A\n");
-    assert_eq!(count(&svg, "class=\"pele-rs-activation\""), 1, "{svg}");
+    assert_eq!(count(&svg, "class=\"pele-activation\""), 1, "{svg}");
     assert_inert(&svg, "activate");
 }
 
@@ -551,22 +548,22 @@ fn wraps_message_labels_when_asked() {
 fn writes_the_accessible_title_and_description() {
     let svg = svg("sequenceDiagram\n accTitle: the title\n accDescr: the description\n A->>B: x\n");
     assert!(
-        svg.contains("<title id=\"pele-rs-title\">the title</title>"),
+        svg.contains("<title id=\"pele-title\">the title</title>"),
         "{svg}"
     );
     assert!(
-        svg.contains("<desc id=\"pele-rs-desc\">the description</desc>"),
+        svg.contains("<desc id=\"pele-desc\">the description</desc>"),
         "{svg}"
     );
-    assert!(svg.contains("aria-labelledby=\"pele-rs-title\""), "{svg}");
-    assert!(svg.contains("aria-describedby=\"pele-rs-desc\""), "{svg}");
+    assert!(svg.contains("aria-labelledby=\"pele-title\""), "{svg}");
+    assert!(svg.contains("aria-describedby=\"pele-desc\""), "{svg}");
 }
 
 #[test]
 fn places_notes_left_and_right_of_a_participant() {
     let left = svg("sequenceDiagram\n participant A\n participant B\n Note left of A: L\n");
     let right = svg("sequenceDiagram\n participant B\n participant A\n Note right of B: R\n");
-    assert_eq!(count(&left, "class=\"pele-rs-note\""), 1, "{left}");
+    assert_eq!(count(&left, "class=\"pele-note\""), 1, "{left}");
     assert!(left.contains(">L<") && right.contains(">R<"));
     assert_ne!(left, right);
 }
@@ -574,9 +571,9 @@ fn places_notes_left_and_right_of_a_participant() {
 #[test]
 fn draws_a_created_participant_at_its_creation() {
     let svg = svg("sequenceDiagram\n participant A\n create participant B\n A->>B: hi\n");
-    let actor = svg.find("pele-rs-actor").expect("a participant is drawn");
+    let actor = svg.find("pele-actor").expect("a participant is drawn");
     let message = svg
-        .find("pele-rs-edge pele-rs-message")
+        .find("pele-edge pele-message")
         .expect("a message is drawn");
     assert!(
         actor > message,

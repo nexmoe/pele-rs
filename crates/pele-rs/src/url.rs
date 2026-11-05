@@ -9,7 +9,7 @@ use crate::{Link, RenderOptions};
 const BLANK: &str = "about:blank";
 
 fn is_ctrl(c: char) -> bool {
-    matches!(c, '\u{0}'..='\u{1f}' | '\u{7f}'..='\u{9f}' | '\u{2000}'..='\u{200d}' | '\u{feff}')
+    matches!(c, '\u{0}'..='\u{1f}' | '\u{7f}'..='\u{9f}' | '\u{2000}'..='\u{200d}' | '\u{feff}' | '\u{fffe}' | '\u{ffff}')
 }
 
 /// `decodeURIComponent`, or the text as it is when it is not valid percent-encoding.
@@ -132,24 +132,29 @@ fn ws_escapes(s: &str) -> (String, bool) {
     (out, found)
 }
 
-/// Follows the algorithm of `@braintree/sanitize-url`, which Mermaid applies to click targets.
-pub(crate) fn sanitize_url(url: &str) -> String {
-    if url.is_empty() {
-        return BLANK.to_string();
-    }
-    let mut decoded = decode(trim(url));
+/// Peel controls and nested encodings while optionally preserving percent escapes.
+fn unwrap(url: &str, percent: bool) -> Option<String> {
+    let mut decoded = if percent {
+        decode(trim(url))
+    } else {
+        trim(url).to_string()
+    };
     let mut rounds = 0;
     loop {
         rounds += 1;
         if rounds > 32 {
-            return BLANK.to_string();
+            return None;
         }
         let s: String = decoded.chars().filter(|&c| !is_ctrl(c)).collect();
         let (s, _) = html_entities(&s);
         let (s, _) = html_ctrl_entities(&s);
         let s: String = s.chars().filter(|&c| !is_ctrl(c)).collect();
         let (s, _) = ws_escapes(&s);
-        decoded = decode(trim(&s));
+        decoded = if percent {
+            decode(trim(&s))
+        } else {
+            trim(&s).to_string()
+        };
         let more = decoded.chars().any(is_ctrl)
             || html_entities(&decoded).1
             || html_ctrl_entities(&decoded).1
@@ -158,11 +163,18 @@ pub(crate) fn sanitize_url(url: &str) -> String {
             break;
         }
     }
-    if decoded.is_empty() {
+    Some(decoded)
+}
+
+/// Check the fully decoded scheme, preserving the author's percent escapes in the href.
+pub(crate) fn sanitize_url(url: &str) -> String {
+    let decoded = unwrap(url, true).unwrap_or_default();
+    let kept = unwrap(url, false).unwrap_or_default();
+    if decoded.is_empty() || kept.is_empty() {
         return BLANK.to_string();
     }
     if decoded.starts_with(['.', '/']) {
-        return decoded;
+        return kept;
     }
     let trimmed = trim_start(&decoded);
     // `^.+(:|&colon;)` with the `m` flag: the first line that has a colon after its first
@@ -175,7 +187,7 @@ pub(crate) fn sanitize_url(url: &str) -> String {
             colon.max(entity).map(|end| &line[..end])
         });
     let Some(scheme) = scheme else {
-        return decoded;
+        return kept;
     };
     let protocol = trim(scheme).to_lowercase();
     let bare = protocol.trim_start_matches(|c: char| !crate::util::is_word(c));
@@ -185,7 +197,7 @@ pub(crate) fn sanitize_url(url: &str) -> String {
     {
         return BLANK.to_string();
     }
-    let normalized = trimmed.replace('\\', "/");
+    let normalized = trim_start(&kept).replace('\\', "/");
     if protocol == "mailto:" || protocol.contains("://") {
         return normalized;
     }
@@ -355,7 +367,7 @@ fn parse_host(host: &str) -> Option<String> {
 fn refused(c: char) -> bool {
     c.is_whitespace()
         || c.is_control()
-        || matches!(c, '\u{200b}'..='\u{200f}' | '\u{2060}'..='\u{206f}' | '\u{feff}')
+        || matches!(c, '\u{200b}'..='\u{200f}' | '\u{2060}'..='\u{206f}' | '\u{feff}' | '\u{fffe}' | '\u{ffff}')
 }
 
 /// Percent-decodes into UTF-8, as the host parser does before anything else.
@@ -552,7 +564,7 @@ const LINK_SCHEMES: &[&str] = &["http", "https", "mailto", "tel"];
 const IMAGE_SCHEMES: &[&str] = &["http", "https"];
 
 /// Keeps a URL only when it is relative or its scheme is one of `schemes`.
-fn allow(url: &str, schemes: &[&str]) -> Option<String> {
+fn allow_once(url: &str, schemes: &[&str]) -> Option<String> {
     let b = url.as_bytes();
     if b.len() >= 2 && matches!(b[0], b'\\' | b'/') && matches!(b[1], b'\\' | b'/') {
         return None;
@@ -570,6 +582,21 @@ fn allow(url: &str, schemes: &[&str]) -> Option<String> {
         .iter()
         .any(|s| s.eq_ignore_ascii_case(&scheme))
         .then(|| url.to_string())
+}
+
+fn allow(url: &str, schemes: &[&str]) -> Option<String> {
+    let decoded = unwrap(url, true)?;
+    allow_once(&decoded, schemes)?;
+    allow_once(url, schemes)
+}
+
+pub(crate) fn internal_link(name: &str, options: &RenderOptions) -> bool {
+    let url = sanitize_url(name);
+    if url == BLANK || link_url(&url, options).is_none() {
+        return false;
+    }
+    let seen: String = name.chars().filter(|&c| !matches!(c, '\0'..='\x08' | '\x0b' | '\x0c' | '\x0e'..='\x1f' | '\x7f' | '\u{fffe}' | '\u{ffff}' | '\t' | '\n' | '\r')).collect();
+    link_url(seen.trim_start_matches(|c: char| c <= '\x20'), options).is_some()
 }
 
 fn schemes(list: &Option<Vec<String>>, default: &'static [&'static str]) -> Vec<String> {
@@ -673,7 +700,7 @@ mod tests {
             sanitize_url("https://a.com/\u{2028}x:y"),
             "https://a.com/%E2%80%A8x:y"
         );
-        assert_eq!(sanitize_url("tel:%25+1"), "tel:%+1");
+        assert_eq!(sanitize_url("tel:%25+1"), "tel:%25+1");
         let encoded = crate::text::entities::encode_entities("#106;avascript:alert(1)");
         assert_eq!(safe_url(&encoded), BLANK);
     }

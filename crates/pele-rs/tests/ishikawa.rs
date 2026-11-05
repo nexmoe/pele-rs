@@ -62,13 +62,13 @@ fn draws_the_effect_and_the_causes() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Ishikawa);
     // The effect is the head of the fishbone, every category of causes a box on a bone.
-    assert_eq!(count(&out.svg, "pele-rs-ishikawa-head"), 1);
-    assert_eq!(count(&out.svg, "pele-rs-ishikawa-category"), 4);
+    assert_eq!(count(&out.svg, "pele-ishikawa-head"), 1);
+    assert_eq!(count(&out.svg, "pele-ishikawa-category"), 4);
     // The spine and the bones of the categories.
-    assert_eq!(count(&out.svg, "pele-rs-ishikawa-spine"), 1);
-    assert_eq!(count(&out.svg, "pele-rs-ishikawa-bones"), 4);
+    assert_eq!(count(&out.svg, "pele-ishikawa-spine"), 1);
+    assert_eq!(count(&out.svg, "pele-ishikawa-bones"), 4);
     // The causes of a category are written along its bones.
-    assert_eq!(count(&out.svg, "pele-rs-ishikawa-causes"), 4);
+    assert_eq!(count(&out.svg, "pele-ishikawa-causes"), 4);
     for text in [
         "Blurry Photo",
         "Process",
@@ -99,7 +99,7 @@ fn the_beta_keyword_works_too() {
 fn draws_the_title_of_the_front_matter() {
     let out = render(&format!("---\ntitle: Root causes\n---\n{FULL}"));
     assert!(out.svg.contains(">Root causes<"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-title"), "{}", out.svg);
+    assert!(out.svg.contains("pele-title"), "{}", out.svg);
 }
 
 #[test]
@@ -107,7 +107,7 @@ fn reads_the_comments_and_the_blank_lines() {
     let out = render("%% a comment\nishikawa\nEffect\n\n%% another comment\nCause\n");
     assert!(out.svg.contains(">Effect<"), "{}", out.svg);
     assert!(out.svg.contains(">Cause<"), "{}", out.svg);
-    assert_eq!(count(&out.svg, "pele-rs-ishikawa-category"), 1);
+    assert_eq!(count(&out.svg, "pele-ishikawa-category"), 1);
 }
 
 #[test]
@@ -130,8 +130,8 @@ fn fits_a_narrow_host() {
     assert!(narrow.width <= 360.0, "{}", narrow.width);
     assert!(narrow.height > 0.0);
     // The causes are drawn one under another instead of as a fishbone.
-    assert_eq!(count(&narrow.svg, "pele-rs-ishikawa-cause"), 8);
-    assert_eq!(count(&narrow.svg, "pele-rs-ishikawa-spine"), 0);
+    assert_eq!(count(&narrow.svg, "pele-ishikawa-cause"), 8);
+    assert_eq!(count(&narrow.svg, "pele-ishikawa-spine"), 0);
 }
 
 #[test]

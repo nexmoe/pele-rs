@@ -1,12 +1,12 @@
 //! The CSS custom properties a diagram is themed with.
 
 /// Private aliases set once on the root element, so each use is short and the public
-/// `--pele-rs-*` tokens keep their fallbacks. The text color is set as well: an icon is drawn
+/// `--pele-*` tokens keep their fallbacks. The text color is set as well: an icon is drawn
 /// in currentColor, which would otherwise be whatever color the page gives the container.
 pub(crate) const ROOT_STYLE: &str = concat!(
-    "--_bg:var(--pele-rs-bg,#fff);--_fg:var(--pele-rs-fg,#1f1f1f);--_m:var(--pele-rs-muted,#6e6e6e);",
-    "--_l:var(--pele-rs-line,#1f1f1f);--_s:var(--pele-rs-surface,#f3f3f3);--_a:var(--pele-rs-surface-alt,#e6e6e6);",
-    "--_b:var(--pele-rs-border,#8a8a8a);--_c:var(--pele-rs-accent,#5b7bd5);color:var(--_fg)",
+    "--_bg:var(--pele-bg,#fff);--_fg:var(--pele-fg,#1f1f1f);--_m:var(--pele-muted,#6e6e6e);",
+    "--_l:var(--pele-line,#1f1f1f);--_s:var(--pele-surface,#f3f3f3);--_a:var(--pele-surface-alt,#e6e6e6);",
+    "--_b:var(--pele-border,#8a8a8a);--_c:var(--pele-accent,#5b7bd5);color:var(--_fg)",
 );
 
 const SERIES: [&str; 8] = [
@@ -16,7 +16,7 @@ const SERIES: [&str; 8] = [
 /// The color of the nth data series in a chart, cycling through eight tokens.
 pub(crate) fn series_color(index: usize) -> String {
     let k = index % 8;
-    format!("var(--pele-rs-series-{},{})", k + 1, SERIES[k])
+    format!("var(--pele-series-{},{})", k + 1, SERIES[k])
 }
 
 /// Corners are rounded through CSS, which older browsers support for `rx`. The default goes
@@ -31,7 +31,7 @@ pub(crate) fn rounded(attrs: &str) -> String {
 }
 
 /// The color of what a diagram marks as critical.
-pub(crate) const CRITICAL: &str = "var(--pele-rs-critical,#e45756)";
+pub(crate) const CRITICAL: &str = "var(--pele-critical,#e45756)";
 
 const SHAPE_PROPS: &[&str] = &[
     "fill",
@@ -74,6 +74,7 @@ fn unsafe_value(value: &str) -> bool {
         || v.contains("@import")
         || v.contains("image-set")
         || v.contains("/*")
+        || v.chars().any(|c| matches!(c, '\0'..='\x08' | '\x0b' | '\x0c' | '\x0e'..='\x1f' | '\x7f' | '\u{fffe}' | '\u{ffff}'))
 }
 
 /// Mermaid style declarations split into what applies to a shape, to its outline, and to its
@@ -229,7 +230,7 @@ pub(crate) fn class_names(raw: &str) -> String {
 }
 
 pub(crate) const FONT_MONO: &str = "var(--_fm)";
-pub(crate) const RADIUS: &str = "var(--pele-rs-radius,4px)";
+pub(crate) const RADIUS: &str = "var(--pele-radius,4px)";
 
 fn is_family_char(c: char) -> bool {
     c.is_alphanumeric() || c == '_' || c == '-'
@@ -297,7 +298,7 @@ pub(crate) fn font_style(
     mono: Option<&str>,
     compat: bool,
 ) -> String {
-    let size = super::num(size);
+    let size = crate::util::js_number(size);
     // resvg does not read the `font` shorthand and would draw 12 pixel text.
     let longhand = if compat {
         format!("font-size:{size}px;")
@@ -310,16 +311,21 @@ pub(crate) fn font_style(
         String::new()
     } else {
         format!(
-            "--_fm:var(--pele-rs-font-mono,{});",
+            "--_fm:var(--pele-font-mono,{});",
             families(mono, "monospace")
         )
     };
     format!(
         ";{mono}font:{size}px sans-serif;{longhand}\
          letter-spacing:normal;word-spacing:normal;text-transform:none;direction:ltr;\
-         font-family:var(--pele-rs-font,{})",
+         font-family:var(--pele-font,{})",
         with_cjk(families(family, "sans-serif"), compat),
     )
+}
+
+/// Whether a resolved shape sets its own fill.
+pub(crate) fn sets_fill(shape: &str) -> bool {
+    shape.contains("\"fill:") || shape.contains(";fill:")
 }
 
 #[cfg(test)]
@@ -370,7 +376,7 @@ mod tests {
     #[test]
     fn adds_cjk_fonts_after_the_family() {
         let style = font_style(16.0, Some("Inter"), None, true);
-        assert!(style.contains("font-family:var(--pele-rs-font,Inter,'Noto Sans CJK TC',"));
+        assert!(style.contains("font-family:var(--pele-font,Inter,'Noto Sans CJK TC',"));
         assert!(font_style(16.0, None, None, true).contains("sans-serif,'Noto Sans CJK TC'"));
         assert!(!font_style(16.0, None, None, false).contains("CJK"));
     }
@@ -379,8 +385,8 @@ mod tests {
     fn writes_font_style() {
         assert_eq!(
             font_style(16.0, Some("x;y"), None, false),
-            ";--_fm:var(--pele-rs-font-mono,monospace);font:16px sans-serif;letter-spacing:normal;\
-             word-spacing:normal;text-transform:none;direction:ltr;font-family:var(--pele-rs-font,sans-serif)"
+            ";--_fm:var(--pele-font-mono,monospace);font:16px sans-serif;letter-spacing:normal;\
+             word-spacing:normal;text-transform:none;direction:ltr;font-family:var(--pele-font,sans-serif)"
         );
     }
 }

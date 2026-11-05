@@ -1,8 +1,9 @@
 # Native editor integration
 
 pele-rs is an independent derivative of [fermaid 0.5.1](https://github.com/tenyi/fermaid),
-retaining its Git history and legal notices. The upstream layout reference remains Pele 1.9.0;
-this is not an official Obsidian project or a claim of full parity with a newer Pele release.
+retaining its Git history and legal notices. The upstream layout and style reference is Pele
+1.13.0; see [official conformance](CONFORMANCE.md) for measured coverage and explicit differences.
+This is not an official Obsidian project.
 The package is `pele-rs`, the Rust import is `pele_rs`, and the binary is `pele-rs`.
 Version 0.6.0 is available from Git; it has not been published to crates.io.
 
@@ -87,7 +88,7 @@ last diagram token instead of an artificial appended blank line.
 Mermaid author palette keys `pie1..8`, `git0..7`, `cScale0..7` (timeline, radar, treemap),
 `cScale1..8` (mindmap) and `venn1..8` are applied before host palette resolution. Colors are
 filtered before reaching SVG; labels containing variable-like text are left untouched.
-SVG classes and CSS variables use the `pele-rs` prefix.
+SVG classes and CSS variables use the official `pele` prefix, so Pele themes can be reused.
 
 The existing snapshots, parser compatibility cases and differential harness are retained.
 The fixed parser/layout reference is recorded in `upstream.json`; updating it is a deliberate

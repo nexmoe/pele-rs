@@ -217,6 +217,46 @@ fn title(src: &str, at: usize) -> Found {
     }
 }
 
+fn title_word(src: &str, at: usize) -> Found {
+    let end = spaces_tabs(src, at) + 5;
+    if src
+        .get(end..)
+        .and_then(|s| s.chars().next())
+        .is_some_and(crate::util::is_word)
+    {
+        Found::No
+    } else {
+        title(src, at)
+    }
+}
+fn title_name(src: &str, at: usize) -> Found {
+    let end = spaces_tabs(src, at) + 5;
+    let suffix = src.get(end..).unwrap_or("");
+    let mut chars = suffix
+        .chars()
+        .take_while(|&c| crate::util::is_word(c) || c == '-');
+    if chars.any(crate::util::is_word) {
+        Found::No
+    } else {
+        title(src, at)
+    }
+}
+fn title_dash(src: &str, at: usize) -> Found {
+    let end = spaces_tabs(src, at) + 5;
+    if src
+        .get(end..)
+        .and_then(|s| s.chars().next())
+        .is_some_and(|c| crate::util::is_word(c) || c == '-')
+    {
+        Found::No
+    } else {
+        title(src, at)
+    }
+}
+pub(crate) const TITLE_WORD: TokenType = token("TITLE", Pattern::Match(title_word));
+pub(crate) const TITLE_NAME: TokenType = token("TITLE", Pattern::Match(title_name));
+pub(crate) const TITLE_DASH: TokenType = token("TITLE", Pattern::Match(title_dash));
+
 /// `"([^"\\]|\\.)*"|'([^'\\]|\\.)*'`, where `.` is anything but a line terminator.
 fn string(src: &str, at: usize) -> Found {
     let Some(quote) = src[at..].chars().next().filter(|&q| q == '"' || q == '\'') else {

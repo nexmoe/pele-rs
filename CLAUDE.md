@@ -14,10 +14,10 @@ pele-rs is a pure-Rust library that renders [Mermaid](https://mermaid.js.org) di
 
 Read `docs/NATIVE.md` for the current public API. `docs/ROADMAP.md` is the historical fermaid plan; its release claims refer to that upstream project. Key points:
 
-- Algorithms, text metrics and limits are ported from pele v1.9.0 (`e7f092a`), written as idiomatic Rust (not a line-by-line translation). When behavior is in doubt, run pele's TypeScript sources and compare.
-- pele is a reference, not the specification: Mermaid is. Where pele has a defect — a keyword whose whitespace swallows the next line, a grammar that misreads a task — pele-rs follows Mermaid instead, and the difference is recorded in `tools/oracle/KNOWN.md` and the roadmap. A behavior that only looks wrong but that Mermaid shares is not a defect: port it as it is and pin it with a test. Mermaid has no `v12.2.0` tag in the clone at `../mermaid`; read its grammars there (they are the same as at 12.1.0, commit `21f72f07`, which the older parsers cite).
+- Algorithms, text metrics and limits are ported from Pele 1.13.0 (`3a2f075`), written as idiomatic Rust (not a line-by-line translation). When behavior is in doubt, run pele's TypeScript sources and compare.
+- Official Pele 1.13.0 is the rendering and style reference. `tests/official.rs` and `src/official_units.rs` enforce the pinned baseline; see `docs/CONFORMANCE.md` for platform differences. Do not silently replace a Pele behavior with a Mermaid.js behavior. Historical syntax-only divergences are recorded in `tools/oracle/KNOWN.md`; verify them against the current official corpus before changing a parser.
 - Zero runtime dependencies in the default core; optional `scene` uses usvg. `std`, MSRV 1.85 (no APIs stabilized later). One Cargo feature per diagram type; `default = ["all"]`.
-- CSS variables use the `--pele-rs-*` prefix with pele's suffixes.
+- SVG classes and CSS variables use the official `pele-*` / `--pele-*` namespace.
 - Output must be deterministic (byte-identical for identical input and options).
 - An explicit nesting depth limit is required, because a Rust stack overflow aborts and cannot be caught.
 

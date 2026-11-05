@@ -25,6 +25,8 @@ pub(crate) struct Cell {
     pub row: i64,
     pub cols: i64,
     pub heights: Vec<f64>,
+    pub row_gaps: Vec<f64>,
+    pub col_gaps: Vec<f64>,
     pub x: f64,
     pub y: f64,
     pub w: f64,
@@ -46,6 +48,8 @@ impl Cell {
             row: 0,
             cols: 0,
             heights: Vec::new(),
+            row_gaps: Vec::new(),
+            col_gaps: Vec::new(),
             x: 0.0,
             y: 0.0,
             w: 0.0,
@@ -122,7 +126,7 @@ fn measure(cells: &mut [Cell], at: usize, gap: f64, inset: f64) -> Result<(), Er
             tallest = cells[child].nh;
         }
     }
-    let mut height = (heights.len() as f64 - 1.0) * gap;
+    let mut height = (heights.len() as f64 - 1.0) * gap + cells[at].row_gaps.iter().sum::<f64>();
     for row in heights.iter_mut() {
         if *row < 0.0 {
             *row = tallest;
@@ -131,9 +135,12 @@ fn measure(cells: &mut [Cell], at: usize, gap: f64, inset: f64) -> Result<(), Er
     }
     cells[at].cols = cols;
     cells[at].heights = heights;
-    cells[at].nw = cells[at]
-        .nw
-        .max(cols as f64 * cw + (cols as f64 - 1.0) * gap + 2.0 * inset);
+    cells[at].nw = cells[at].nw.max(
+        cols as f64 * cw
+            + (cols as f64 - 1.0) * gap
+            + cells[at].col_gaps.iter().sum::<f64>()
+            + 2.0 * inset,
+    );
     cells[at].nh = height + 2.0 * inset + cells[at].head;
     Ok(())
 }
@@ -143,8 +150,22 @@ fn arrange(cells: &mut [Cell], at: usize, gap: f64, inset: f64) {
     let cols = cells[at].cols;
     let heights = cells[at].heights.clone();
     let rows = heights.len();
-    let cw = (cells[at].w - 2.0 * inset - (cols as f64 - 1.0) * gap) / cols as f64;
-    let room = cells[at].h - 2.0 * inset - cells[at].head - (rows as f64 - 1.0) * gap;
+    let cw = (cells[at].w
+        - 2.0 * inset
+        - (cols as f64 - 1.0) * gap
+        - cells[at].col_gaps.iter().sum::<f64>())
+        / cols as f64;
+    let room = cells[at].h
+        - 2.0 * inset
+        - cells[at].head
+        - (rows as f64 - 1.0) * gap
+        - cells[at].row_gaps.iter().sum::<f64>();
+    let mut offsets = vec![0.0; cols as usize];
+    let mut sum = 0.0;
+    for (col, offset) in offsets.iter_mut().enumerate() {
+        *offset = sum;
+        sum += cells[at].col_gaps.get(col).copied().unwrap_or(0.0);
+    }
     let needed: f64 = heights.iter().sum();
     let scale = if needed > 0.0 { room / needed } else { 0.0 };
     let share = if needed > 0.0 {
@@ -157,12 +178,26 @@ fn arrange(cells: &mut [Cell], at: usize, gap: f64, inset: f64) {
     let mut row = 0usize;
     for child in cells[at].children.clone() {
         while (row as i64) < cells[child].row {
-            top += heights[row] * scale + share + gap;
+            top += heights[row] * scale
+                + share
+                + gap
+                + cells[at].row_gaps.get(row).copied().unwrap_or(0.0);
             row += 1;
         }
-        cells[child].w = cw * cells[child].span as f64 + gap * (cells[child].span - 1) as f64;
+        let before = offsets
+            .get(cells[child].col as usize)
+            .copied()
+            .unwrap_or(0.0);
+        cells[child].w = cw * cells[child].span as f64
+            + gap * (cells[child].span - 1) as f64
+            + offsets
+                .get((cells[child].col + cells[child].span - 1) as usize)
+                .copied()
+                .unwrap_or(0.0)
+            - before;
         cells[child].h = heights[row] * scale + share;
-        cells[child].x = left + cells[child].col as f64 * (cw + gap) + cells[child].w / 2.0;
+        cells[child].x =
+            left + cells[child].col as f64 * (cw + gap) + before + cells[child].w / 2.0;
         cells[child].y = top + cells[child].h / 2.0;
     }
 }

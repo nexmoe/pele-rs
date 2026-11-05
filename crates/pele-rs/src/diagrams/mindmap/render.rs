@@ -43,12 +43,7 @@ const ROW_GAP: f64 = 10.0;
 /// ragged.
 fn left_label(label: &Label, left: f64, cy: f64) -> String {
     if label.lines.len() < 2 {
-        return label_svg(
-            label,
-            left + label.width / 2.0,
-            cy,
-            " class=\"pele-rs-label\"",
-        );
+        return label_svg(label, left + label.width / 2.0, cy, " class=\"pele-label\"");
     }
     let top = cy - label.height / 2.0;
     let mut out = String::new();
@@ -57,7 +52,7 @@ fn left_label(label: &Label, left: f64, cy: f64) -> String {
             &label_line(label, k),
             left + label.widths[k] / 2.0,
             top + line_middle(label, k),
-            " class=\"pele-rs-label\"",
+            " class=\"pele-label\"",
         );
     }
     out
@@ -302,7 +297,7 @@ fn draw(db: &MindmapDb, input: &Input<'_>, down: bool) -> Output {
         }
         let _ = write!(
             out,
-            "<g class=\"pele-rs-branch pele-rs-section-{section}\"><g class=\"pele-rs-edges\" fill=\"none\" stroke=\"{color}\" stroke-width=\"1.5\">{edges}</g>{body}</g>"
+            "<g class=\"pele-branch pele-section-{section}\"><g class=\"pele-edges\" fill=\"none\" stroke=\"{color}\" stroke-width=\"1.5\">{edges}</g>{body}</g>"
         );
         edges.clear();
         body.clear();
@@ -369,7 +364,7 @@ fn draw(db: &MindmapDb, input: &Input<'_>, down: bool) -> Output {
                 trunk[p] = y2 - bend;
                 let _ = write!(
                     edges,
-                    "<path class=\"pele-rs-edge\"{stroke} d=\"M{},{}V{}Q{},{} {},{}H{}\"/>",
+                    "<path class=\"pele-edge\"{stroke} d=\"M{},{}V{}Q{},{} {},{}H{}\"/>",
                     num(x1),
                     num(y1),
                     num(y2 - bend),
@@ -397,7 +392,7 @@ fn draw(db: &MindmapDb, input: &Input<'_>, down: bool) -> Output {
                 let mid = num((x1 + x2) / 2.0);
                 let _ = write!(
                     edges,
-                    "<path class=\"pele-rs-edge\"{stroke} d=\"M{},{}C{mid},{} {mid},{} {},{}\"/>",
+                    "<path class=\"pele-edge\"{stroke} d=\"M{},{}C{mid},{} {mid},{} {},{}\"/>",
                     num(x1),
                     num(y1),
                     num(y1),
@@ -461,11 +456,11 @@ fn draw(db: &MindmapDb, input: &Input<'_>, down: bool) -> Output {
         let text = if down && shape.is_empty() {
             left_label(label, shift - label.width / 2.0, dy[i])
         } else {
-            label_svg(label, shift, dy[i], " class=\"pele-rs-label\"")
+            label_svg(label, shift, dy[i], " class=\"pele-label\"")
         };
         let group = format!(
-            "<g class=\"pele-rs-node pele-rs-shape-{kind}{}{}\" data-id=\"{}\" transform=\"translate({},{})\">{inner}{text}</g>",
-            if i > 0 { "" } else { " pele-rs-root" },
+            "<g class=\"pele-node pele-shape-{kind}{}{}\" data-id=\"{}\" transform=\"translate({},{})\">{inner}{text}</g>",
+            if i > 0 { "" } else { " pele-root" },
             class_names(node.class.as_deref().unwrap_or("")),
             esc_text(&node.node_id),
             num(cx),
@@ -491,7 +486,7 @@ fn draw(db: &MindmapDb, input: &Input<'_>, down: bool) -> Output {
         &title,
         total_width / 2.0,
         pad + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
     ) + &format!(
         "<g transform=\"translate({},{})\">{out}</g>",
         num(pad - min_x + (width - max_x + min_x) / 2.0),

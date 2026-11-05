@@ -142,6 +142,8 @@ const LEVEL_TOUCH: f64 = 4.0;
 const CROSSED_SLOPE: f64 = 0.5;
 const IN_LINE: f64 = 0.5;
 const SNAP: f64 = 12.0;
+const BEND_SNAP: f64 = 24.0;
+const TWIN: f64 = 1.0;
 const LEAN_CLEAR: f64 = 40.0;
 const MAX_WEIGHED: usize = 400;
 const SAMPLES: usize = 16;
@@ -655,6 +657,8 @@ pub(crate) fn layered(
         }
     }
 
+    align_ports(&g, &mut xs, empty.as_deref());
+
     // A rank that holds nothing but the bends of edges is only there because some other edge
     // has a label or a twin. Its bends move onto the straight line between the ends of their
     // edges, and one that gets there is left out of the route.
@@ -1094,6 +1098,11 @@ pub(crate) fn rank(nodes: &mut [LNode], edges: &[LEdge], step: i32) {
     }
 
     let mut r = vec![0i32; n];
+    for i in 0..n {
+        if nodes[i].kind == Kind::StartPort {
+            r[i] = -step;
+        }
+    }
     let mut indeg: Vec<usize> = (0..n).map(|i| in_start[i + 1] - in_start[i]).collect();
     let mut topo = vec![0usize; n];
     let mut count = 0;
@@ -1294,6 +1303,46 @@ fn follow(g: &Graph, empty: Option<&[bool]>, mut e: usize, side: usize) -> usize
         };
     }
     e
+}
+
+fn align_ports(g: &Graph, xs: &mut [f64], empty: Option<&[bool]>) {
+    for (rank, kind) in [(0, Kind::StartPort), (g.max_rank, Kind::EndPort)] {
+        let start = g.layer_start[rank];
+        let end = g.layer_start[rank + 1];
+        let mut to = Vec::new();
+        for i in start..end {
+            let v = g.order[i];
+            let entering = kind == Kind::StartPort;
+            let count = if entering {
+                g.succ_start[v + 1] - g.succ_start[v]
+            } else {
+                g.pred_start[v + 1] - g.pred_start[v]
+            };
+            if g.kind[v] != kind || count != 1 {
+                break;
+            }
+            let edge = if entering {
+                g.succ_e[g.succ_start[v]]
+            } else {
+                g.pred_e[g.pred_start[v]]
+            };
+            let e = follow(g, empty, edge, usize::from(entering));
+            let at = if entering {
+                xs[g.et[e]] + g.etd[e]
+            } else {
+                xs[g.ef[e]] + g.efd[e]
+            };
+            if to.last().is_some_and(|last| at < last + TWIN) {
+                break;
+            }
+            to.push(at);
+        }
+        if !to.is_empty() && to.len() == end - start {
+            for i in start..end {
+                xs[g.order[i]] = to[i - start];
+            }
+        }
+    }
 }
 
 /// How many ends that may move along it each node has on the side its edges arrive at, and on
@@ -1688,7 +1737,7 @@ fn snap(g: &Graph, xs: &mut [f64], empty: Option<&[bool]>, opt: &LayeredOptions)
         let d = off(xs, k).abs();
         if d < 0.01 {
             join(&mut block, &mut members, a[k], b[k]);
-        } else if d <= SNAP {
+        } else if d <= BEND_SNAP {
             near.push(k);
         }
     }
@@ -1723,7 +1772,7 @@ fn snap(g: &Graph, xs: &mut [f64], empty: Option<&[bool]>, opt: &LayeredOptions)
             join(&mut block, &mut members, a[k], b[k]);
             continue;
         }
-        if d.abs() > SNAP || block[a[k]] == block[b[k]] {
+        if d.abs() > BEND_SNAP || block[a[k]] == block[b[k]] {
             continue;
         }
         let upper = block[a[k]];
@@ -1735,6 +1784,9 @@ fn snap(g: &Graph, xs: &mut [f64], empty: Option<&[bool]>, opt: &LayeredOptions)
         };
         for id in [first, if first == upper { lower } else { upper }] {
             let shift = if id == upper { d } else { -d };
+            if d.abs() > SNAP && !members[id].iter().all(|&v| g.kind[v] == Kind::Dummy) {
+                continue;
+            }
             if !free(xs, &block, &members, id, shift) {
                 continue;
             }
@@ -2154,8 +2206,8 @@ fn straighten(
             twins.clear();
             let mut j = i;
             while j < row.len()
-                && (from[row[j]] - from[row[i]]).abs() < 1.0
-                && (to[row[j]] - to[row[i]]).abs() < 1.0
+                && (from[row[j]] - from[row[i]]).abs() < TWIN
+                && (to[row[j]] - to[row[i]]).abs() < TWIN
             {
                 twins.push(row[j]);
                 j += 1;

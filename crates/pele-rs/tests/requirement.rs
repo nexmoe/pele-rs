@@ -32,10 +32,10 @@ fn try_render(src: &str) -> Option<String> {
 fn draws_requirements_elements_and_relationships() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Requirement);
-    assert_eq!(count(&out.svg, "pele-rs-node pele-rs-requirement"), 3);
-    assert_eq!(count(&out.svg, "pele-rs-node pele-rs-element"), 2);
-    assert_eq!(count(&out.svg, "pele-rs-relationship-contains"), 1);
-    assert_eq!(count(&out.svg, "pele-rs-relationship-arrow"), 4);
+    assert_eq!(count(&out.svg, "pele-node pele-requirement"), 3);
+    assert_eq!(count(&out.svg, "pele-node pele-element"), 2);
+    assert_eq!(count(&out.svg, "pele-relationship-contains"), 1);
+    assert_eq!(count(&out.svg, "pele-relationship-arrow"), 4);
     for needle in [
         "«Functional Requirement»",
         "«Element»",
@@ -43,7 +43,7 @@ fn draws_requirements_elements_and_relationships() {
         ">Verification<",
         ">Inspection<",
         ">reqs/test_entity<",
-        "pele-rs-requirement hot",
+        "pele-requirement hot",
         "fill:#f96",
         "stroke:red",
     ] {
@@ -279,12 +279,12 @@ fn draws_every_relationship_kind() {
         let out = render(&src);
         assert!(out.svg.contains(&format!("\u{ab}{kind}\u{bb}")), "{kind}");
         assert_eq!(
-            count(&out.svg, "pele-rs-relationship-contains"),
+            count(&out.svg, "pele-relationship-contains"),
             usize::from(kind == "contains"),
             "{kind}"
         );
         assert_eq!(
-            count(&out.svg, "pele-rs-relationship-arrow"),
+            count(&out.svg, "pele-relationship-arrow"),
             usize::from(kind != "contains"),
             "{kind}"
         );
@@ -334,7 +334,7 @@ fn puts_a_class_on_an_element() {
     let out = render(
         "requirementDiagram\n element a:::hot {\n type: simulation\n }\n classDef hot fill:#f96\n",
     );
-    assert!(out.svg.contains("pele-rs-element hot"), "{}", out.svg);
+    assert!(out.svg.contains("pele-element hot"), "{}", out.svg);
     assert!(out.svg.contains("fill:#f96"), "{}", out.svg);
 }
 
@@ -344,7 +344,7 @@ fn draws_the_contains_marker_and_dashes_the_other_relationships() {
         "requirementDiagram\n requirement a {\n }\n requirement b {\n }\n a - contains -> b\n a - traces -> b\n",
     );
     assert_eq!(
-        count(&out.svg, "<circle class=\"pele-rs-marker\""),
+        count(&out.svg, "<circle class=\"pele-marker\""),
         1,
         "{}",
         out.svg
@@ -359,13 +359,13 @@ fn draws_the_accessible_title_and_description() {
     );
     assert!(
         out.svg
-            .contains("<title id=\"pele-rs-title\">the title</title>"),
+            .contains("<title id=\"pele-title\">the title</title>"),
         "{}",
         out.svg
     );
     assert!(
         out.svg
-            .contains("<desc id=\"pele-rs-desc\">the description</desc>"),
+            .contains("<desc id=\"pele-desc\">the description</desc>"),
         "{}",
         out.svg
     );

@@ -45,19 +45,16 @@ fn parsed_models_match_one_shot_and_can_be_shared_between_workers() {
 }
 
 #[test]
-fn parsing_config_and_limits_cannot_silently_change() {
+fn parsed_models_retain_parsing_config_and_limits() {
     let parsed = parse("flowchart LR\nA-->B", &ParseOptions::default()).unwrap();
     let options = RenderOptions {
         config: Some("{\"flowchart\":{\"inheritDir\":true}}".into()),
         ..Default::default()
     };
-    assert_eq!(
-        parsed.render(&options).unwrap_err().code,
-        ErrorCode::Semantic
-    );
+    assert!(parsed.render(&options).is_ok());
     let mut options = RenderOptions::default();
     options.limits.max_edges = 1;
-    assert_eq!(parsed.render(&options).unwrap_err().code, ErrorCode::Limit);
+    assert!(parsed.render(&options).is_ok());
     options.limits = Default::default();
     options.limits.output = 20;
     assert_eq!(parsed.render(&options).unwrap_err().code, ErrorCode::Limit);
@@ -81,7 +78,7 @@ fn maps_diagnostics_through_front_matter_comments_directives_and_crlf() {
 
 #[test]
 fn author_palettes_survive_literal_host_colors_without_touching_labels() {
-    let source = "%%{init:{\"themeVariables\":{\"pie1\":\"#ff0000\",\"pie2\":\"#00ff00\"}}}%%\npie\n\"var(--pele-rs-series-1,#4c78a8)\":1\n\"B\":1";
+    let source = "%%{init:{\"themeVariables\":{\"pie1\":\"#ff0000\",\"pie2\":\"#00ff00\"}}}%%\npie\n\"var(--pele-series-1,#4c78a8)\":1\n\"B\":1";
     let options = RenderOptions {
         palette: Some(pele_rs::Palette::dark()),
         ..Default::default()
@@ -90,10 +87,10 @@ fn author_palettes_survive_literal_host_colors_without_touching_labels() {
     assert_eq!(out.kind, DiagramKind::Pie);
     assert!(out.svg.contains("fill=\"#ff0000\""));
     assert!(out.svg.contains("fill=\"#00ff00\""));
-    assert!(out.svg.contains(">var(--pele-rs-series-1,#4c78a8)<"));
+    assert!(out.svg.contains(">var(--pele-series-1,#4c78a8)<"));
     for payload in [
         "url(javascript:alert(1))",
-        "var(--pele-rs-series-1,red)",
+        "var(--pele-series-1,red)",
         "red\" onload=\"alert(1)",
     ] {
         let src =

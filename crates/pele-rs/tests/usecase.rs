@@ -52,10 +52,10 @@ fn draws_actors_use_cases_and_relations() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Usecase);
     // The two actors, the two use cases and the boundary.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-node "), 4);
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-cluster "), 1);
+    assert_eq!(count(&out.svg, "<g class=\"pele-node "), 4);
+    assert_eq!(count(&out.svg, "<g class=\"pele-cluster "), 1);
     // The four relationships.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-edge "), 4);
+    assert_eq!(count(&out.svg, "<g class=\"pele-edge "), 4);
     assert!(out.svg.contains(">Customer<"), "{}", out.svg);
     assert!(out.svg.contains(">Browse products<"), "{}", out.svg);
     assert!(out.svg.contains(">Store<"), "{}", out.svg);
@@ -66,14 +66,10 @@ fn draws_actors_use_cases_and_relations() {
 #[test]
 fn draws_the_actors_as_figures() {
     let out = render("usecase-beta\nactor Customer\nactor Staff\n");
-    assert_eq!(count(&out.svg, "pele-rs-actor-figure"), 2);
+    assert_eq!(count(&out.svg, "pele-actor-figure"), 2);
     // The stick figure of an actor is drawn.
     assert!(out.svg.contains("usecase-actor-normal"), "{}", out.svg);
-    assert!(
-        out.svg.contains("pele-rs-shape-usecaseActor"),
-        "{}",
-        out.svg
-    );
+    assert!(out.svg.contains("pele-actor"), "{}", out.svg);
 }
 
 #[test]
@@ -87,8 +83,8 @@ fn draws_the_shapes_of_the_elements() {
 #[test]
 fn draws_a_boundary_around_its_members() {
     let out = render("usecase-beta\nsystemBoundary Store\n  A\n  B\nend\n");
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-cluster "), 1);
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-node "), 2);
+    assert_eq!(count(&out.svg, "<g class=\"pele-cluster "), 1);
+    assert_eq!(count(&out.svg, "<g class=\"pele-node "), 2);
 }
 
 #[test]
@@ -101,12 +97,8 @@ fn draws_a_note_about_an_element() {
 #[test]
 fn draws_a_json_table() {
     let out = render("usecase-beta\njson Payload@{ \"a\": 1, \"b\": [\"x\"] }\n");
-    assert!(
-        out.svg.contains("pele-rs-shape-usecaseJsonTable"),
-        "{}",
-        out.svg
-    );
-    assert!(out.svg.contains("pele-rs-json-key"), "{}", out.svg);
+    assert!(out.svg.contains("pele-json"), "{}", out.svg);
+    assert!(out.svg.contains("pele-json-key"), "{}", out.svg);
 }
 
 #[test]
@@ -120,7 +112,7 @@ fn reads_the_config() {
 fn draws_a_title() {
     let out = render("---\ntitle: A use case diagram\n---\nusecase-beta\nA\n");
     assert!(out.svg.contains(">A use case diagram<"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-title"));
+    assert!(out.svg.contains("pele-title"));
 }
 
 #[test]
@@ -165,7 +157,7 @@ fn fits_a_narrow_host() {
     let narrow = narrow(FULL);
     assert!(narrow.width <= 360.0, "{}", narrow.width);
     assert!(narrow.height > 0.0);
-    assert_eq!(count(&narrow.svg, "<g class=\"pele-rs-node "), 4);
+    assert_eq!(count(&narrow.svg, "<g class=\"pele-node "), 4);
     let _ = wide;
 }
 

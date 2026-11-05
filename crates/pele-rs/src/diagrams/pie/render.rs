@@ -217,7 +217,7 @@ fn draw(model: &PieModel, input: &Input<'_>, radius: f64, tight: bool) -> Output
         let end = angle + share * PI * 2.0;
         let _ = write!(
             slices,
-            "<path class=\"pele-rs-slice\" data-id=\"{}\" d=\"{}\" fill=\"{}\"/>",
+            "<path class=\"pele-slice\" data-id=\"{}\" d=\"{}\" fill=\"{}\"/>",
             esc_text(label),
             slice(angle, end, radius, inner),
             series_color(index)
@@ -251,16 +251,17 @@ fn draw(model: &PieModel, input: &Input<'_>, radius: f64, tight: bool) -> Output
             let r = radius * text_position;
             let _ = write!(
                 labels,
-                "<text x=\"{}\" y=\"{}\">{text}</text>",
+                "<text x=\"{}\" y=\"{}\"{}>{text}</text>",
                 num(mid.sin() * r),
-                num(-mid.cos() * r + small * 0.35)
+                num(-mid.cos() * r + small * 0.35),
+                crate::palette::series_ink_fill(index)
             );
         }
         angle = end;
     }
     if slices.is_empty() {
         slices = format!(
-            "<circle class=\"pele-rs-slice\" r=\"{}\" fill=\"none\" stroke=\"var(--_b)\"/>",
+            "<circle class=\"pele-slice\" r=\"{}\" fill=\"none\" stroke=\"var(--_b)\"/>",
             js_number(radius)
         );
     }
@@ -286,7 +287,7 @@ fn draw(model: &PieModel, input: &Input<'_>, radius: f64, tight: bool) -> Output
         let y = ly + index as f64 * ROW + ROW / 2.0;
         let _ = write!(
             legend_out,
-            "<g class=\"pele-rs-legend-item\" data-id=\"{}\">\
+            "<g class=\"pele-legend-item\" data-id=\"{}\">\
              <rect x=\"{}\" y=\"{}\" width=\"{SWATCH}\" height=\"{SWATCH}\" rx=\"2\" fill=\"{}\"/>{}</g>",
             esc_text(&entries[index].0),
             num(lx),
@@ -304,31 +305,31 @@ fn draw(model: &PieModel, input: &Input<'_>, radius: f64, tight: bool) -> Output
         &title,
         total_width / 2.0,
         pad + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
     );
     let _ = write!(
         content,
-        "<g class=\"pele-rs-slices\" transform=\"{center}\" stroke=\"var(--_bg)\" stroke-width=\"1\" \
+        "<g class=\"pele-slices\" transform=\"{center}\" stroke=\"var(--_bg)\" stroke-width=\"1\" \
          stroke-linejoin=\"round\">{slices}</g>"
     );
     if !labels.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-slice-labels\" transform=\"{center}\" font-size=\"{small_size}\" \
+            "<g class=\"pele-slice-labels\" transform=\"{center}\" font-size=\"{small_size}\" \
              text-anchor=\"middle\" fill=\"var(--_bg)\">{labels}</g>"
         );
     }
     if !outside.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-slice-labels\" transform=\"{center}\" font-size=\"{small_size}\" \
+            "<g class=\"pele-slice-labels\" transform=\"{center}\" font-size=\"{small_size}\" \
              text-anchor=\"middle\">{outside}</g>"
         );
     }
     if !legend_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-legend\" font-size=\"{small_size}\">{legend_out}</g>"
+            "<g class=\"pele-legend\" font-size=\"{small_size}\">{legend_out}</g>"
         );
     }
 

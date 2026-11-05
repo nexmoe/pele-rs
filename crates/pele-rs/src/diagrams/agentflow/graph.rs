@@ -182,11 +182,13 @@ pub(crate) fn build_agent_graph(db: &mut AgentflowDb) -> AgentGraph {
         if hidden_of(&agent.id) {
             continue;
         }
-        if db.subgraph(&agent.id).is_some() {
-            // A flow that was given a metadata block has a placeholder agent of its own.
+        if let Some(existing) = nodes.iter_mut().find(|n| n.id == agent.id) {
+            existing.css_styles = agent.styles.clone();
+            existing.css_compiled_styles = compiled_styles(db, &agent.classes);
+            existing.css_classes = agent.classes.join(" ");
             continue;
         }
-        let mut classes = vec!["default".to_string()];
+        let mut classes = vec!["default".to_string(), "node".to_string()];
         classes.extend(agent.classes.iter().cloned());
         let shape = type_from_vertex(agent.shape.as_deref());
         nodes.push(GraphNode {
@@ -198,7 +200,7 @@ pub(crate) fn build_agent_graph(db: &mut AgentflowDb) -> AgentGraph {
             parent_id: parent_id_of(&agent.id),
             css_styles: agent.styles.clone(),
             css_compiled_styles: compiled_styles(db, &classes),
-            css_classes: classes.join(" "),
+            css_classes: format!("default {}", agent.classes.join(" ")),
             dir: agent.dir.clone(),
             link: agent.link.clone(),
             link_target: agent.link_target.clone(),
@@ -281,7 +283,7 @@ fn collapsed_into(hidden: &[String], owner: &[(String, String)], id: &str) -> Op
         }
     }
     path.retain(|p| p != id);
-    path.last().cloned()
+    Some(top)
 }
 
 /// Whether holding `child` in `parent` would close a loop.
@@ -378,57 +380,54 @@ fn assign_color_slots(db: &AgentflowDb, nodes: &mut [GraphNode]) {
     // The flows are numbered in the order they were written: a walk of the nesting, parents
     // first.
     let mut order: Vec<String> = Vec::new();
-    let mut roots: Vec<&str> = Vec::new();
     for sg in &db.subgraphs {
         let parent = nodes
             .iter()
             .find(|n| n.id == sg.id)
-            .and_then(|n| n.parent_id.clone());
-        match parent {
-            Some(parent) if parent != sg.id => {
-                if let Some(at) = order.iter().position(|id| *id == parent) {
-                    order.insert(at, sg.id.clone());
-                } else {
-                    order.push(sg.id.clone());
-                }
-            }
-            _ => roots.push(&sg.id),
+            .and_then(|n| n.parent_id.as_deref());
+        if parent.is_some() {
+            continue;
         }
-    }
-    let mut counter = 0;
-    for root in roots {
-        let mut pending = vec![root.to_string()];
+        let mut pending = vec![sg.id.clone()];
         while let Some(id) = pending.pop() {
             if order.contains(&id) {
                 continue;
             }
             order.push(id.clone());
-            for sg in db.subgraphs.iter().rev() {
-                let parent = nodes
+            for child in db.subgraphs.iter().rev() {
+                if nodes
                     .iter()
-                    .find(|n| n.id == sg.id)
-                    .and_then(|n| n.parent_id.clone());
-                if parent.as_deref() == Some(id.as_str()) {
-                    pending.push(sg.id.clone());
+                    .find(|n| n.id == child.id)
+                    .and_then(|n| n.parent_id.as_deref())
+                    == Some(id.as_str())
+                {
+                    pending.push(child.id.clone());
                 }
             }
         }
-        counter += 1;
     }
+    let mut counter = order.len();
     let container_slots = PALETTE.saturating_sub(KIND_COUNT).max(1);
     for node in nodes.iter_mut() {
         if node.is_group || node.shape == "collapsedGroup" {
             let at = order
                 .iter()
                 .position(|id| *id == node.id)
-                .unwrap_or(counter);
+                .unwrap_or_else(|| {
+                    let at = counter;
+                    counter += 1;
+                    at
+                });
             node.color_index = Some((KIND_COUNT + at % container_slots) % PALETTE);
             continue;
         }
-        let kind = db
-            .node(&node.id)
-            .map(|agent| db.vertex_kind(agent))
-            .unwrap_or("task");
+        let kind = if db.connectors.contains_key(&node.id) {
+            "connector"
+        } else {
+            db.node(&node.id)
+                .map(|agent| db.vertex_kind(agent))
+                .unwrap_or("task")
+        };
         if KIND_SLOT.iter().any(|(name, _)| *name == kind) {
             node.kind = Some(kind.to_string());
         }

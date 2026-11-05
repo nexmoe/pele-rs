@@ -251,7 +251,7 @@ fn marker(x: f64, y: f64, dx: f64, dy: f64, color: &str) -> String {
     let by = y - dy * ARROW;
     let half = ARROW * 0.42;
     format!(
-        "<path class=\"pele-rs-marker\" d=\"M{},{}L{},{}L{},{}Z\" fill=\"{color}\" stroke=\"none\"/>",
+        "<path class=\"pele-marker\" d=\"M{},{}L{},{}L{},{}Z\" fill=\"{color}\" stroke=\"none\"/>",
         num(x),
         num(y),
         num(bx + nx * half),
@@ -266,7 +266,7 @@ fn edge_label_svg(id: &str, label: &Label, x: f64, y: f64) -> String {
     let w = label.width + 8.0;
     let h = label.height;
     format!(
-        "<g class=\"pele-rs-edge-label\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" \
+        "<g class=\"pele-edge-label\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" \
          height=\"{}\" rx=\"3\" fill=\"var(--_bg)\"/>{}</g>",
         esc_text(id),
         num(x - w / 2.0),
@@ -777,7 +777,7 @@ fn draw(model: &ArchitectureModel, input: &Input<'_>, tight: bool) -> Output {
         }
         let id = esc_text(&format!("{}-{}", edge.lhs_id, edge.rhs_id));
         edges_out += &format!(
-            "<g class=\"pele-rs-edge\" data-id=\"{id}\"><path d=\"{}\"/>",
+            "<g class=\"pele-edge\" data-id=\"{id}\"><path d=\"{}\"/>",
             path_data(
                 &points,
                 if edge.lhs_into && !s.wire {
@@ -927,11 +927,11 @@ fn draw(model: &ArchitectureModel, input: &Input<'_>, tight: bool) -> Output {
                 label,
                 text_x + label.width / 2.0,
                 cy,
-                " class=\"pele-rs-cluster-label\" fill=\"var(--_m)\"",
+                " class=\"pele-cluster-label\" fill=\"var(--_m)\"",
             );
         }
         clusters += &format!(
-            "<g class=\"pele-rs-cluster\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" \
+            "<g class=\"pele-cluster\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" \
              height=\"{}\" fill=\"var(--_a)\" fill-opacity=\"0.5\" stroke=\"var(--_b)\"{ROUNDED}/>{}</g>",
             esc_text(&group.id),
             num(x),
@@ -955,7 +955,7 @@ fn draw(model: &ArchitectureModel, input: &Input<'_>, tight: bool) -> Output {
         );
         if node.kind == NodeKind::Junction {
             nodes_out += &format!(
-                "<g class=\"pele-rs-node pele-rs-junction\" {at}><circle cy=\"{}\" r=\"{}\" \
+                "<g class=\"pele-node pele-junction\" {at}><circle cy=\"{}\" r=\"{}\" \
                  fill=\"var(--_l)\"/></g>",
                 num(half),
                 num(DOT)
@@ -993,15 +993,12 @@ fn draw(model: &ArchitectureModel, input: &Input<'_>, tight: bool) -> Output {
                 &fit(&label, icon_size - 8.0, lines, measurer),
                 0.0,
                 half,
-                &format!(
-                    " class=\"pele-rs-icon-text\" font-size=\"{}\"",
-                    num(text_size)
-                ),
+                &format!(" class=\"pele-icon-text\" font-size=\"{}\"", num(text_size)),
             );
         }
         let label = &view.labels[i];
         nodes_out += &format!(
-            "<g class=\"pele-rs-node pele-rs-service\" {at}><rect x=\"{}\" width=\"{}\" height=\"{}\" \
+            "<g class=\"pele-node pele-service\" {at}><rect x=\"{}\" width=\"{}\" height=\"{}\" \
              fill=\"var(--_s)\" stroke=\"var(--_b)\"{ROUNDED}/>{inner}{}</g>",
             num(-half),
             num(icon_size),
@@ -1010,7 +1007,7 @@ fn draw(model: &ArchitectureModel, input: &Input<'_>, tight: bool) -> Output {
                 label,
                 0.0,
                 icon_size + LABEL_GAP + label.height / 2.0,
-                " class=\"pele-rs-label\""
+                " class=\"pele-label\""
             )
         );
     }
@@ -1034,19 +1031,19 @@ fn draw(model: &ArchitectureModel, input: &Input<'_>, tight: bool) -> Output {
     let oy = (pad + title_height - min_y).round();
     let mut body = String::new();
     if !clusters.is_empty() {
-        body += &format!("<g class=\"pele-rs-clusters\">{clusters}</g>");
+        body += &format!("<g class=\"pele-clusters\">{clusters}</g>");
     }
     if !edges_out.is_empty() {
         body += &format!(
-            "<g class=\"pele-rs-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\" \
+            "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\" \
              stroke-linejoin=\"round\">{edges_out}</g>"
         );
     }
     if !labels_out.is_empty() {
-        body += &format!("<g class=\"pele-rs-edge-labels\" font-size=\"{small}\">{labels_out}</g>");
+        body += &format!("<g class=\"pele-edge-labels\" font-size=\"{small}\">{labels_out}</g>");
     }
     if !nodes_out.is_empty() {
-        body += &format!("<g class=\"pele-rs-nodes\">{nodes_out}</g>");
+        body += &format!("<g class=\"pele-nodes\">{nodes_out}</g>");
     }
     let acc = Accessible {
         title: model.acc_title.clone(),
@@ -1066,7 +1063,7 @@ fn draw(model: &ArchitectureModel, input: &Input<'_>, tight: bool) -> Output {
                     &title,
                     width / 2.0,
                     pad + title.height / 2.0,
-                    " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+                    " class=\"pele-title\" font-weight=\"var(--_tw)\"",
                 ),
                 if body.is_empty() {
                     String::new()

@@ -320,12 +320,12 @@ impl AgentflowDb {
             meta
         });
 
-        // The metadata of a flow goes to the flow.
-        if let Some(sg) = self.subgraph_mut(id) {
-            if let Some(meta) = metadata {
-                sg.metadata = Some(merge(sg.metadata.take(), meta));
+        // Metadata belongs to the container; a style statement still creates its styling node.
+        if let Some(meta) = metadata.as_ref() {
+            if let Some(sg) = self.subgraph_mut(id) {
+                sg.metadata = Some(merge(sg.metadata.take(), meta.clone()));
+                return Ok(());
             }
-            return Ok(());
         }
         // The metadata of a connector goes to the connector.
         if self.connectors.contains_key(id) {
@@ -428,14 +428,16 @@ impl AgentflowDb {
             }
             node.shape = Some(resolved);
         }
-        if let Some(label) = meta.get("label") {
-            node.text = Some(strip_quotes(&label.js_string()));
-        }
-        if let Some(kind) = meta.get("labelType") {
-            node.label_type = match kind.js_string().as_str() {
-                "markdown" => LabelType::Markdown,
-                "string" => LabelType::Str,
-                _ => LabelType::Text,
+        if let Some(label) = meta.get("label").filter(|v| v.truthy()) {
+            node.text = Some(label.js_string());
+            node.label_type = match meta
+                .get("labelType")
+                .map(crate::preprocess::Value::js_string)
+                .as_deref()
+            {
+                Some("string") => LabelType::Str,
+                Some("text") => LabelType::Text,
+                _ => LabelType::Markdown,
             };
         }
         Ok(())
@@ -576,7 +578,22 @@ impl AgentflowDb {
     }
 
     /// Adds the edges between two sets of agents.
-    pub(crate) fn add_link(&mut self, start: &[String], end: &[String], link: &LinkInfo) {
+    pub(crate) fn add_link(
+        &mut self,
+        start: &[String],
+        end: &[String],
+        link: &LinkInfo,
+    ) -> Result<(), crate::Error> {
+        if start
+            .len()
+            .checked_mul(end.len())
+            .is_none_or(|n| n > self.max_edges.saturating_sub(self.edges.len()))
+        {
+            return Err(crate::Error::new(
+                crate::ErrorCode::Limit,
+                format!("Edge limit exceeded. The limit is {}.", self.max_edges),
+            ));
+        }
         let id = link.id.as_deref().map(|id| id.replacen('@', "", 1));
         let last_start = start.last().cloned().unwrap_or_default();
         let first_end = end.first().cloned().unwrap_or_default();
@@ -592,6 +609,7 @@ impl AgentflowDb {
                 self.add_single_link(s, e, link, id);
             }
         }
+        Ok(())
     }
 
     /// Adds one edge.
@@ -654,7 +672,10 @@ impl AgentflowDb {
             let Some(node) = self.node_mut(id) else {
                 continue;
             };
-            node.link = Some(url.to_string());
+            node.link = Some(crate::url::safe_url(crate::util::trim(url)));
+            if !node.classes.iter().any(|c| c == "clickable") {
+                node.classes.push("clickable".to_string());
+            }
             node.link_target = target.map(str::to_string);
         }
     }
@@ -683,6 +704,7 @@ impl AgentflowDb {
             };
             if let Some(node) = self.node_mut(id) {
                 node.callback = Some(callback);
+                node.classes.push("clickable".to_string());
             }
         }
     }
@@ -690,15 +712,14 @@ impl AgentflowDb {
     /// Puts agents in a class.
     pub(crate) fn set_class(&mut self, ids: &str, class: &str) {
         for id in ids.split(',') {
-            let id = id.trim();
-            if id.is_empty() {
-                continue;
-            }
-            let Some(node) = self.node_mut(id) else {
-                continue;
-            };
-            if !node.classes.iter().any(|c| c == class) {
+            if let Some(node) = self.node_mut(id) {
                 node.classes.push(class.to_string());
+            }
+            if let Some(edge) = self.edges.iter_mut().find(|e| e.id.as_deref() == Some(id)) {
+                edge.classes.push(class.to_string());
+            }
+            if let Some(group) = self.subgraph_mut(id) {
+                group.classes.push(class.to_string());
             }
         }
     }
@@ -707,23 +728,33 @@ impl AgentflowDb {
     pub(crate) fn add_class(&mut self, ids: &str, style: &[String]) {
         // Mermaid joins the styles with a comma, then splits them on semicolons, so that a
         // style may hold a semicolon of its own.
-        let joined = style.join(",");
-        let parts = split_styles(&joined);
+        let joined = style
+            .join(",")
+            .replace("\\,", "§§§")
+            .replace(',', ";")
+            .replace("§§§", ",");
+        let parts: Vec<_> = joined.split(';').map(str::to_string).collect();
         for id in ids.split(',') {
-            let id = id.trim();
-            if id.is_empty() {
-                continue;
-            }
-            if let Some(def) = self.classes.iter_mut().find(|(n, _)| n == id) {
-                def.1.styles.extend(parts.iter().cloned());
+            let at = if let Some(at) = self.classes.iter().position(|(n, _)| n == id) {
+                at
             } else {
                 self.classes.push((
                     id.to_string(),
                     ClassDef {
-                        styles: parts.to_vec(),
+                        styles: Vec::new(),
                         text_styles: Vec::new(),
                     },
                 ));
+                self.classes.len() - 1
+            };
+            for part in &parts {
+                if part.contains("color") {
+                    self.classes[at]
+                        .1
+                        .text_styles
+                        .push(part.replace("fill", "bgFill"));
+                }
+                self.classes[at].1.styles.push(part.clone());
             }
         }
     }
@@ -829,26 +860,6 @@ fn strip_quotes(text: &str) -> String {
     } else {
         text.to_string()
     }
-}
-
-/// Splits a style list on semicolons, the way Mermaid does.
-fn split_styles(joined: &str) -> Vec<String> {
-    let mut out = Vec::new();
-    let mut current = String::new();
-    let mut chars = joined.chars().peekable();
-    while let Some(c) = chars.next() {
-        if c == '\\' && chars.peek() == Some(&',') {
-            current.push(',');
-            chars.next();
-        } else if c == ';' {
-            out.push(current.trim().to_string());
-            current = String::new();
-        } else {
-            current.push(c);
-        }
-    }
-    out.push(current.trim().to_string());
-    out
 }
 
 /// Whether an agent is a tool, which v0.8.1 reads off the shape it was written with.

@@ -9,3 +9,7 @@ edition = "2024"
 rust-version = "1.85"
 license = "MIT OR Apache-2.0 OR BSD-3-Clause OR 0BSD"
 repository = "https://github.com/nexmoe/pele-rs"
+
+# Official stress corpora include tens of thousands of nodes and class names.
+[profile.test]
+opt-level = 1

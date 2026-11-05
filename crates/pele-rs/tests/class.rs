@@ -52,14 +52,14 @@ fn draws_classes_members_and_relations() {
         "classDiagram\n class Animal {\n <<abstract>>\n +String name\n +int age$\n +makeSound()* void\n }\n Animal <|-- Duck\n Animal <|-- Fish\n Duck \"1\" *-- \"many\" Egg : lays\n Fish o-- Fin\n Duck ..> Water\n Duck -- Pond\n",
     );
     assert_eq!(out.kind, DiagramKind::Class);
-    assert_eq!(count(&out.svg, "pele-rs-node pele-rs-class"), 7);
-    assert_eq!(count(&out.svg, "pele-rs-relation"), 6);
-    assert_eq!(count(&out.svg, "pele-rs-cardinality\""), 2);
+    assert_eq!(count(&out.svg, "pele-node pele-class"), 7);
+    assert_eq!(count(&out.svg, "pele-relation"), 6);
+    assert_eq!(count(&out.svg, "pele-cardinality\""), 2);
     for needle in [
         "«abstract»",
         "+String name",
-        "pele-rs-static",
-        "pele-rs-abstract",
+        "pele-static",
+        "pele-abstract",
         "+makeSound() : void",
         ">lays<",
     ] {
@@ -73,10 +73,10 @@ fn draws_namespaces_notes_generics_and_interfaces() {
         "classDiagram\n namespace Shapes {\n class Square~Shape~ {\n List~int~ position\n }\n class Circle\n }\n note for Circle \"round\"\n note \"loose\"\n Square --() Drawable\n Circle --> Circle : self\n",
     );
     for needle in [
-        "pele-rs-namespace",
-        "class=\"pele-rs-node pele-rs-note\"",
-        "pele-rs-note-edge",
-        "pele-rs-interface",
+        "pele-namespace",
+        "class=\"pele-node pele-note\"",
+        "pele-note-edge",
+        "pele-interface",
         "Square&lt;Shape&gt;",
         "List&lt;int&gt; position",
         ">round<",
@@ -85,13 +85,9 @@ fn draws_namespaces_notes_generics_and_interfaces() {
         assert!(svg.contains(needle), "{needle}");
     }
     // The note that names no class is drawn on its own; the one that names a class is joined to it.
-    assert_eq!(
-        count(&svg, "class=\"pele-rs-node pele-rs-note\""),
-        2,
-        "{svg}"
-    );
+    assert_eq!(count(&svg, "class=\"pele-node pele-note\""), 2, "{svg}");
     assert!(svg.contains(">loose<"), "the loose note is drawn");
-    assert_eq!(count(&svg, "pele-rs-note-edge"), 1, "{svg}");
+    assert_eq!(count(&svg, "pele-note-edge"), 1, "{svg}");
     assert_inert(&svg, "namespaces");
 }
 
@@ -373,11 +369,11 @@ fn draws_an_end_marker_for_every_relation_end() {
     let drawn = svg(
         "classDiagram\n Animal <|-- Duck\n Duck \"1\" *-- \"many\" Egg\n Fish o-- Fin\n Duck ..> Water\n Duck -- Pond\n",
     );
-    assert_eq!(count(&drawn, "pele-rs-relation"), 5, "{drawn}");
-    assert_eq!(count(&drawn, "pele-rs-marker"), 4, "{drawn}");
+    assert_eq!(count(&drawn, "pele-relation"), 5, "{drawn}");
+    assert_eq!(count(&drawn, "pele-marker"), 4, "{drawn}");
     let lollipop = svg("classDiagram\n A --() B\n");
     assert!(
-        lollipop.contains("<circle class=\"pele-rs-marker\""),
+        lollipop.contains("<circle class=\"pele-marker\""),
         "{lollipop}"
     );
 }
@@ -385,8 +381,8 @@ fn draws_an_end_marker_for_every_relation_end() {
 #[test]
 fn draws_a_relation_without_an_end_marker() {
     let svg = svg("classDiagram\n A -- B\n");
-    assert_eq!(count(&svg, "pele-rs-relation"), 1, "{svg}");
-    assert_eq!(count(&svg, "pele-rs-marker"), 0, "{svg}");
+    assert_eq!(count(&svg, "pele-relation"), 1, "{svg}");
+    assert_eq!(count(&svg, "pele-marker"), 0, "{svg}");
 }
 
 #[test]
@@ -395,7 +391,7 @@ fn draws_class_labels_and_annotations() {
     assert!(svg.contains(">My Label<"), "{svg}");
     assert!(svg.contains("«interface»"), "{svg}");
     assert!(svg.contains("«enumeration»"), "{svg}");
-    assert_eq!(count(&svg, "pele-rs-annotation"), 2, "{svg}");
+    assert_eq!(count(&svg, "pele-annotation"), 2, "{svg}");
 }
 
 #[test]
@@ -406,22 +402,22 @@ fn draws_member_visibility_classifiers_and_generics() {
     for needle in [">-private<", ">#protected<", ">~package<", ">+public<"] {
         assert!(svg.contains(needle), "{needle}");
     }
-    assert_eq!(count(&svg, "pele-rs-static"), 1, "{svg}");
-    assert_eq!(count(&svg, "pele-rs-abstract"), 1, "{svg}");
+    assert_eq!(count(&svg, "pele-static"), 1, "{svg}");
+    assert_eq!(count(&svg, "pele-abstract"), 1, "{svg}");
     assert!(svg.contains("List&lt;int&gt;"), "{svg}");
 }
 
 #[test]
 fn nests_namespaces() {
     let svg = svg("classDiagram\n namespace A {\n namespace B {\n class C\n }\n }\n");
-    assert_eq!(count(&svg, "pele-rs-namespace"), 2, "{svg}");
-    assert!(svg.contains("pele-rs-node pele-rs-class"), "{svg}");
+    assert_eq!(count(&svg, "pele-namespace"), 2, "{svg}");
+    assert!(svg.contains("pele-node pele-class"), "{svg}");
 }
 
 #[test]
 fn applies_a_css_class_to_several_classes() {
     let svg = svg("classDiagram\n class A\n class B\n cssClass \"A,B\" hot\n");
-    assert_eq!(count(&svg, "pele-rs-node pele-rs-class hot"), 2, "{svg}");
+    assert_eq!(count(&svg, "pele-node pele-class hot"), 2, "{svg}");
 }
 
 #[test]
@@ -434,22 +430,22 @@ fn draws_a_link_with_its_tooltip_and_never_a_callback() {
     let cb = svg("classDiagram\n class A\n callback A \"alertFn\" \"the tooltip\"\n");
     assert!(!cb.contains("alertFn"), "{cb}");
     assert!(cb.contains("<title>the tooltip</title>"), "{cb}");
-    assert!(cb.contains("pele-rs-node pele-rs-class clickable"), "{cb}");
+    assert!(cb.contains("pele-node pele-class clickable"), "{cb}");
 }
 
 #[test]
 fn renders_accessibility_text() {
     let svg = svg("classDiagram\n accTitle: My Title\n accDescr: My Description\n A --> B\n");
     assert!(
-        svg.contains("<title id=\"pele-rs-title\">My Title</title>"),
+        svg.contains("<title id=\"pele-title\">My Title</title>"),
         "{svg}"
     );
     assert!(
-        svg.contains("<desc id=\"pele-rs-desc\">My Description</desc>"),
+        svg.contains("<desc id=\"pele-desc\">My Description</desc>"),
         "{svg}"
     );
-    assert!(svg.contains("aria-labelledby=\"pele-rs-title\""), "{svg}");
-    assert!(svg.contains("aria-describedby=\"pele-rs-desc\""), "{svg}");
+    assert!(svg.contains("aria-labelledby=\"pele-title\""), "{svg}");
+    assert!(svg.contains("aria-describedby=\"pele-desc\""), "{svg}");
 }
 
 #[test]

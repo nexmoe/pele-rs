@@ -51,18 +51,18 @@ fn draws_the_five_domains() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Cynefin);
     // The four regions of the frame and the ellipse in the middle.
-    assert_eq!(count(&out.svg, "class=\"pele-rs-cynefin-region\""), 5);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-cynefin-boundaries\""), 1);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-cynefin-cliff\""), 1);
+    assert_eq!(count(&out.svg, "class=\"pele-cynefin-region\""), 5);
+    assert_eq!(count(&out.svg, "class=\"pele-cynefin-boundaries\""), 1);
+    assert_eq!(count(&out.svg, "class=\"pele-cynefin-cliff\""), 1);
     // Every domain is drawn, with its name.
-    assert_eq!(count(&out.svg, "class=\"pele-rs-cynefin-domain\""), 5);
+    assert_eq!(count(&out.svg, "class=\"pele-cynefin-domain\""), 5);
     for name in ["Complex", "Complicated", "Clear", "Chaotic", "Confusion"] {
         assert!(out.svg.contains(&format!(">{name}<")), "{}", out.svg);
     }
     // The items are in the badges.
     assert!(out.svg.contains(">Investigate root cause<"), "{}", out.svg);
     assert!(out.svg.contains(">Unknown failure mode<"), "{}", out.svg);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-node\""), 6);
+    assert_eq!(count(&out.svg, "class=\"pele-node\""), 6);
 }
 
 #[test]
@@ -71,11 +71,11 @@ fn puts_the_items_in_the_domain_they_name() {
     // The clear domain stands in the right half of the frame, the chaotic one in the left half.
     let clear = out
         .svg
-        .find("class=\"pele-rs-cynefin-domain\" data-id=\"clear\"")
+        .find("class=\"pele-cynefin-domain\" data-id=\"clear\"")
         .expect("the clear domain");
     let chaotic = out
         .svg
-        .find("class=\"pele-rs-cynefin-domain\" data-id=\"chaotic\"")
+        .find("class=\"pele-cynefin-domain\" data-id=\"chaotic\"")
         .expect("the chaotic domain");
     // The domains are drawn in the order of the frame.
     assert!(chaotic < clear, "{}", out.svg);
@@ -98,7 +98,7 @@ fn puts_the_items_in_the_domain_they_name() {
 fn draws_the_transitions() {
     let out =
         render("cynefin-beta\n  complex\n  complicated\n  complex --> complicated : \"Pattern\"\n");
-    assert_eq!(count(&out.svg, "class=\"pele-rs-edge\""), 1);
+    assert_eq!(count(&out.svg, "class=\"pele-edge\""), 1);
     assert!(
         out.svg.contains("data-id=\"complex-complicated\""),
         "{}",
@@ -107,14 +107,14 @@ fn draws_the_transitions() {
     // The label of the transition is drawn.
     assert!(out.svg.contains(">Pattern<"), "{}", out.svg);
     // The arrowhead of the transition.
-    assert_eq!(count(&out.svg, "class=\"pele-rs-marker\""), 1);
+    assert_eq!(count(&out.svg, "class=\"pele-marker\""), 1);
 }
 
 #[test]
 fn drops_a_self_loop() {
     // Mermaid's database skips a transition that starts and ends in the same domain.
     let out = render("cynefin-beta\n  complex\n  complex --> complex : \"x\"\n");
-    assert_eq!(count(&out.svg, "class=\"pele-rs-edge\""), 0);
+    assert_eq!(count(&out.svg, "class=\"pele-edge\""), 0);
 }
 
 #[test]
@@ -139,7 +139,7 @@ fn reads_the_config() {
 fn draws_a_title() {
     let out = render("---\ntitle: A Cynefin map\n---\ncynefin-beta\n  complex\n");
     assert!(out.svg.contains(">A Cynefin map<"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-title"));
+    assert!(out.svg.contains("pele-title"));
     // The title of the source wins over the one of the front matter.
     let out = render("---\ntitle: A Cynefin map\n---\ncynefin-beta\n  title Another\n  complex\n");
     assert!(out.svg.contains(">Another<"), "{}", out.svg);
@@ -153,13 +153,13 @@ fn draws_the_accessible_text() {
     );
     assert!(
         out.svg
-            .contains("<title id=\"pele-rs-title\">The framework</title>"),
+            .contains("<title id=\"pele-title\">The framework</title>"),
         "{}",
         out.svg
     );
     assert!(
         out.svg
-            .contains("<desc id=\"pele-rs-desc\">A map of the five domains</desc>"),
+            .contains("<desc id=\"pele-desc\">A map of the five domains</desc>"),
         "{}",
         out.svg
     );

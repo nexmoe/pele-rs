@@ -41,7 +41,12 @@ fn option(config: &Config, key: &str, fallback: f64, min: f64, max: f64) -> f64 
 /// How far from the centre a value reaches.
 fn relative_radius(value: f64, min: f64, max: f64, radius: f64) -> f64 {
     let clipped = value.max(min).min(max);
-    radius * (clipped - min) / (max - min)
+    let scaled = radius * (clipped - min);
+    if scaled.is_finite() {
+        scaled / (max - min)
+    } else {
+        radius * ((clipped - min) / (max - min))
+    }
 }
 
 /// A closed Catmull-Rom spline through the points, as cubic Bézier segments.
@@ -203,7 +208,7 @@ fn draw_radar(
                 0.0
             };
         labels += &format!(
-            "<g class=\"pele-rs-radar-axis-label\" data-id=\"{}\">{}</g>",
+            "<g class=\"pele-axis-label\" data-id=\"{}\">{}</g>",
             esc_text(&axes[i].name),
             label_svg(&label, cx, cy, "")
         );
@@ -234,7 +239,7 @@ fn draw_radar(
             .collect();
         let color = series_color(index);
         let attrs = format!(
-            " class=\"pele-rs-radar-curve\" data-id=\"{}\" fill=\"{color}\" stroke=\"{color}\"",
+            " class=\"pele-curve\" data-id=\"{}\" fill=\"{color}\" stroke=\"{color}\"",
             esc_text(&curve.name)
         );
         shapes += &if graticule == Graticule::Circle {
@@ -292,7 +297,7 @@ fn draw_radar(
         let y = legend_top + index as f64 * ROW + ROW / 2.0;
         let color = series_color(index);
         legend_out += &format!(
-            "<g class=\"pele-rs-radar-legend-item\" data-id=\"{}\">\
+            "<g class=\"pele-legend-item\" data-id=\"{}\">\
              <rect x=\"{}\" y=\"{}\" width=\"{SWATCH}\" height=\"{SWATCH}\" rx=\"2\" \
              fill=\"{color}\" fill-opacity=\"0.4\" stroke=\"{color}\"/>{}</g>",
             esc_text(&curves[index].name),
@@ -330,39 +335,35 @@ fn draw_radar(
             &title,
             total_width / 2.0,
             pad + title.height / 2.0,
-            " class=\"pele-rs-title\" font-weight=\"var(--_tw)\""
+            " class=\"pele-title\" font-weight=\"var(--_tw)\""
         ),
         if grid.is_empty() {
             String::new()
         } else {
-            format!(
-                "<g class=\"pele-rs-radar-graticule\" fill=\"none\" stroke=\"var(--_a)\">{grid}</g>"
-            )
+            format!("<g class=\"pele-graticule\" fill=\"none\" stroke=\"var(--_a)\">{grid}</g>")
         },
         if spokes.is_empty() {
             String::new()
         } else {
-            format!(
-                "<path class=\"pele-rs-radar-axes\" d=\"{spokes}\" fill=\"none\" stroke=\"var(--_b)\"/>"
-            )
+            format!("<path class=\"pele-axes\" d=\"{spokes}\" fill=\"none\" stroke=\"var(--_b)\"/>")
         },
         if shapes.is_empty() {
             String::new()
         } else {
             format!(
-                "<g class=\"pele-rs-radar-curves\" fill-opacity=\"0.2\" stroke-width=\"1.5\" \
+                "<g class=\"pele-curves\" fill-opacity=\"0.2\" stroke-width=\"1.5\" \
                  stroke-linejoin=\"round\">{shapes}</g>"
             )
         },
         if labels.is_empty() {
             String::new()
         } else {
-            format!("<g class=\"pele-rs-radar-axis-labels\" font-size=\"{small}\">{labels}</g>")
+            format!("<g class=\"pele-axis-labels\" font-size=\"{small}\">{labels}</g>")
         },
         if legend_out.is_empty() {
             String::new()
         } else {
-            format!("<g class=\"pele-rs-radar-legend\" font-size=\"{small}\">{legend_out}</g>")
+            format!("<g class=\"pele-legend\" font-size=\"{small}\">{legend_out}</g>")
         },
     );
 

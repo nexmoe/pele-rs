@@ -92,11 +92,11 @@ fn draws_the_lanes() {
     let out = render(LANES);
     assert_eq!(out.kind, DiagramKind::Swimlane);
     // Two lanes, each with its title in a band of its own.
-    assert_eq!(count(&out.svg, "class=\"pele-rs-cluster pele-rs-lane"), 2);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-cluster-label\""), 2);
+    assert_eq!(count(&out.svg, "class=\"pele-cluster pele-lane"), 2);
+    assert_eq!(count(&out.svg, "class=\"pele-cluster-label\""), 2);
     // The nodes of the lanes and the edges between them.
-    assert_eq!(count(&out.svg, "class=\"pele-rs-node "), 4);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-edge\""), 3);
+    assert_eq!(count(&out.svg, "class=\"pele-node "), 4);
+    assert_eq!(count(&out.svg, "class=\"pele-edge\""), 3);
     // The title of a lane is written out.
     assert!(out.svg.contains(">Customer<"), "{}", out.svg);
     assert!(out.svg.contains(">Warehouse<"), "{}", out.svg);
@@ -134,9 +134,9 @@ fn keeps_the_nodes_inside_their_lane() {
 fn shares_one_unnamed_lane_between_the_nodes_that_have_none() {
     let out = render("swimlane-beta LR\n A[One] --> B[Two]\n");
     // One lane, with no title of its own.
-    assert_eq!(count(&out.svg, "class=\"pele-rs-cluster pele-rs-lane"), 1);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-cluster-label\""), 0);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-node "), 2);
+    assert_eq!(count(&out.svg, "class=\"pele-cluster pele-lane"), 1);
+    assert_eq!(count(&out.svg, "class=\"pele-cluster-label\""), 0);
+    assert_eq!(count(&out.svg, "class=\"pele-node "), 2);
 }
 
 #[test]
@@ -375,8 +375,8 @@ fn draws_a_nested_lane_as_a_group() {
     let out = render(
         "swimlane-beta LR\n subgraph lane\n  subgraph inner\n   a[One] --> b[Two]\n  end\n end\n",
     );
-    assert_eq!(count(&out.svg, "class=\"pele-rs-cluster pele-rs-lane"), 1);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-cluster\""), 1);
+    assert_eq!(count(&out.svg, "class=\"pele-cluster pele-lane"), 1);
+    assert_eq!(count(&out.svg, "class=\"pele-cluster\""), 1);
 }
 
 #[test]

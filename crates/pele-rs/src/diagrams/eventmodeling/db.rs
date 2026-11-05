@@ -101,6 +101,8 @@ pub(crate) struct Specification {
 #[derive(Debug, Clone, Default, PartialEq)]
 pub(crate) struct EventModel {
     pub title: Option<String>,
+    pub acc_title: Option<String>,
+    pub acc_descr: Option<String>,
     pub boxes: Vec<FrameBox>,
     /// The lanes, from top to bottom.
     pub lanes: Vec<Lane>,
@@ -291,7 +293,27 @@ pub(crate) fn build_event_model(
     lanes.sort_by_key(|lane| lane.index);
 
     Ok(EventModel {
-        title: title.map(str::to_string),
+        title: ast
+            .title
+            .as_deref()
+            .map(crate::diagrams::common::tokens::title_value)
+            .filter(|s| !s.is_empty())
+            .or_else(|| title.map(str::to_string)),
+        acc_title: ast
+            .acc_title
+            .as_deref()
+            .map(crate::diagrams::common::tokens::acc_title_value)
+            .map(|s| s.trim_start_matches(crate::util::is_space).to_string()),
+        acc_descr: ast
+            .acc_descr
+            .as_deref()
+            .map(crate::diagrams::common::tokens::acc_descr_value)
+            .map(|s| {
+                s.split('\n')
+                    .map(str::trim_start)
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            }),
         boxes,
         lanes,
         relations,

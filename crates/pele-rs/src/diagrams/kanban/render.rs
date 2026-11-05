@@ -346,12 +346,12 @@ pub(crate) fn render_kanban(db: &KanbanDb, input: &Input<'_>) -> Output {
             &titles[index],
             COLUMN_PAD + 4.0,
             COLUMN_PAD,
-            " class=\"pele-rs-cluster-label\" font-weight=\"var(--_hw)\"",
+            " class=\"pele-cluster-label\" font-weight=\"var(--_hw)\"",
             false,
         );
         let _ = write!(
             body,
-            "<text class=\"pele-rs-count\" x=\"{}\" y=\"{}\" text-anchor=\"end\" font-size=\"{}\" fill=\"var(--_m)\">{}</text>",
+            "<text class=\"pele-count\" x=\"{}\" y=\"{}\" text-anchor=\"end\" font-size=\"{}\" fill=\"var(--_m)\">{}</text>",
             js_number(edge),
             num(COLUMN_PAD + line / 2.0 + small * 0.35),
             js_number(small),
@@ -383,7 +383,7 @@ pub(crate) fn render_kanban(db: &KanbanDb, input: &Input<'_>) -> Output {
             if let Some(color) = &color {
                 let _ = write!(
                     inner,
-                    "<path class=\"pele-rs-priority\" d=\"M2.5,5V{}\" fill=\"none\" {color} stroke-width=\"3\" stroke-linecap=\"round\"/>",
+                    "<path class=\"pele-priority\" d=\"M2.5,5V{}\" fill=\"none\" {color} stroke-width=\"3\" stroke-linecap=\"round\"/>",
                     num(card.height - 5.0)
                 );
             }
@@ -391,7 +391,7 @@ pub(crate) fn render_kanban(db: &KanbanDb, input: &Input<'_>) -> Output {
                 &card.label,
                 CARD_PAD,
                 CARD_PAD,
-                " class=\"pele-rs-label\"",
+                " class=\"pele-label\"",
                 false,
             );
             if let (Some(name), Some(markup)) =
@@ -422,7 +422,7 @@ pub(crate) fn render_kanban(db: &KanbanDb, input: &Input<'_>) -> Output {
                             &card.ticket,
                             CARD_PAD,
                             top,
-                            " class=\"pele-rs-ticket\" fill=\"var(--_m)\"",
+                            " class=\"pele-ticket\" fill=\"var(--_m)\"",
                             false,
                         );
                     }
@@ -436,7 +436,7 @@ pub(crate) fn render_kanban(db: &KanbanDb, input: &Input<'_>) -> Output {
                                 &card.ticket,
                                 CARD_PAD,
                                 top,
-                                " class=\"pele-rs-ticket\" fill=\"var(--_c)\"",
+                                " class=\"pele-ticket\" fill=\"var(--_c)\"",
                                 false
                             )
                         );
@@ -453,18 +453,18 @@ pub(crate) fn render_kanban(db: &KanbanDb, input: &Input<'_>) -> Output {
                     &card.assigned,
                     card_width - CARD_PAD,
                     bottom - card.assigned.height,
-                    " class=\"pele-rs-assigned\" fill=\"var(--_m)\"",
+                    " class=\"pele-assigned\" fill=\"var(--_m)\"",
                     true,
                 );
             }
             let marked = if color.is_some() {
-                format!(" pele-rs-priority-{}", priority.replacen(' ', "-", 1))
+                format!(" pele-priority-{}", priority.replacen(' ', "-", 1))
             } else {
                 String::new()
             };
             let _ = write!(
                 body,
-                "<g class=\"pele-rs-node pele-rs-card{marked}{}\" data-id=\"{}\" transform=\"translate({},{})\" font-size=\"{}\">{inner}</g>",
+                "<g class=\"pele-node pele-card{marked}{}\" data-id=\"{}\" transform=\"translate({},{})\" font-size=\"{}\">{inner}</g>",
                 class_names(item.css_classes.as_deref().unwrap_or("")),
                 esc_text(&item.id),
                 js_number(COLUMN_PAD),
@@ -476,7 +476,7 @@ pub(crate) fn render_kanban(db: &KanbanDb, input: &Input<'_>) -> Output {
 
         let _ = write!(
             out,
-            "<g class=\"pele-rs-cluster pele-rs-column{}\" data-id=\"{}\" transform=\"translate({},{})\">{body}</g>",
+            "<g class=\"pele-cluster pele-column{}\" data-id=\"{}\" transform=\"translate({},{})\">{body}</g>",
             class_names(section.node.css_classes.as_deref().unwrap_or("")),
             esc_text(&section.node.id),
             num(left + (index % per_row) as f64 * (column_width + COLUMN_GAP)),
@@ -490,7 +490,7 @@ pub(crate) fn render_kanban(db: &KanbanDb, input: &Input<'_>) -> Output {
         &title,
         total_width / 2.0,
         pad + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
     ) + &out;
     Output {
         svg: svg_document(

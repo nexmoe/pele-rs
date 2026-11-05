@@ -232,7 +232,7 @@ pub(crate) fn arrow_head(x: f64, y: f64, dx: f64, dy: f64, color: &str) -> Strin
     let by = y - dy * ARROW;
     let half = ARROW * 0.42;
     format!(
-        "<path class=\"pele-rs-marker\" d=\"M{},{}L{},{}L{},{}Z\" fill=\"{color}\" stroke=\"none\"/>",
+        "<path class=\"pele-marker\" d=\"M{},{}L{},{}L{},{}Z\" fill=\"{color}\" stroke=\"none\"/>",
         num(x),
         num(y),
         num(bx + nx * half),

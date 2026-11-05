@@ -49,7 +49,7 @@ pub(crate) fn with_title(
                 &label,
                 full / 2.0,
                 pad + label.height / 2.0,
-                " class=\"pele-rs-title\" font-weight=\"var(--_tw)\""
+                " class=\"pele-title\" font-weight=\"var(--_tw)\""
             ),
             num((full - width) / 2.0),
             num(shift)

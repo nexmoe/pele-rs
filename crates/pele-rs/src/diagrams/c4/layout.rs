@@ -71,7 +71,7 @@ fn form_of(shape: &Shape) -> Form {
             "box" | "rounded" => Some(Form::Rounded),
             "cylinder" | "database" | "db" => Some(Form::Cyl),
             "queue" | "pipe" => Some(Form::HCyl),
-            "component" => Some(Form::FrRect),
+            "component" => Some(Form::Rounded),
             _ => None,
         }
     };
@@ -97,8 +97,6 @@ fn form_of(shape: &Shape) -> Form {
         Form::Cyl
     } else if kind.ends_with("_queue") {
         Form::HCyl
-    } else if kind.ends_with("component") {
-        Form::FrRect
     } else {
         Form::Rounded
     }
@@ -275,7 +273,7 @@ pub(crate) fn layout_c4(
             head_w,
             head_x: HEAD_LEFT,
             frame: Frame {
-                id: at,
+                id: model.shapes.len() + at,
                 x: 0.0,
                 y: 0.0,
                 w: 0.0,

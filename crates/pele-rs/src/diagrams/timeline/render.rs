@@ -48,7 +48,7 @@ fn rect(x: f64, y: f64, w: f64, h: f64, attrs: &str) -> String {
 
 fn dot(x: f64, y: f64, color: &str) -> String {
     format!(
-        "<circle class=\"pele-rs-dot\" cx=\"{}\" cy=\"{}\" r=\"4\" fill=\"{color}\" stroke=\"var(--_bg)\" stroke-width=\"2\"/>",
+        "<circle class=\"pele-dot\" cx=\"{}\" cy=\"{}\" r=\"4\" fill=\"{color}\" stroke=\"var(--_bg)\" stroke-width=\"2\"/>",
         num(x),
         num(y)
     )
@@ -165,6 +165,23 @@ fn draw(db: &TimelineDb, input: &Input<'_>, vertical: bool) -> Output {
     let event_w = event_text_w(text_w) + 2.0 * PAD_X;
     let chip_height = |label: &Label| label.height.max(line_height) + 2.0 * PAD_Y;
     let event_height = |label: &Label| label.height.max(round(small * 1.5)) + 2.0 * PAD_Y;
+    let series_of = |group: &Group, period: usize| {
+        group.section.or({
+            if has_sections {
+                None
+            } else {
+                Some(if multicolor { period } else { 0 })
+            }
+        })
+    };
+    let on_color = |series: Option<usize>| {
+        let ink = series.map_or_else(String::new, crate::palette::series_ink_fill);
+        if ink.is_empty() {
+            ON_COLOR.to_string()
+        } else {
+            ink
+        }
+    };
     let color_of = |group: &Group, period: usize| match group.section {
         Some(s) => series_color(s),
         None if has_sections => "var(--_m)".to_string(),
@@ -221,16 +238,16 @@ fn draw(db: &TimelineDb, input: &Input<'_>, vertical: bool) -> Output {
                 label,
                 x + w / 2.0,
                 y + h / 2.0,
-                &format!(" font-weight=\"var(--_hw)\"{ON_COLOR}"),
+                &format!(" font-weight=\"var(--_hw)\"{}", on_color(Some(section))),
             )
     };
-    let period_svg = |label: &Label, color: &str, x: f64, y: f64, h: f64| {
+    let period_svg = |label: &Label, series: Option<usize>, color: &str, x: f64, y: f64, h: f64| {
         rect(x, y, col_w, h, &format!(" fill=\"{color}\""))
-            + &label_svg(label, x + col_w / 2.0, y + h / 2.0, ON_COLOR)
+            + &label_svg(label, x + col_w / 2.0, y + h / 2.0, &on_color(series))
     };
     let event_svg = |label: &Label, color: &str, x: f64, y: f64, h: f64| {
         format!(
-            "<g class=\"pele-rs-node pele-rs-event\">{}{}</g>",
+            "<g class=\"pele-node pele-event\">{}{}</g>",
             rect(
                 x,
                 y,
@@ -248,14 +265,14 @@ fn draw(db: &TimelineDb, input: &Input<'_>, vertical: bool) -> Output {
     };
     let open = |group: &Group| match group.section {
         Some(s) => format!(
-            "<g class=\"pele-rs-cluster pele-rs-section\" data-id=\"{}\">",
+            "<g class=\"pele-cluster pele-section\" data-id=\"{}\">",
             esc_text(trim(&db.sections[s]))
         ),
         None => String::new(),
     };
     let open_period = |i: usize| {
         format!(
-            "<g class=\"pele-rs-node pele-rs-period\" data-id=\"{}\">",
+            "<g class=\"pele-node pele-period\" data-id=\"{}\">",
             esc_text(trim(&periods[i].text))
         )
     };
@@ -304,9 +321,16 @@ fn draw(db: &TimelineDb, input: &Input<'_>, vertical: bool) -> Output {
                 }
                 let _ = write!(
                     body,
-                    "{}{}<path class=\"pele-rs-edge\" d=\"{d}\"{LINE}/>{}{cards}</g>",
+                    "{}{}<path class=\"pele-edge\" d=\"{d}\"{LINE}/>{}{cards}</g>",
                     open_period(i),
-                    period_svg(&period_labels[i], &color, left, cy - h / 2.0, h),
+                    period_svg(
+                        &period_labels[i],
+                        series_of(group, i),
+                        &color,
+                        left,
+                        cy - h / 2.0,
+                        h
+                    ),
                     dot(axis_x, cy, &color)
                 );
                 y = (cy + h / 2.0).max(ey - EVENT_GAP) + GAP;
@@ -324,7 +348,7 @@ fn draw(db: &TimelineDb, input: &Input<'_>, vertical: bool) -> Output {
         if drawn {
             let tip = y + TAIL + ARROW;
             body = format!(
-                "<path class=\"pele-rs-axis\" d=\"M{},{}V{}\" fill=\"none\" stroke=\"var(--_l)\"/>{}{body}",
+                "<path class=\"pele-axis\" d=\"M{},{}V{}\" fill=\"none\" stroke=\"var(--_l)\"/>{}{body}",
                 num(axis_x),
                 num(top),
                 num(tip - ARROW + 1.0),
@@ -392,9 +416,16 @@ fn draw(db: &TimelineDb, input: &Input<'_>, vertical: bool) -> Output {
                 bottom = bottom.max(ey - EVENT_GAP);
                 let _ = write!(
                     body,
-                    "{}{}<path class=\"pele-rs-edge\" d=\"{d}\"{LINE}/>{}{cards}</g>",
+                    "{}{}<path class=\"pele-edge\" d=\"{d}\"{LINE}/>{}{cards}</g>",
                     open_period(i),
-                    period_svg(&period_labels[i], &color, x, periods_y, chip_h),
+                    period_svg(
+                        &period_labels[i],
+                        series_of(group, i),
+                        &color,
+                        x,
+                        periods_y,
+                        chip_h
+                    ),
                     dot(cx, axis_y, &color)
                 );
             }
@@ -406,7 +437,7 @@ fn draw(db: &TimelineDb, input: &Input<'_>, vertical: bool) -> Output {
         if drawn {
             let tip = left + body_w;
             body = format!(
-                "<path class=\"pele-rs-axis\" d=\"M{},{}H{}\" fill=\"none\" stroke=\"var(--_l)\"/>{}{body}",
+                "<path class=\"pele-axis\" d=\"M{},{}H{}\" fill=\"none\" stroke=\"var(--_l)\"/>{}{body}",
                 num(left),
                 num(axis_y),
                 num(tip - ARROW + 1.0),
@@ -422,7 +453,7 @@ fn draw(db: &TimelineDb, input: &Input<'_>, vertical: bool) -> Output {
         &title,
         total_width / 2.0,
         pad + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
     ) + &body;
     let acc = Accessible {
         title: db.acc_title.clone(),

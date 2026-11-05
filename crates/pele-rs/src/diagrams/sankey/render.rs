@@ -58,7 +58,19 @@ fn content_id(text: &str) -> String {
         a = (a ^ c).wrapping_mul(0x01000193);
         b = b.wrapping_mul(33).wrapping_add(c);
     }
-    format!("{:x}{:x}", a, b)
+    fn base36(mut n: u32) -> String {
+        let mut out = Vec::new();
+        loop {
+            out.push(b"0123456789abcdefghijklmnopqrstuvwxyz"[(n % 36) as usize]);
+            n /= 36;
+            if n == 0 {
+                break;
+            }
+        }
+        out.reverse();
+        String::from_utf8(out).unwrap()
+    }
+    base36(a) + &base36(b)
 }
 
 /// The value as Mermaid shows it: two decimals, and numbers too large for that left as they
@@ -152,8 +164,8 @@ fn draw(
     let chart_height = number_option(conf, "height", 400.0, 1.0, 10000.0);
     let node_width = number_option(conf, "nodeWidth", 10.0, 1.0, 200.0).min(chart_width);
     let show_values = !matches!(conf.get("showValues"), Some(Value::Bool(false)));
-    let prefix = text_option(conf, "prefix");
-    let suffix = text_option(conf, "suffix");
+    let prefix = crate::text::entities::decode_entities(&text_option(conf, "prefix"));
+    let suffix = crate::text::entities::decode_entities(&text_option(conf, "suffix"));
     let outlined = matches!(conf.get("labelStyle"), Some(Value::String(s)) if s == "outlined");
     let alignment = match conf.get("nodeAlignment") {
         Some(Value::String(s)) if s == "left" => Alignment::Left,
@@ -283,7 +295,13 @@ fn draw(
     if nodes.len() <= CAREFUL {
         for (i, label) in labels.iter().enumerate() {
             let band = (label.y / line_height).floor() as i64;
-            for key in [band - 2, band - 1, band, band + 1, band + 2] {
+            for key in [
+                band.saturating_sub(2),
+                band.saturating_sub(1),
+                band,
+                band.saturating_add(1),
+                band.saturating_add(2),
+            ] {
                 bands.entry(key).or_default().push(i);
             }
         }
@@ -297,7 +315,7 @@ fn draw(
         let height = node.height.max(1.0);
         let _ = write!(
             nodes_out,
-            "<rect class=\"pele-rs-sankey-node\" data-id=\"{}\" x=\"{}\" y=\"{}\" width=\"{}\" \
+            "<rect class=\"pele-sankey-node\" data-id=\"{}\" x=\"{}\" y=\"{}\" width=\"{}\" \
              height=\"{}\" rx=\"{}\" fill=\"{}\"{}/>",
             esc_text(id),
             num(node.x),
@@ -372,13 +390,13 @@ fn draw(
         if !label.value.is_empty() {
             let _ = write!(
                 text,
-                " <tspan class=\"pele-rs-sankey-value\" fill=\"var(--_m)\">{}</tspan>",
+                " <tspan class=\"pele-sankey-value\" fill=\"var(--_m)\">{}</tspan>",
                 esc(&label.value)
             );
         }
         let _ = write!(
             labels_out,
-            "<g class=\"pele-rs-label\" data-id=\"{}\">",
+            "<g class=\"pele-label\" data-id=\"{}\">",
             esc_text(id)
         );
         if outlined {
@@ -405,7 +423,7 @@ fn draw(
     // Without an idPrefix diagrams share gradient ids, and Chrome then uses a hidden or
     // differently themed copy's gradient. Other characters would end the url() and void the
     // whole fill.
-    let id_prefix = options.id_prefix.clone();
+    let id_prefix = options.id_prefix.as_deref().unwrap_or("");
     let gradient = link_color == "gradient"
         && !id_prefix.is_empty()
         && id_prefix
@@ -422,7 +440,15 @@ fn draw(
         let half = link.thickness.max(1.0) / 2.0;
         let x0 = nodes[link.source].x + node_width;
         let x1 = nodes[link.target].x;
-        let mut paint = format!("fill=\"{}\"{}", series_color(end), fixed.clone());
+        let mut paint = format!(
+            "fill=\"{}\"{}",
+            series_color(end),
+            if fixed.is_empty() {
+                node_style(end)
+            } else {
+                fixed.clone()
+            }
+        );
         if !fixed.is_empty() {
             paint = format!("fill=\"{}\"{}", series_color(end), fixed);
         }
@@ -454,7 +480,7 @@ fn draw(
         let to = esc_text(&db.nodes[link.target].id);
         let _ = write!(
             links_out,
-            "<path class=\"pele-rs-sankey-link\" data-id=\"{from}-&gt;{to}\" \
+            "<path class=\"pele-sankey-link\" data-id=\"{from}-&gt;{to}\" \
              d=\"M{},{}C{},{} {},{} {},{}L{},{}C{},{} {},{} {},{}Z\" {paint}>",
             num(x0),
             num(link.source_y - half),
@@ -476,9 +502,9 @@ fn draw(
         let _ = write!(
             links_out,
             "<title>{from} → {to}: {}{}{}</title></path>",
-            esc_text(&prefix),
+            crate::svg::esc(&prefix),
             crate::util::js_number(rounded(link.value)),
-            esc_text(&suffix)
+            crate::svg::esc(&suffix)
         );
     }
 
@@ -502,14 +528,14 @@ fn draw(
         options,
         &Accessible::default(),
         &format!(
-            "{}<g transform=\"translate({},{})\">{}<g class=\"pele-rs-sankey-links\" \
-             fill-opacity=\"0.4\">{links_out}</g><g class=\"pele-rs-sankey-nodes\">{nodes_out}</g>\
-             <g class=\"pele-rs-labels\" font-size=\"{}\">{labels_out}</g></g>",
+            "{}<g transform=\"translate({},{})\">{}<g class=\"pele-sankey-links\" \
+             fill-opacity=\"0.4\">{links_out}</g><g class=\"pele-sankey-nodes\">{nodes_out}</g>\
+             <g class=\"pele-labels\" font-size=\"{}\">{labels_out}</g></g>",
             label_svg(
                 &title,
                 width / 2.0,
                 pad + title.height / 2.0,
-                " class=\"pele-rs-title\" font-weight=\"var(--_tw)\""
+                " class=\"pele-title\" font-weight=\"var(--_tw)\""
             ),
             num(ox),
             num(oy),

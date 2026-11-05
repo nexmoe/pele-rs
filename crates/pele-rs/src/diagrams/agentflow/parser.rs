@@ -397,25 +397,27 @@ impl Parser<'_> {
             // A metadata block may follow a node.
             if self.t() == T::ShapeData {
                 let data = self.shape_data()?;
-                let mark = self.i;
+                if self.t() != T::Space {
+                    self.pending_data = Some(data);
+                    return Ok(ids);
+                }
                 while self.t() == T::Space {
                     self.i += 1;
                 }
-                if self.t() == T::Amp {
-                    // `node shapeData spaceList AMP spaceList styledVertex`
-                    self.i += 1;
-                    while self.t() == T::Space {
-                        self.i += 1;
-                    }
-                    let next = self.styled_vertex()?;
-                    self.attach(&ids[ids.len() - 1], &data)?;
-                    ids.push(next);
-                    continue;
+                if self.t() != T::Amp {
+                    return self.fail("'AMP'");
                 }
-                // `node shapeData`: the metadata belongs to the node.
-                self.i = mark;
-                self.pending_data = Some(data);
-                return Ok(ids);
+                self.i += 1;
+                if self.t() != T::Space {
+                    return self.fail("'SPACE'");
+                }
+                while self.t() == T::Space {
+                    self.i += 1;
+                }
+                let next = self.styled_vertex()?;
+                self.attach(&ids[ids.len() - 1], &data)?;
+                ids.push(next);
+                continue;
             }
             if self.t() != T::Space {
                 return Ok(ids);
@@ -503,7 +505,7 @@ impl Parser<'_> {
                 let last = next.last().cloned().unwrap_or_default();
                 self.attach(&last, &data)?;
             }
-            self.db.add_link(&stmt, &next, &info);
+            self.db.add_link(&stmt, &next, &info)?;
             let mut all = next.clone();
             all.extend(nodes.iter().cloned());
             nodes = all;

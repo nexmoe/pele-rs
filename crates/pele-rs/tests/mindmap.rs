@@ -63,18 +63,18 @@ fn try_render(src: &str) -> Option<String> {
 fn draws_branches_and_shapes() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Mindmap);
-    assert_eq!(count(&out.svg, "pele-rs-node "), 19);
-    assert_eq!(count(&out.svg, "pele-rs-edge\""), 18);
-    assert_eq!(count(&out.svg, "pele-rs-branch pele-rs-section-"), 8);
-    assert_eq!(count(&out.svg, "pele-rs-shape-branch"), 6);
-    assert_eq!(count(&out.svg, " pele-rs-root"), 1);
+    assert_eq!(count(&out.svg, "pele-node "), 19);
+    assert_eq!(count(&out.svg, "pele-edge\""), 18);
+    assert_eq!(count(&out.svg, "pele-branch pele-section-"), 8);
+    assert_eq!(count(&out.svg, "pele-shape-branch"), 6);
+    assert_eq!(count(&out.svg, " pele-root"), 1);
     for needle in [
-        "pele-rs-shape-circle pele-rs-root",
-        "pele-rs-shape-cloud",
-        "pele-rs-shape-bang",
-        "pele-rs-shape-hex",
-        "pele-rs-shape-rect",
-        "pele-rs-shape-rounded",
+        "pele-shape-circle pele-root",
+        "pele-shape-cloud",
+        "pele-shape-bang",
+        "pele-shape-hex",
+        "pele-shape-rect",
+        "pele-shape-rounded",
         " urgent\"",
         ">Origins<",
     ] {
@@ -90,7 +90,7 @@ fn runs_down_in_a_narrow_host() {
     assert!(down.width <= 360.0);
     assert!(down.height > wide.height);
     // The root becomes a pill heading the outline.
-    assert!(down.svg.contains("pele-rs-shape-stadium pele-rs-root"));
+    assert!(down.svg.contains("pele-shape-stadium pele-root"));
 }
 
 #[test]
@@ -100,14 +100,14 @@ fn colors_wrap_after_eleven_branches() {
         writeln!(src, "  b{i}").unwrap();
     }
     let svg = svg(&src);
-    assert!(svg.contains("pele-rs-section-10\""));
-    assert!(!svg.contains("pele-rs-section-11\""));
-    assert_eq!(count(&svg, "pele-rs-section-0\""), 2);
+    assert!(svg.contains("pele-section-10\""));
+    assert!(!svg.contains("pele-section-11\""));
+    assert_eq!(count(&svg, "pele-section-0\""), 2);
 }
 
 /// The `stroke` of every link, in the order the links are drawn.
 fn link_colors(svg: &str) -> Vec<&str> {
-    svg.split("<path class=\"pele-rs-edge\"")
+    svg.split("<path class=\"pele-edge\"")
         .skip(1)
         .map(|p| match p.strip_prefix(" stroke=\"") {
             Some(rest) => rest.split('"').next().unwrap(),
@@ -293,7 +293,7 @@ fn an_accessibility_statement_becomes_a_node() {
     // Mermaid's mindmap grammar has no accessibility statements, so a line that looks like one
     // is a node. Mermaid does the same, so this is ported as it is.
     let out = render("mindmap\n  root\n    accTitle: M\n");
-    assert_eq!(count(&out.svg, "pele-rs-node "), 2, "{}", out.svg);
+    assert_eq!(count(&out.svg, "pele-node "), 2, "{}", out.svg);
     assert!(out.svg.contains(">accTitle: M<"), "{}", out.svg);
     assert!(!out.svg.contains("<title id="), "{}", out.svg);
 }

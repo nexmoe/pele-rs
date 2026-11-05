@@ -132,7 +132,7 @@ fn contains_marker(x: f64, y: f64, dx: f64, dy: f64) -> String {
     let cx = x - dx * r;
     let cy = y - dy * r;
     format!(
-        "<circle class=\"pele-rs-marker\" cx=\"{}\" cy=\"{}\" r=\"{}\"/><path class=\"pele-rs-marker\" d=\"M{},{}L{},{}M{},{}L{},{}\"/>",
+        "<circle class=\"pele-marker\" cx=\"{}\" cy=\"{}\" r=\"{}\"/><path class=\"pele-marker\" d=\"M{},{}L{},{}M{},{}L{},{}\"/>",
         num(cx),
         num(cy),
         num(r),
@@ -152,7 +152,7 @@ fn arrow_marker(x: f64, y: f64, dx: f64, dy: f64) -> String {
     let bx = x - dx * ARROW_LENGTH;
     let by = y - dy * ARROW_LENGTH;
     format!(
-        "<path class=\"pele-rs-marker\" d=\"M{},{}L{},{}L{},{}\" stroke-linejoin=\"round\"/>",
+        "<path class=\"pele-marker\" d=\"M{},{}L{},{}L{},{}\" stroke-linejoin=\"round\"/>",
         num(bx - dy * ARROW_HALF),
         num(by + dx * ARROW_HALF),
         num(x),
@@ -437,6 +437,8 @@ fn draw(db: &RequirementDb, input: &Input<'_>, turned: bool) -> Output {
     for (i, view) in views.iter().enumerate() {
         let node = &nodes[i];
         let (w, h, style) = (view.w, view.h, &view.style);
+        let color = crate::svg::ink::ink_fill(style, None);
+        let muted = crate::svg::ink::ink_fill(style, Some("var(--_m)"));
         let left = -w / 2.0;
         let top = -h / 2.0;
         let mut body = format!(
@@ -452,7 +454,7 @@ fn draw(db: &RequirementDb, input: &Input<'_>, turned: bool) -> Output {
             0.0,
             top + PAD_Y + view.kind.height / 2.0,
             &format!(
-                " class=\"pele-rs-stereotype\" font-size=\"{}\" fill=\"var(--_m)\"{}",
+                " class=\"pele-stereotype\" font-size=\"{}\"{muted}{}",
                 num(view.kind.size),
                 style.text
             ),
@@ -462,7 +464,7 @@ fn draw(db: &RequirementDb, input: &Input<'_>, turned: bool) -> Output {
             0.0,
             top + PAD_Y + view.kind.height + view.name.height / 2.0,
             &format!(
-                " class=\"pele-rs-label\" font-size=\"{}\" font-weight=\"var(--_hw)\"{}",
+                " class=\"pele-label\" font-size=\"{}\" font-weight=\"var(--_hw)\"{color}{}",
                 num(view.name.size),
                 style.text
             ),
@@ -471,7 +473,7 @@ fn draw(db: &RequirementDb, input: &Input<'_>, turned: bool) -> Output {
             let divider = top + view.head_height;
             let _ = write!(
                 body,
-                "<path class=\"pele-rs-divider\" d=\"M{},{}H{}\" stroke=\"var(--_b)\"{}/>",
+                "<path class=\"pele-divider\" d=\"M{},{}H{}\" stroke=\"var(--_b)\"{}/>",
                 num(left),
                 num(divider),
                 num(-left),
@@ -484,29 +486,29 @@ fn draw(db: &RequirementDb, input: &Input<'_>, turned: bool) -> Output {
                     &row.key,
                     left + PAD_X,
                     y,
-                    &format!(" class=\"pele-rs-field\" fill=\"var(--_m)\"{}", style.text),
+                    &format!(" class=\"pele-field\"{muted}{}", style.text),
                 );
                 rows += &start_text(
                     &row.value,
                     left + PAD_X + view.key_width + COLUMN_GAP,
                     y,
-                    &format!(" class=\"pele-rs-value\"{}", style.text),
+                    &format!(" class=\"pele-value\"{color}{}", style.text),
                 );
                 y += row.height + ROW_GAP;
             }
             let _ = write!(
                 body,
-                "<g class=\"pele-rs-fields\" font-size=\"{}\">{rows}</g>",
+                "<g class=\"pele-fields\" font-size=\"{}\">{rows}</g>",
                 num(view.rows[0].key.size)
             );
         }
         let _ = write!(
             nodes_out,
-            "<g class=\"pele-rs-node {}{}\" data-id=\"{}\" transform=\"translate({},{})\">{body}</g>",
+            "<g class=\"pele-node {}{}\" data-id=\"{}\" transform=\"translate({},{})\">{body}</g>",
             if node.requirement.is_some() {
-                "pele-rs-requirement"
+                "pele-requirement"
             } else {
-                "pele-rs-element"
+                "pele-element"
             },
             class_names(without_default(&node.css_classes)),
             esc_text(node.id),
@@ -598,7 +600,7 @@ fn draw(db: &RequirementDb, input: &Input<'_>, turned: bool) -> Output {
         };
         let _ = write!(
             edges_out,
-            "<g class=\"pele-rs-edge pele-rs-relationship-{}\" data-id=\"{}\"><path d=\"{}\"{}/>{}</g>",
+            "<g class=\"pele-edge pele-relationship-{}\" data-id=\"{}\"><path d=\"{}\"{}/>{}</g>",
             if edge.contains { "contains" } else { "arrow" },
             esc_text(&edge.id),
             path.d,
@@ -620,22 +622,22 @@ fn draw(db: &RequirementDb, input: &Input<'_>, turned: bool) -> Output {
         &title,
         width / 2.0,
         pad + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
     );
     if !edges_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">{edges_out}</g>"
+            "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">{edges_out}</g>"
         );
     }
     if !labels_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-edge-labels\" font-size=\"{}\" fill=\"var(--_m)\">{labels_out}</g>",
+            "<g class=\"pele-edge-labels\" font-size=\"{}\" fill=\"var(--_m)\">{labels_out}</g>",
             num(small)
         );
     }
-    let _ = write!(content, "<g class=\"pele-rs-nodes\">{nodes_out}</g>");
+    let _ = write!(content, "<g class=\"pele-nodes\">{nodes_out}</g>");
 
     let acc = Accessible {
         title: db.acc_title.clone(),

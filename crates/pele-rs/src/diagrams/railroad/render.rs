@@ -134,15 +134,21 @@ fn leaf(kind: Kind, text: &str, id: &str, style: Style, m: &Metrics<'_>) -> Shap
 }
 
 /// The count a loop shows.
-fn count(min: u64, max: Option<u64>) -> String {
-    if max.is_none() && min <= 1 {
+fn count(min: f64, max: Option<f64>) -> String {
+    if max.is_none() && min <= 1.0 {
         return String::new();
     }
-    let text = |value: u64| value.to_string();
+    let text = |value: f64| {
+        if value.is_finite() {
+            crate::util::js_number(value)
+        } else {
+            "∞".to_string()
+        }
+    };
     match max {
         Some(max) if max == min => format!("{}×", text(min)),
         None => format!("≥{}×", text(min)),
-        Some(max) if min == 0 => format!("≤{}×", text(max)),
+        Some(max) if min == 0.0 => format!("≤{}×", text(max)),
         Some(max) => format!("{}–{}×", text(min), text(max)),
     }
 }
@@ -172,7 +178,7 @@ fn around(node: &Node, m: &Metrics<'_>) -> f64 {
     match node {
         Node::Choice(_) | Node::Optional(_) => 4.0 * m.arc,
         Node::Repetition { min, .. } => {
-            if *min == 0 {
+            if *min == 0.0 {
                 6.0 * m.arc
             } else {
                 2.0 * m.arc
@@ -349,7 +355,7 @@ fn build(node: &Node, kids: Vec<Shape>, room: f64, m: &Metrics<'_>) -> Shape {
         Node::Optional(_) => bypass(kids.into_iter().next().expect("an element"), m),
         Node::Repetition { min, max, .. } => {
             let kid = kids.into_iter().next().expect("an element");
-            if *min == 1 && *max == Some(1) {
+            if *min == 1.0 && *max == Some(1.0) {
                 return kid;
             }
             let text = count(*min, *max);
@@ -374,7 +380,7 @@ fn build(node: &Node, kids: Vec<Shape>, room: f64, m: &Metrics<'_>) -> Shape {
                 id: String::new(),
                 reach,
             };
-            if *min == 0 {
+            if *min == 0.0 {
                 bypass(loop_shape, m)
             } else {
                 loop_shape
@@ -589,7 +595,7 @@ fn place(root: Shape, left: f64, baseline: f64, out: &mut Drawing, m: &Metrics<'
                 ));
                 if !shape.text.is_empty() {
                     out.nodes.push_str(&format!(
-                        "<text class=\"pele-rs-edge-label pele-rs-count\" x=\"{}\" y=\"{}\" \
+                        "<text class=\"pele-edge-label pele-count\" x=\"{}\" y=\"{}\" \
                          font-size=\"{}\" fill=\"var(--_m)\">{}</text>",
                         num(middle),
                         num(loop_y + COUNT_SIZE + 3.0),
@@ -621,20 +627,20 @@ fn place(root: Shape, left: f64, baseline: f64, out: &mut Drawing, m: &Metrics<'
                 );
                 match shape.kind {
                     Kind::Terminal => out.nodes.push_str(&format!(
-                        "<g class=\"pele-rs-node pele-rs-terminal\">{rect} rx=\"{}\" \
+                        "<g class=\"pele-node pele-terminal\">{rect} rx=\"{}\" \
                          fill=\"var(--_s)\" stroke=\"var(--_b)\"{stroke}/>{label} \
                          font-family=\"{MONO}\">{}</text></g>",
                         num(box_top),
                         esc(text)
                     )),
                     Kind::NonTerminal => out.nodes.push_str(&format!(
-                        "<g class=\"pele-rs-node pele-rs-nonterminal\" data-id=\"{}\">{rect} \
+                        "<g class=\"pele-node pele-nonterminal\" data-id=\"{}\">{rect} \
                          fill=\"var(--_bg)\" stroke=\"var(--_b)\"{stroke}{ROUNDED}/>{label}>{}</text></g>",
                         esc_text(&shape.id),
                         esc(text)
                     )),
                     _ => out.nodes.push_str(&format!(
-                        "<g class=\"pele-rs-node pele-rs-special\">{rect} fill=\"var(--_bg)\" \
+                        "<g class=\"pele-node pele-special\">{rect} fill=\"var(--_bg)\" \
                          stroke=\"var(--_b)\" stroke-dasharray=\"4 3\"{stroke}{ROUNDED}/>{label} \
                          font-style=\"italic\"><tspan fill=\"var(--_m)\">? </tspan>{}\
                          <tspan fill=\"var(--_m)\"> ?</tspan></text></g>",
@@ -735,8 +741,8 @@ fn draw(model: &RailroadModel, input: &Input<'_>, tight: bool) -> Output {
         place(shape, left, baseline, &mut out, &m, &stroke);
         let markers = if radius > 0.0 {
             format!(
-                "<circle class=\"pele-rs-marker pele-rs-start\" cx=\"{}\" cy=\"{}\" r=\"{}\" \
-                 fill=\"var(--_l)\"/><circle class=\"pele-rs-marker pele-rs-end\" cx=\"{}\" \
+                "<circle class=\"pele-marker pele-start\" cx=\"{}\" cy=\"{}\" r=\"{}\" \
+                 fill=\"var(--_l)\"/><circle class=\"pele-marker pele-end\" cx=\"{}\" \
                  cy=\"{}\" r=\"{}\" fill=\"var(--_l)\"/>",
                 num(pad + radius),
                 num(baseline),
@@ -749,10 +755,10 @@ fn draw(model: &RailroadModel, input: &Input<'_>, tight: bool) -> Output {
             String::new()
         };
         rules.push_str(&format!(
-            "<g class=\"pele-rs-rule\" data-id=\"{}\">\
-             <text class=\"pele-rs-rule-name\" x=\"{}\" y=\"{}\" font-size=\"{}\" \
+            "<g class=\"pele-rule\" data-id=\"{}\">\
+             <text class=\"pele-rule-name\" x=\"{}\" y=\"{}\" font-size=\"{}\" \
              font-weight=\"var(--_hw)\" text-anchor=\"start\">{}</text>\
-             <path class=\"pele-rs-edge pele-rs-track\" d=\"{}\" fill=\"none\" \
+             <path class=\"pele-edge pele-track\" d=\"{}\" fill=\"none\" \
              stroke=\"var(--_l)\"{}/>{}{}{}</g>",
             esc_text(&rule.name),
             num(pad),
@@ -765,7 +771,7 @@ fn draw(model: &RailroadModel, input: &Input<'_>, tight: bool) -> Output {
                 String::new()
             } else {
                 format!(
-                    "<path class=\"pele-rs-marker\" d=\"{}\" fill=\"var(--_l)\"/>",
+                    "<path class=\"pele-marker\" d=\"{}\" fill=\"var(--_l)\"/>",
                     out.arrows
                 )
             },
@@ -789,13 +795,13 @@ fn draw(model: &RailroadModel, input: &Input<'_>, tight: bool) -> Output {
             &title,
             total_width / 2.0,
             pad + title.height / 2.0,
-            " class=\"pele-rs-title\" font-weight=\"var(--_tw)\""
+            " class=\"pele-title\" font-weight=\"var(--_tw)\""
         ),
         if rules.is_empty() {
             String::new()
         } else {
             format!(
-                "<g class=\"pele-rs-rules\" transform=\"translate(0.5,0.5)\" font-size=\"{}\" \
+                "<g class=\"pele-rules\" transform=\"translate(0.5,0.5)\" font-size=\"{}\" \
                  text-anchor=\"middle\">{}</g>",
                 num(size),
                 rules

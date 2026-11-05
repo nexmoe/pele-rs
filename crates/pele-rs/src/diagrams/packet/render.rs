@@ -157,7 +157,7 @@ fn draw(model: &PacketModel, config: &Config, input: &Input<'_>, down: bool) -> 
                 }) * bit_width;
             let w = count * bit_width - gap;
             fields.push_str(&format!(
-                "<g class=\"pele-rs-node\" data-id=\"{}-{}\">",
+                "<g class=\"pele-node\" data-id=\"{}-{}\">",
                 num(block.start),
                 num(block.end)
             ));
@@ -242,7 +242,7 @@ fn draw(model: &PacketModel, config: &Config, input: &Input<'_>, down: bool) -> 
             String::new()
         } else {
             format!(
-                "<g class=\"pele-rs-packet-fields\" font-size=\"{}\" text-anchor=\"middle\">{}</g>",
+                "<g class=\"pele-packet-fields\" font-size=\"{}\" text-anchor=\"middle\">{}</g>",
                 num(label_size),
                 fields
             )
@@ -251,7 +251,7 @@ fn draw(model: &PacketModel, config: &Config, input: &Input<'_>, down: bool) -> 
             String::new()
         } else {
             format!(
-                "<g class=\"pele-rs-packet-bits\" font-size=\"{}\" fill=\"var(--_m)\">{}</g>",
+                "<g class=\"pele-packet-bits\" font-size=\"{}\" fill=\"var(--_m)\">{}</g>",
                 num(bit_size),
                 bits
             )
@@ -261,7 +261,7 @@ fn draw(model: &PacketModel, config: &Config, input: &Input<'_>, down: bool) -> 
             &title,
             total_width / 2.0,
             total_height - pad - title.height / 2.0,
-            " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+            " class=\"pele-title\" font-weight=\"var(--_tw)\"",
         )
     );
 

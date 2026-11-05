@@ -554,7 +554,15 @@ impl Lexer<'_> {
         if legacy {
             q += 1;
         }
-        if !is_space(self.c(q)) || q + 1 >= self.n || !self.has(q + 1, LINE) {
+        let mut e = q;
+        while e < self.n && self.c(e) != 10 && is_space(self.c(e)) {
+            e += 1;
+        }
+        if e == self.n || self.c(e) == 10 {
+            self.p = e;
+            return true;
+        }
+        if !is_space(self.c(q)) || self.c(q) == 13 || !self.has(q + 1, LINE) {
             return false;
         }
         let end = self.line_run(q + 1);
@@ -655,10 +663,6 @@ impl Lexer<'_> {
             return;
         }
         if c == 35 || (c == 37 && self.c(p + 1) != 123) {
-            self.p = self.eol(p);
-            return;
-        }
-        if c != 125 && self.c(p + 1) == 37 && self.c(p + 2) == 37 {
             self.p = self.eol(p);
             return;
         }

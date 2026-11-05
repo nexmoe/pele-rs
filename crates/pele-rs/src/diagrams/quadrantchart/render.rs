@@ -55,6 +55,10 @@ fn hex(color: &str) -> String {
 fn is_clear(taken: &[f64], from: usize, x0: f64, y0: f64, x1: f64, y1: f64) -> bool {
     let mut k = from;
     while k < taken.len() {
+        if taken[k] >= taken[k + 2] || taken[k + 1] >= taken[k + 3] {
+            k += 4;
+            continue;
+        }
         if x0 < taken[k + 2] && x1 > taken[k] && y0 < taken[k + 3] && y1 > taken[k + 1] {
             return false;
         }
@@ -68,9 +72,23 @@ pub(crate) fn render_quadrant(db: &QuadrantDb, input: &Input<'_>) -> Result<Outp
     let options = input.options;
     let measurer = input.measurer;
     let size = options.font_size.unwrap_or(16.0);
-    let axis_size = round(size * 0.875);
-    let point_size = round(size * 0.75);
     let config = &input.config;
+    let text_size = |key, fallback| match setting(config, key) {
+        Some(Value::Number(n)) if n.is_finite() => n.clamp(4.0, 72.0),
+        _ => fallback,
+    };
+    let size_attr = |own, inherited| {
+        if own == inherited {
+            String::new()
+        } else {
+            format!(" font-size=\"{}\"", num(own))
+        }
+    };
+    let title_size = text_size("titleFontSize", size);
+    let quadrant_size = text_size("quadrantLabelFontSize", size);
+    let x_axis_size = text_size("xAxisLabelFontSize", round(size * 0.875));
+    let y_axis_size = text_size("yAxisLabelFontSize", round(size * 0.875));
+    let point_size = text_size("pointLabelFontSize", round(size * 0.75));
     let natural = round(f64::max(100.0, length(config, "chartWidth", 500.0, 4000.0)));
     let width = round(cap_width(options, natural, 280.0));
     let height =
@@ -100,7 +118,7 @@ pub(crate) fn render_quadrant(db: &QuadrantDb, input: &Input<'_>) -> Result<Outp
         db.title.as_deref(),
         false,
         measurer,
-        size,
+        title_size,
         f64::max(width - 2.0 * outer, 40.0),
         Style::BOLD,
     );
@@ -127,27 +145,27 @@ pub(crate) fn render_quadrant(db: &QuadrantDb, input: &Input<'_>) -> Result<Outp
     let side = width - 2.0 * outer;
     let x_left = label(
         db.x_axis_left.as_ref(),
-        axis_size,
+        x_axis_size,
         if db.x_axis_right.is_some() {
             side / 2.0 - 16.0
         } else {
             side
         },
     );
-    let x_right = label(db.x_axis_right.as_ref(), axis_size, side / 2.0 - 16.0);
+    let x_right = label(db.x_axis_right.as_ref(), x_axis_size, side / 2.0 - 16.0);
     let x_height = f64::max(x_left.height, x_right.height);
     let x_space = if has_x { x_height + x_pad } else { 0.0 };
     let tall = height - 2.0 * outer - title_space - x_space;
     let y_bottom = label(
         db.y_axis_bottom.as_ref(),
-        axis_size,
+        y_axis_size,
         if db.y_axis_top.is_some() {
             tall / 2.0 - 16.0
         } else {
             tall
         },
     );
-    let y_top = label(db.y_axis_top.as_ref(), axis_size, tall / 2.0 - 16.0);
+    let y_top = label(db.y_axis_top.as_ref(), y_axis_size, tall / 2.0 - 16.0);
     let y_height = f64::max(y_bottom.height, y_top.height);
     let y_space = if has_y { y_height + y_pad } else { 0.0 };
 
@@ -180,7 +198,7 @@ pub(crate) fn render_quadrant(db: &QuadrantDb, input: &Input<'_>) -> Result<Outp
             left
         };
         let y = if k < 2 { top } else { top + h - tile_h };
-        let text = label(db.quadrants[k].as_ref(), size, tile_w - 16.0);
+        let text = label(db.quadrants[k].as_ref(), quadrant_size, tile_w - 16.0);
         let cx = x + tile_w / 2.0;
         let cy = if has_points {
             y + text_top + text.height / 2.0
@@ -192,7 +210,7 @@ pub(crate) fn render_quadrant(db: &QuadrantDb, input: &Input<'_>) -> Result<Outp
         taken.push(cx + text.width / 2.0);
         taken.push(cy + text.height / 2.0);
         quadrants += &format!(
-            "<g class=\"pele-rs-quadrant\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" \
+            "<g class=\"pele-quadrant\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" \
              height=\"{}\"{ROUNDED}/>{}</g>",
             k + 1,
             num(x),
@@ -203,7 +221,10 @@ pub(crate) fn render_quadrant(db: &QuadrantDb, input: &Input<'_>) -> Result<Outp
                 &text,
                 cx,
                 cy,
-                " class=\"pele-rs-label\" fill=\"var(--_fg)\" stroke=\"none\""
+                &format!(
+                    " class=\"pele-label\"{} fill=\"var(--_fg)\" stroke=\"none\"",
+                    size_attr(quadrant_size, size)
+                )
             )
         );
     }
@@ -236,9 +257,10 @@ pub(crate) fn render_quadrant(db: &QuadrantDb, input: &Input<'_>) -> Result<Outp
         let turned = |text: &Label, y: f64| -> String {
             if text.height > 0.0 {
                 format!(
-                    "<g transform=\"translate({},{}) rotate(-90)\">{}</g>",
+                    "<g transform=\"translate({},{}) rotate(-90)\"{}>{}</g>",
                     num(x),
                     num(y),
+                    size_attr(y_axis_size, x_axis_size),
                     label_svg(text, 0.0, 0.0, "")
                 )
             } else {
@@ -317,10 +339,10 @@ pub(crate) fn render_quadrant(db: &QuadrantDb, input: &Input<'_>) -> Result<Outp
             } else {
                 0.0
             },
-            text: label(Some(&point.text), point_size, 200.0),
+            text: label(Some(&point.text), point_size, w),
         });
         circles.push(format!(
-            "<circle class=\"pele-rs-point{}\" data-id=\"{}\" cx=\"{}\" cy=\"{}\" r=\"{}\"{}{}/>",
+            "<circle class=\"pele-point{}\" data-id=\"{}\" cx=\"{}\" cy=\"{}\" r=\"{}\"{}{}/>",
             class_names(&point.class_name),
             esc_text(&point.text.text),
             num(cx),
@@ -425,7 +447,7 @@ pub(crate) fn render_quadrant(db: &QuadrantDb, input: &Input<'_>) -> Result<Outp
             taken.push(tx + half_w);
             taken.push(ty + half_h);
         }
-        labels += &label_svg(&dot.text, tx, ty, " class=\"pele-rs-label\"");
+        labels += &label_svg(&dot.text, tx, ty, " class=\"pele-label\"");
     }
 
     // Mermaid puts each new point under the ones before it.
@@ -433,16 +455,19 @@ pub(crate) fn render_quadrant(db: &QuadrantDb, input: &Input<'_>) -> Result<Outp
         &title,
         width / 2.0,
         title_pad / 2.0 + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        &format!(
+            " class=\"pele-title\"{} font-weight=\"var(--_tw)\"",
+            size_attr(title_size, size)
+        ),
     );
     let quadrants_svg = format!(
-        "<g class=\"pele-rs-quadrants\" fill=\"var(--_s)\" stroke=\"var(--_b)\">{quadrants}</g>"
+        "<g class=\"pele-quadrants\" fill=\"var(--_s)\" stroke=\"var(--_b)\">{quadrants}</g>"
     );
     let axes_svg = if axes.is_empty() {
         String::new()
     } else {
         format!(
-            "<g class=\"pele-rs-axis-labels\" font-size=\"{axis_size}\" \
+            "<g class=\"pele-axis-labels\" font-size=\"{x_axis_size}\" \
              fill=\"var(--_m)\">{axes}</g>"
         )
     };
@@ -450,8 +475,8 @@ pub(crate) fn render_quadrant(db: &QuadrantDb, input: &Input<'_>) -> Result<Outp
         String::new()
     } else {
         format!(
-            "<g class=\"pele-rs-points\" fill=\"{fill}\">{}</g><g \
-             class=\"pele-rs-point-labels\" font-size=\"{point_size}\">{labels}</g>",
+            "<g class=\"pele-points\" fill=\"{fill}\">{}</g><g \
+             class=\"pele-point-labels\" font-size=\"{point_size}\">{labels}</g>",
             circles.iter().rev().cloned().collect::<Vec<_>>().join("")
         )
     };

@@ -50,14 +50,11 @@ fn draws_the_components_and_the_anchors() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Wardley);
     assert_eq!(
-        count(
-            &out.svg,
-            "<g class=\"pele-rs-node pele-rs-wardley-component\""
-        ),
+        count(&out.svg, "<g class=\"pele-node pele-wardley-component\""),
         3
     );
     assert_eq!(
-        count(&out.svg, "<g class=\"pele-rs-node pele-rs-wardley-anchor\""),
+        count(&out.svg, "<g class=\"pele-node pele-wardley-anchor\""),
         1
     );
     // The name of a component is its label.
@@ -68,7 +65,7 @@ fn draws_the_components_and_the_anchors() {
 #[test]
 fn draws_the_links_between_the_components() {
     let out = render(FULL);
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-edge\""), 2);
+    assert_eq!(count(&out.svg, "<g class=\"pele-edge\""), 2);
     // The link that names both of its ends is drawn between them.
     assert!(
         out.svg.contains("data-id=\"Cup of Tea-Bag of Flour\""),
@@ -81,7 +78,7 @@ fn draws_the_links_between_the_components() {
 fn draws_the_arrowheads_of_the_flows() {
     let out = render("wardley-beta\ncomponent A [0.2, 0.8]\ncomponent B [0.8, 0.2]\nA +<> B\n");
     // The link is in both directions, so it has two arrowheads.
-    assert_eq!(count(&out.svg, "pele-rs-marker"), 2);
+    assert_eq!(count(&out.svg, "pele-marker"), 2);
 }
 
 #[test]
@@ -90,11 +87,7 @@ fn draws_the_stages_of_the_evolution_axis() {
     assert!(out.svg.contains(">Genesis<"), "{}", out.svg);
     assert!(out.svg.contains(">Commodity<"), "{}", out.svg);
     // The stages are written under the map.
-    assert!(
-        out.svg.contains("pele-rs-wardley-stage-label"),
-        "{}",
-        out.svg
-    );
+    assert!(out.svg.contains("pele-wardley-stage-label"), "{}", out.svg);
 }
 
 #[test]
@@ -109,18 +102,18 @@ fn draws_a_pipeline() {
     let out = render(
         "wardley-beta\ncomponent Kettle [0.45, 0.57]\npipeline Kettle {\n  component Campfire [0.35]\n  component Electric [0.53]\n}\n",
     );
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-wardley-pipeline\""), 1);
+    assert_eq!(count(&out.svg, "<g class=\"pele-wardley-pipeline\""), 1);
     assert_eq!(
         count(
             &out.svg,
-            "<g class=\"pele-rs-node pele-rs-wardley-pipeline-component\""
+            "<g class=\"pele-node pele-wardley-pipeline-component\""
         ),
         2
     );
     assert_eq!(
         count(
             &out.svg,
-            "<g class=\"pele-rs-node pele-rs-wardley-pipeline-parent\""
+            "<g class=\"pele-node pele-wardley-pipeline-parent\""
         ),
         1
     );
@@ -132,22 +125,16 @@ fn draws_the_notes_and_the_annotations() {
         "wardley-beta\ncomponent A [0.5, 0.5]\nnote \"a note\" [0.3, 0.7]\nannotations [0.1, 0.9]\nannotation 1, [0.6, 0.65] \"first\"\n",
     );
     assert!(out.svg.contains(">a note<"), "{}", out.svg);
-    assert_eq!(
-        count(&out.svg, "<g class=\"pele-rs-wardley-annotation\""),
-        1
-    );
+    assert_eq!(count(&out.svg, "<g class=\"pele-wardley-annotation\""), 1);
     assert!(out.svg.contains(">1. first<"), "{}", out.svg);
 }
 
 #[test]
 fn draws_the_accelerators_and_the_deaccelerators() {
     let out = render("wardley-beta\naccelerator Trend [0.3, 0.7]\ndeaccelerator Drag [0.6, 0.3]\n");
+    assert_eq!(count(&out.svg, "<g class=\"pele-wardley-accelerator\""), 1);
     assert_eq!(
-        count(&out.svg, "<g class=\"pele-rs-wardley-accelerator\""),
-        1
-    );
-    assert_eq!(
-        count(&out.svg, "<g class=\"pele-rs-wardley-deaccelerator\""),
+        count(&out.svg, "<g class=\"pele-wardley-deaccelerator\""),
         1
     );
 }
@@ -155,7 +142,7 @@ fn draws_the_accelerators_and_the_deaccelerators() {
 #[test]
 fn draws_the_evolution_of_a_component() {
     let out = render("wardley-beta\ncomponent Kettle [0.35, 0.43]\nevolve Kettle 0.62\n");
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-wardley-trend\""), 1);
+    assert_eq!(count(&out.svg, "<g class=\"pele-wardley-trend\""), 1);
 }
 
 #[test]
@@ -170,15 +157,15 @@ fn reads_the_config() {
     let grid = svg(
         "---\nconfig:\n  wardley-beta:\n    showGrid: true\n---\nwardley-beta\ncomponent A [0.5, 0.5]\n",
     );
-    assert!(!plain.contains("pele-rs-wardley-grid"));
-    assert!(grid.contains("pele-rs-wardley-grid"), "{grid}");
+    assert!(!plain.contains("pele-wardley-grid"));
+    assert!(grid.contains("pele-wardley-grid"), "{grid}");
 }
 
 #[test]
 fn draws_a_title() {
     let out = render("---\ntitle: A strategy map\n---\nwardley-beta\ncomponent A [0.5, 0.5]\n");
     assert!(out.svg.contains(">A strategy map<"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-title"));
+    assert!(out.svg.contains("pele-title"));
 }
 
 #[test]
@@ -187,14 +174,13 @@ fn draws_the_accessibility_text() {
         "wardley-beta\naccTitle: The map\naccDescr: Two components and a link\ncomponent A [0.5, 0.5]\n",
     );
     assert!(
-        out.svg
-            .contains("<title id=\"pele-rs-title\">The map</title>"),
+        out.svg.contains("<title id=\"pele-title\">The map</title>"),
         "{}",
         out.svg
     );
     assert!(
         out.svg
-            .contains("<desc id=\"pele-rs-desc\">Two components and a link</desc>"),
+            .contains("<desc id=\"pele-desc\">Two components and a link</desc>"),
         "{}",
         out.svg
     );
@@ -262,10 +248,7 @@ fn fits_a_narrow_host() {
     assert!(narrow.height > 0.0);
     // The components are still drawn.
     assert_eq!(
-        count(
-            &narrow.svg,
-            "<g class=\"pele-rs-node pele-rs-wardley-component\""
-        ),
+        count(&narrow.svg, "<g class=\"pele-node pele-wardley-component\""),
         3
     );
     let _ = wide;

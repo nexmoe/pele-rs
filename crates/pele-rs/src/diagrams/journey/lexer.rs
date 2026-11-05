@@ -78,14 +78,22 @@ pub(crate) fn tokenize(src: &[u16]) -> Tokens {
             p += 7;
             continue;
         }
-        // `\s` after a keyword also takes a line break, so `title` alone on a line takes the
-        // next line as its text.
-        if keyword_at(src, p, "title") && space(at(src, p + 5)) {
-            e = text_end(src, p + 6, false);
-            if e > p + 6 {
-                out.push(t::TITLE, p, e);
+        if keyword_at(src, p, "title") {
+            e = p + 5;
+            while e < n && at(src, e) != 10 && space(at(src, e)) {
+                e += 1;
+            }
+            if e == n || at(src, e) == 10 {
                 p = e;
                 continue;
+            }
+            if at(src, p + 5) != 13 && space(at(src, p + 5)) {
+                e = text_end(src, p + 6, false);
+                if e > p + 6 {
+                    out.push(t::TITLE, p, e);
+                    p = e;
+                    continue;
+                }
             }
         }
         e = accessibility(src, p, &mut out, t::ACC_TITLE);

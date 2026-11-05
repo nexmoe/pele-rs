@@ -6,14 +6,15 @@
 use std::fmt::Write;
 
 use super::db::{Model, NodeType};
-use super::icons::{self, Icons};
+use super::icons::Icons;
 use crate::DiagramKind;
 use crate::diagram::{Input, Output};
+use crate::diagrams::common::literal::literal_label;
 use crate::preprocess::Value;
 use crate::svg::{Accessible, ROUNDED, class_names, esc, esc_text, label_svg, num, svg_document};
+use crate::text::Style;
 use crate::text::entities::decode_entities;
-use crate::text::label::{Label, Span, layout_label};
-use crate::text::{Style, TextMeasurer};
+use crate::text::label::{Label, layout_label};
 use crate::util::round;
 
 /// The room between a name and the description beside it.
@@ -79,6 +80,7 @@ struct Row {
     node: usize,
     /// Where the row starts, measured from the left of the tree.
     x: f64,
+    label_x: f64,
     /// The middle of the row, measured from the top of the rows.
     cy: f64,
     /// Where the row starts, measured from the top of the rows.
@@ -88,7 +90,6 @@ struct Row {
     /// The name of the icon of the row, as it is drawn.
     icon_label: Option<String>,
     /// The room the icon takes.
-    icon_width: f64,
     /// The name of the node.
     text: String,
     /// The name, measured and broken over several lines when the tree is drawn tight.
@@ -155,9 +156,18 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool) -> Output {
     let label_right = rows.iter().fold(0.0f64, |most, row| {
         let width = match &row.label {
             Some(label) => label.width,
-            None => row.icon_width + measurer.width(&row.text, size, row.style()),
+            None => measurer.width(
+                &row.text,
+                size,
+                row.style()
+                    | if options.monospace.contains(&crate::MonospacePart::Files) {
+                        Style::MONO
+                    } else {
+                        Style::NONE
+                    },
+            ),
         };
-        most.max(row.x + width)
+        most.max(row.label_x + width)
     });
     let desc_x = label_right + DESC_GAP;
     let mut width = label_right;
@@ -169,7 +179,7 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool) -> Output {
             Some(label) => label.width,
             None => measurer.width(description, size, Style::ITALIC),
         };
-        width = width.max(if tight { row.x } else { desc_x } + w);
+        width = width.max(if tight { row.label_x } else { desc_x } + w);
     }
     width = width.max(title.width);
 
@@ -227,6 +237,11 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool) -> Output {
     }
 
     let baseline = size * 0.35;
+    let family = if options.monospace.contains(&crate::MonospacePart::Files) {
+        format!(" font-family=\"{}\"", crate::svg::FONT_MONO)
+    } else {
+        String::new()
+    };
     let mut body = String::new();
     for row in &rows {
         let node = &model.nodes[row.node];
@@ -236,7 +251,7 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool) -> Output {
             let x = inset + row.x - HIGHLIGHT_OVERHANG;
             let _ = write!(
                 inner,
-                "<rect class=\"pele-rs-tree-highlight\" x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" \
+                "<rect class=\"pele-tree-highlight\" x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" \
                  fill=\"var(--_c)\" fill-opacity=\"0.14\"{ROUNDED}/>",
                 num(x),
                 num(top + row.top + 1.0),
@@ -244,30 +259,42 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool) -> Output {
                 num(row.height - 2.0)
             );
         }
+        if let Some(icon) = &row.icon_label {
+            let glyph = if icon == "mermaid-treeview:folder"
+                || (icon != "mermaid-treeview:file" && row.directory)
+            {
+                "M3 6.5A1.5 1.5 0 0 1 4.5 5h4.6l2.4 2.5h8A1.5 1.5 0 0 1 21 9v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18z"
+            } else {
+                "M6.5 3h7L19 8.5v11a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 19.5v-15A1.5 1.5 0 0 1 6.5 3zM13.5 3v5.5H19"
+            };
+            let markup = measurer.host().and_then(|h| h.icon(icon)).map_or_else(
+                || format!("<path d=\"{glyph}\" stroke=\"var(--_m)\" stroke-width=\"1.5\"/>"),
+                |s| s.to_string(),
+            );
+            inner += &crate::svg::icon_svg(icon, inset + row.x, cy - size / 2.0, size, &markup);
+        }
         match &row.label {
             Some(label) => {
                 inner += &left_label(
                     label,
-                    inset + row.x,
+                    inset + row.label_x,
                     top + row.top + settings.padding_y,
-                    " class=\"pele-rs-label\"",
+                    " class=\"pele-label\"",
                     row.directory,
                 );
             }
             None => {
-                if !row.text.is_empty() || row.icon_label.is_some() {
+                if !row.text.is_empty() {
                     let _ = write!(
                         inner,
-                        "<text class=\"pele-rs-label\" x=\"{}\" y=\"{}\"{} xml:space=\"preserve\">{}\
-                         {}</text>",
-                        num(inset + row.x),
+                        "<text class=\"pele-label\" x=\"{}\" y=\"{}\"{}{family} xml:space=\"preserve\">{}</text>",
+                        num(inset + row.label_x),
                         num(cy + baseline),
                         if row.directory {
-                            " font-weight=\"var(--_w)\""
+                            " font-weight=\"var(--_hw)\""
                         } else {
                             ""
                         },
-                        icon_span(row.icon_label.as_deref()),
                         esc(&row.text)
                     );
                 }
@@ -278,18 +305,18 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool) -> Output {
                 Some(label) => {
                     inner += &left_label(
                         label,
-                        inset + row.x,
+                        inset + row.label_x,
                         top + row.top
                             + settings.padding_y
                             + row.label.as_ref().map_or(0.0, |l| l.height),
-                        " class=\"pele-rs-tree-description\" fill=\"var(--_m)\"",
+                        " class=\"pele-tree-description\" fill=\"var(--_m)\"",
                         false,
                     );
                 }
                 None => {
                     let _ = write!(
                         inner,
-                        "<text class=\"pele-rs-tree-description\" x=\"{}\" y=\"{}\" \
+                        "<text class=\"pele-tree-description\" x=\"{}\" y=\"{}\" \
                          font-style=\"italic\" fill=\"var(--_m)\" xml:space=\"preserve\">{}</text>",
                         num(inset + desc_x),
                         num(cy + baseline),
@@ -300,7 +327,7 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool) -> Output {
         }
         let _ = write!(
             body,
-            "<g class=\"pele-rs-node pele-rs-tree-{}{}\" data-id=\"{}\">{}</g>",
+            "<g class=\"pele-node pele-tree-{}{}\" data-id=\"{}\">{}</g>",
             if row.directory { "dir" } else { "file" },
             class_names(node.css_class.as_deref().unwrap_or("")),
             esc_text(&node.name),
@@ -312,12 +339,12 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool) -> Output {
         &title,
         total_width / 2.0,
         pad + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
     ) + &if guides.is_empty() {
         String::new()
     } else {
         format!(
-            "<g class=\"pele-rs-tree-guides\" fill=\"none\" stroke=\"var(--_b)\" \
+            "<g class=\"pele-tree-guides\" fill=\"none\" stroke=\"var(--_b)\" \
              stroke-width=\"{}\">{guides}</g>",
             num(settings.line_thickness)
         )
@@ -340,17 +367,6 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool) -> Output {
         width: total_width,
         height: total_height,
         links: Vec::new(),
-    }
-}
-
-/// The name of an icon, as it is written in front of the name of a node.
-fn icon_span(icon: Option<&str>) -> String {
-    match icon {
-        Some(icon) => format!(
-            "<tspan class=\"pele-rs-tree-icon\" fill=\"var(--_m)\">{}</tspan><tspan> </tspan>",
-            esc(icon)
-        ),
-        None => String::new(),
     }
 }
 
@@ -386,25 +402,21 @@ fn layout(
         let item = &model.nodes[node];
         let directory = item.node_type == NodeType::Directory;
         let text = decode_entities(&item.name);
+        let siblings = &model.nodes[item.parent.unwrap_or(0)].children;
+        let slot = siblings
+            .iter()
+            .any(|&i| icons.of(&model.nodes[i]).is_some());
+        let label_x = x + if slot { size + 6.0 } else { 0.0 };
         let room = MIN_ROOM
             .max(options.max_width.unwrap_or(320.0) - 2.0 * pad - 2.0 * HIGHLIGHT_OVERHANG - x);
-        let style = if directory { Style::BOLD } else { Style::NONE };
-        let icon_label = icons.of(item).as_deref().map(icons::label);
-        let icon_width = icon_label.as_deref().map_or(0.0, |icon| {
-            measurer.width(&format!("{icon} "), size, Style::NONE)
-        });
-        let mut label = tight.then(|| literal_label(&text, measurer, size, room, style));
-        // pele-rs has no icon font and draws no images, so the name of the icon is written in
-        // front of the name of the node.
-        if let (Some(icon), Some(label)) = (&icon_label, label.as_mut()) {
-            let icon_text = format!("{icon} ");
-            let width = measurer.width(&icon_text, size, Style::NONE);
-            if let Some(first) = label.lines.first_mut() {
-                first.insert(0, Span::text(icon_text, Style::NONE, width));
-                label.widths[0] += width;
-                label.width += width;
-            }
-        }
+        let style = (if directory { Style::BOLD } else { Style::NONE })
+            | if options.monospace.contains(&crate::MonospacePart::Files) {
+                Style::MONO
+            } else {
+                Style::NONE
+            };
+        let icon_label = icons.of(item);
+        let label = tight.then(|| literal_label(&text, measurer, size, room, style));
         let description_text = item.description.as_deref().map(decode_entities);
         let description = match &description_text {
             Some(text) if tight => Some(literal_label(text, measurer, size, room, Style::ITALIC)),
@@ -429,11 +441,11 @@ fn layout(
         rows.push(Row {
             node,
             x,
+            label_x,
             cy,
             top: rows_height,
             height,
             icon_label,
-            icon_width,
             text,
             label,
             description,
@@ -497,16 +509,23 @@ impl Row {
 /// look ragged.
 fn left_label(label: &Label, left: f64, top: f64, attrs: &str, bold: bool) -> String {
     let attrs = if bold {
-        format!("{attrs} font-weight=\"var(--_w)\"")
+        format!("{attrs} font-weight=\"var(--_hw)\"")
     } else {
         attrs.to_string()
     };
+    let attrs = crate::svg::text_style(&attrs, crate::svg::shared_style(label));
     let mut out = String::new();
     for (k, line) in label.lines.iter().enumerate() {
         let y = top + (k as f64 + 0.5) * label.line_height + label.size * 0.35;
         let mut body = String::new();
         for span in line {
-            let _ = write!(body, "<tspan>{}</tspan>", esc(&span.text));
+            let shared = crate::svg::shared_style(label);
+            let own = crate::svg::span_style(span.style & !shared);
+            if own.is_empty() {
+                body += &esc(&span.text);
+            } else {
+                let _ = write!(body, "<tspan{own}>{}</tspan>", esc(&span.text));
+            }
         }
         let _ = write!(
             out,
@@ -516,88 +535,4 @@ fn left_label(label: &Label, left: f64, top: f64, attrs: &str, bold: bool) -> St
         );
     }
     out
-}
-
-/// A label that keeps every character of a name, broken between characters when it does not
-/// fit the room it has.
-fn literal_label(
-    text: &str,
-    measurer: &dyn TextMeasurer,
-    size: f64,
-    room: f64,
-    style: Style,
-) -> Label {
-    let mut lines: Vec<String> = Vec::new();
-    for raw in text.split('\n') {
-        let chars: Vec<char> = raw.chars().collect();
-        let mut from = 0;
-        while from < chars.len() {
-            let fits = |length: usize| {
-                let piece: String = chars[from..from + length].iter().collect();
-                measurer.width(&piece, size, style) <= room
-            };
-            let mut hi = 1;
-            while hi < chars.len() - from && fits(hi) {
-                hi = (chars.len() - from).min(hi * 2);
-            }
-            let mut lo = 1;
-            while lo < hi {
-                let mid = (lo + hi).div_ceil(2);
-                if fits(mid) {
-                    lo = mid;
-                } else {
-                    hi = mid - 1;
-                }
-            }
-            let mut take = lo;
-            let wraps = from + take < chars.len();
-            if wraps && !chars[from + take].is_whitespace() {
-                for i in (1..take).rev() {
-                    if chars[from + i].is_whitespace() {
-                        take = i + 1;
-                        break;
-                    }
-                }
-            }
-            let line: String = chars[from..from + take].iter().collect();
-            lines.push(if wraps {
-                let trimmed = line.trim_end();
-                if trimmed.is_empty() {
-                    line
-                } else {
-                    trimmed.to_string()
-                }
-            } else {
-                line
-            });
-            from += take;
-            while wraps && from < chars.len() && chars[from].is_whitespace() {
-                from += 1;
-            }
-        }
-    }
-    if text.is_empty() {
-        lines.clear();
-    }
-    let line_height = round(size * 1.5);
-    let widths: Vec<f64> = lines
-        .iter()
-        .map(|line| measurer.width(line, size, style))
-        .collect();
-    let width = widths.iter().copied().fold(0.0f64, f64::max);
-    let spans: Vec<Vec<Span>> = lines
-        .into_iter()
-        .zip(widths.iter())
-        .map(|(line, &width)| vec![Span::text(line, style, width)])
-        .collect();
-    let height = spans.len() as f64 * line_height;
-    Label {
-        lines: spans,
-        widths,
-        width,
-        height,
-        size,
-        line_height,
-        heights: None,
-    }
 }

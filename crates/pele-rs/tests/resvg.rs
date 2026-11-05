@@ -139,7 +139,7 @@ fn text_is_sized_and_falls_back_to_cjk_fonts() {
     let plain = pele_rs::render("flowchart LR\n A[開始] --> B", &RenderOptions::default())
         .unwrap()
         .svg;
-    assert!(plain.contains("font-family:var(--pele-rs-font,sans-serif)"));
+    assert!(plain.contains("font-family:var(--pele-font,sans-serif)"));
     assert!(!plain.contains("CJK"));
 }
 

@@ -44,9 +44,6 @@ pub struct ParsedDiagram {
     pre: Arc<Preprocessed>,
     model: Arc<dyn Parsed>,
     kind: DiagramKind,
-    limits: Limits,
-    source_chars: usize,
-    host_config: Option<String>,
     keep_comments: bool,
     math: bool,
 }
@@ -61,7 +58,7 @@ impl std::fmt::Debug for ParsedDiagram {
 
 /// Parse once, then call [`ParsedDiagram::render`] for different widths or fonts.
 pub fn parse(src: &str, options: &ParseOptions) -> Result<ParsedDiagram, Error> {
-    if src.chars().count() > options.limits.source {
+    if src.encode_utf16().count() > options.limits.source {
         return Err(Error::new(
             ErrorCode::Limit,
             format!(
@@ -127,9 +124,6 @@ pub fn parse(src: &str, options: &ParseOptions) -> Result<ParsedDiagram, Error> 
         pre: Arc::new(pre),
         model: Arc::from(model),
         kind,
-        limits: options.limits,
-        source_chars: src.chars().count(),
-        host_config: options.config.clone(),
         keep_comments: diagram.keep_comments(),
         math: diagram.math(),
     })
@@ -144,39 +138,9 @@ impl ParsedDiagram {
     }
 
     /// Render without parsing again. Width, fonts, palette, links, and time may change.
-    /// A different parsing config or stricter structural limits requires a new `parse` call.
+    /// Parsing config and structural limits are retained by the model; render options do not reparse it.
     /// Cache the returned SVG separately from device-dependent raster images.
     pub fn render(&self, options: &RenderOptions) -> Result<Rendered, Error> {
-        if self.source_chars > options.limits.source {
-            return Err(Error::new(
-                ErrorCode::Limit,
-                "Diagram source exceeds the rendering source limit.",
-            )
-            .with_kind(self.kind));
-        }
-        if options.limits.max_edges < self.limits.max_edges
-            || options.limits.max_depth < self.limits.max_depth
-        {
-            return Err(Error::new(
-                ErrorCode::Limit,
-                "Structural limits changed; parse the diagram again with those limits.",
-            )
-            .with_kind(self.kind));
-        }
-        if let Some(host) = options
-            .config
-            .as_deref()
-            .filter(|_| options.config != self.host_config)
-        {
-            let original = preprocess(&self.source)?;
-            if with_host_config(host, &original.config)? != self.pre.config {
-                return Err(Error::new(
-                    ErrorCode::Semantic,
-                    "Parsing configuration changed; parse the diagram again.",
-                )
-                .with_kind(self.kind));
-            }
-        }
         let measured = options.measurer.as_deref().unwrap_or(&MetricsMeasurer);
         let math = options.math.as_ref().filter(|_| self.math);
         let hosted;
@@ -198,6 +162,7 @@ impl ParsedDiagram {
             options,
             measurer: &checked,
         };
+        let _palette = crate::palette::enter(self.kind, &self.pre.config);
         let numeric = crate::svg::NumericGuard::new();
         let mut out = self.model.render(&input).map_err(|e| {
             crate::source_map::remap(
@@ -218,12 +183,11 @@ impl ParsedDiagram {
             )
             .with_kind(self.kind));
         }
-        crate::palette::apply(&mut out.svg, self.kind, &self.pre.config);
         if let Some(palette) = &options.palette {
             out.svg =
                 crate::svg::resolve_vars(&out.svg, palette, options.font_family_mono.as_deref());
         }
-        if out.svg.chars().count() > options.limits.output {
+        if out.svg.encode_utf16().count() > options.limits.output {
             return Err(Error::new(
                 ErrorCode::Limit,
                 format!(
@@ -232,6 +196,9 @@ impl ParsedDiagram {
                 ),
             )
             .with_kind(self.kind));
+        }
+        for link in &mut out.links {
+            link.id = crate::text::entities::decode_entities(&link.id);
         }
         Ok(Rendered {
             svg: out.svg,

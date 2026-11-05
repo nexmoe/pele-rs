@@ -288,7 +288,7 @@ impl BlockModel {
 }
 
 /// The model of a block diagram, from the statements the parser read.
-pub(crate) fn build_block(parsed: &Parsed, title: Option<&str>) -> Result<BlockModel, Error> {
+pub(crate) fn build_block(parsed: Parsed, title: Option<&str>) -> Result<BlockModel, Error> {
     let mut model = BlockModel {
         title: title.map(str::to_string),
         arena: vec![Block {
@@ -309,7 +309,7 @@ pub(crate) fn build_block(parsed: &Parsed, title: Option<&str>) -> Result<BlockM
         spaces: 0,
     };
 
-    let mut stack = vec![frame(parsed.statements.clone(), model.root)];
+    let mut stack = vec![frame(parsed.statements, model.root)];
     while !stack.is_empty() {
         let (at, len) = {
             let f = stack.last().expect("the stack is never empty here");
@@ -320,7 +320,13 @@ pub(crate) fn build_block(parsed: &Parsed, title: Option<&str>) -> Result<BlockM
             model.arena[f.parent].children = f.children;
             continue;
         }
-        let statement = stack.last().expect("the stack is never empty here").list[at].clone();
+        let statement = std::mem::replace(
+            &mut stack
+                .last_mut()
+                .expect("the stack is never empty here")
+                .list[at],
+            Statement::Columns { columns: -1 },
+        );
         stack.last_mut().expect("the stack is never empty here").at += 1;
         let parent = stack.last().expect("the stack is never empty here").parent;
         let columns = stack.last().expect("the stack is never empty here").columns;
@@ -454,7 +460,7 @@ pub(crate) fn build_block(parsed: &Parsed, title: Option<&str>) -> Result<BlockM
             }
         }
 
-        let inner = block.children.clone();
+        let inner = block.children;
         if block.kind == Kind::Space {
             let width = block.width.unwrap_or(1);
             if width > MAX_SPACES - model.spaces {
@@ -509,7 +515,7 @@ mod tests {
     #[test]
     fn reads_the_columns() {
         let parsed = super::super::parser::parse_block("block\ncolumns 2\nA\nB\n", 64).unwrap();
-        let model = build_block(&parsed, None).unwrap();
+        let model = build_block(parsed, None).unwrap();
         assert_eq!(model.arena[model.root].columns, Some(2));
     }
 }

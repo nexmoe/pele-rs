@@ -59,6 +59,9 @@ const ID: usize = 34;
 const FID: usize = 35;
 const DATA_INLINE: usize = 36;
 const DATA_BLOCK: usize = 37;
+const ACC_DESCR: usize = 38;
+const ACC_TITLE: usize = 39;
+const TITLE: usize = 40;
 
 /// The kinds that may match a longer text than a keyword does, as Chevrotain's `LONGER_ALT`.
 /// A name is longer than a keyword only when it has more characters.
@@ -66,7 +69,7 @@ const NAME: &[usize] = &[ID];
 /// `event` is the beginning of `eventmodeling`, so that keyword is one of its alternatives.
 const EVENT_NAME: &[usize] = &[EVENTMODELING, ID];
 
-static TOKENS: [TokenType; 44] = [
+static TOKENS: [TokenType; 47] = [
     TokenType {
         name: "eventmodeling",
         pattern: Pattern::Match(diagram_keyword),
@@ -115,6 +118,9 @@ static TOKENS: [TokenType; 44] = [
         hidden: false,
         longer: &[],
     },
+    match_token("EM_ACC_DESCR", acc_descr),
+    match_token("EM_ACC_TITLE", acc_title),
+    match_token("EM_TITLE", title),
     TokenType {
         name: "EM_WS",
         pattern: Pattern::Match(whitespace),
@@ -206,8 +212,8 @@ fn inline_data(src: &str, at: usize) -> Found {
         .rposition(|&b| b == close)
         .map(|i| at + i + 1);
     match last {
-        Some(end) => Found::End(end),
-        None => Found::No,
+        Some(end) if end > at + 1 => Found::End(end),
+        _ => Found::No,
     }
 }
 
@@ -383,6 +389,9 @@ pub(crate) struct Specification {
 /// What the grammar reads out of the text.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub(crate) struct EventModelAst {
+    pub title: Option<String>,
+    pub acc_title: Option<String>,
+    pub acc_descr: Option<String>,
     pub model_entities: Vec<String>,
     pub frames: Vec<Frame>,
     pub data_entities: Vec<DataEntity>,
@@ -400,6 +409,15 @@ pub(crate) fn parse_event_modeling(src: &str) -> Result<EventModelAst, Error> {
     r.expect(EVENTMODELING)?;
     while r.kind() != END {
         match r.kind() {
+            ACC_DESCR => {
+                ast.acc_descr = Some(r.take().to_string());
+            }
+            ACC_TITLE => {
+                ast.acc_title = Some(r.take().to_string());
+            }
+            TITLE => {
+                ast.title = Some(r.take().to_string());
+            }
             ENTITY => {
                 r.i += 1;
                 ast.model_entities.push(qualified_name(&mut r)?);
@@ -571,6 +589,27 @@ fn statements(r: &mut Reader<'_>) -> Result<Vec<String>, Error> {
         return Err(r.fail("a statement of the specification"));
     }
     Ok(out)
+}
+
+fn common_match(token: crate::diagrams::common::tokens::TokenType, src: &str, at: usize) -> Found {
+    use crate::diagrams::common::tokens::{Found as F, Pattern as P};
+    let P::Match(f) = token.pattern else {
+        unreachable!()
+    };
+    match f(src, at) {
+        F::End(e) => Found::End(e),
+        F::No => Found::No,
+        F::Never => Found::Never,
+    }
+}
+fn acc_descr(src: &str, at: usize) -> Found {
+    common_match(crate::diagrams::common::tokens::ACC_DESCR, src, at)
+}
+fn acc_title(src: &str, at: usize) -> Found {
+    common_match(crate::diagrams::common::tokens::ACC_TITLE, src, at)
+}
+fn title(src: &str, at: usize) -> Found {
+    common_match(crate::diagrams::common::tokens::TITLE_WORD, src, at)
 }
 
 #[cfg(test)]

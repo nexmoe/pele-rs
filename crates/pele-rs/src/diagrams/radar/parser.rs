@@ -10,7 +10,7 @@
 use crate::diagrams::common::tokens::Scanner;
 use crate::diagrams::common::tokens::{
     ACC_DESCR, ACC_TITLE, DIRECTIVE, END, Found, NEWLINE, Pattern, Reader, SINGLE_LINE_COMMENT,
-    STRING, TITLE, TokenType, WHITESPACE, YAML, acc_descr_value, acc_title_value,
+    STRING, TITLE_NAME, TokenType, WHITESPACE, YAML, acc_descr_value, acc_title_value,
     keyword_token_with, literal_token, match_token, string_value, title_value, tokenize,
     word_token,
 };
@@ -68,7 +68,7 @@ static TOKENS: [TokenType; 28] = [
     match_token("BOOLEAN", boolean),
     ACC_DESCR,
     ACC_TITLE,
-    TITLE,
+    TITLE_NAME,
     TokenType {
         name: "NUMBER",
         pattern: Pattern::Scanner(new_numbers),

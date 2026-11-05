@@ -9,6 +9,8 @@
 pele-rs = { git = "https://github.com/nexmoe/pele-rs" }
 ```
 
+描画の参照先は **Pele 1.13.0** に固定しています。Rust テストで **178,887 件の公式描画呼び出し**と **19,308 件のユーティリティ／レイアウト呼び出し**を再現し、SVG の構造、スタイル、座標を比較します。SVG クラスと CSS 変数は公式の `pele-*` / `--pele-*` を使用します。許容誤差、除外項目、ブラウザー動作との境界、再現手順は[互換性検証](docs/CONFORMANCE.md)を参照してください。
+
 全図種で再利用できる `parse` / `ParsedDiagram::render`、上限付き `CachingMeasurer`、元ソースへのエラー位置の対応、配色設定の互換性、数値検証を追加しました。オプションの `scene` 機能は usvg による `SvgScene` と resvg に一致する `FontMeasurer` を提供します。既定のビルドには実行時依存関係がありません。[ネイティブ統合ガイド](docs/NATIVE.md)を参照してください。crates.io にはまだ公開していません。
 
 
@@ -42,7 +44,7 @@ pele-rs は [Mermaid](https://mermaid.js.org) のダイアグラムを純粋な 
 | C4 図（`C4Context`、`C4Container`、`C4Component`、`C4Dynamic`、`C4Deployment`） | 対応済み：`title`、`accTitle` と `accDescr`、人物、システム、コンテナ、コンポーネントと、その境界と関係、および `UpdateLayoutConfig` 文 |
 | ユースケース図（`usecase-beta`） | 対応済み：`title`、`accTitle` と `accDescr`、アクターとユースケース、その関係。`usecase` の設定キー `nodeSpacing` と `rankSpacing` に対応 |
 | インフォメーション図（`info`） | 対応済み：`title`、`accTitle` と `accDescr`、バージョンと本文の行 |
-| ベン図（`venn-beta`） | 対応済み：各円とラベル。`venn` の設定キー `width`、`height`、`padding` に対応 |
+| ベン図（`venn-beta`） | 対応済み：集合、交差領域、ラベル、領域スタイル、内容に合わせたサイズ調整 |
 | ツリービュー図（`treeView-beta`） | 対応済み：罫線文字で描かれる木、ラベルの前のアイコン、`classDef` と `class`。`treeView` の設定キー `rowIndent`、`paddingX`、`paddingY`、`lineThickness`、`showIcons`、`defaultIconPack`、`filenameIcons`、`extensionIcons` に対応 |
 | Cynefin 図（`cynefin-beta:`） | 対応済み：`title`、`accTitle` と `accDescr`、四つの領域の項目と領域間の遷移。`cynefin` の設定キー `width`、`height`、`showDomainDescriptions`、`boundaryAmplitude`、`seed` に対応 |
 | 石川図（`ishikawa`） | 対応済み：各段階の原因と背骨 |
@@ -95,15 +97,15 @@ SVG の色とフォントは CSS カスタムプロパティから取得され�
 
 ```css
 svg {
-  --pele-rs-bg: #1e1e1e;
-  --pele-rs-fg: #dcddde;
-  --pele-rs-line: #999;
-  --pele-rs-accent: #7f6df2;
-  --pele-rs-font: "Inter", sans-serif;
+  --pele-bg: #1e1e1e;
+  --pele-fg: #dcddde;
+  --pele-line: #999;
+  --pele-accent: #7f6df2;
+  --pele-font: "Inter", sans-serif;
 }
 ```
 
-使用できる変数：`--pele-rs-bg`、`--pele-rs-fg`、`--pele-rs-muted`、`--pele-rs-line`、`--pele-rs-surface`、`--pele-rs-surface-alt`、`--pele-rs-border`、`--pele-rs-accent`、`--pele-rs-radius`、`--pele-rs-font`、`--pele-rs-font-mono`、そして円グラフの扇形などデータ系列の色に使う `--pele-rs-series-1` から `--pele-rs-series-8`。
+使用できる変数：`--pele-bg`、`--pele-fg`、`--pele-muted`、`--pele-line`、`--pele-surface`、`--pele-surface-alt`、`--pele-border`、`--pele-accent`、`--pele-radius`、`--pele-font`、`--pele-font-mono`、そして円グラフの扇形などデータ系列の色に使う `--pele-series-1` から `--pele-series-8`。
 
 ### CSS 変数を読めないビューア
 

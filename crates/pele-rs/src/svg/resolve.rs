@@ -59,7 +59,7 @@ fn value(name: &str, fallback: Option<&str>, palette: &Palette, mono: &str) -> O
             .to_string(),
         );
     }
-    let token = name.strip_prefix("pele-rs-")?;
+    let token = name.strip_prefix("pele-")?;
     match palette.token(token) {
         Some(color) => Some(color.to_string()),
         None => fallback.map(str::to_string),
@@ -135,7 +135,12 @@ fn radius_attribute(tag: &str) -> String {
 /// Replaces every `var()` in the tags of `svg` with its value. Text between tags is never
 /// touched, so a label that reads `var(--x)` stays as it was written.
 pub(crate) fn resolve_vars(svg: &str, palette: &Palette, mono: Option<&str>) -> String {
-    let palette = sanitized(palette);
+    let mut palette = sanitized(palette);
+    for (i, color) in crate::palette::colors().into_iter().enumerate() {
+        if let Some(color) = color {
+            palette.series[i] = resolve_tag(&color, &palette, "monospace");
+        }
+    }
     let mono = esc(families(mono, "monospace"));
     let mut out = String::with_capacity(svg.len());
     let mut rest = svg;
@@ -178,16 +183,16 @@ mod tests {
     fn resolves_tokens_aliases_and_fallbacks() {
         let p = Palette::dark();
         assert_eq!(
-            run("<g fill=\"var(--_bg)\" stroke=\"var(--pele-rs-line,#000)\"/>"),
+            run("<g fill=\"var(--_bg)\" stroke=\"var(--pele-line,#000)\"/>"),
             format!("<g fill=\"{}\" stroke=\"{}\"/>", p.bg, p.line)
         );
         assert_eq!(
-            run("<g style=\"rx:var(--_r);fill:var(--pele-rs-series-3,#123)\"/>"),
+            run("<g style=\"rx:var(--_r);fill:var(--pele-series-3,#123)\"/>"),
             format!("<g rx=\"4\" style=\"fill:{}\"/>", p.series[2])
         );
         // Not a color token: the fallback is the value.
         assert_eq!(
-            run("<g x=\"var(--pele-rs-radius,4px)\" y=\"var(--other,red)\"/>"),
+            run("<g x=\"var(--pele-radius,4px)\" y=\"var(--other,red)\"/>"),
             "<g x=\"4px\" y=\"red\"/>"
         );
         assert_eq!(run("<g x=\"var(--other)\"/>"), "<g x=\"var(--other)\"/>");

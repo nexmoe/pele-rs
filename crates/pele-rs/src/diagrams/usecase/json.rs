@@ -3,7 +3,7 @@
 //! keys.
 
 /// A JSON value, with the keys of an object in the order they were written.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub(crate) enum JsonValue {
     Null,
     Bool(bool),
@@ -38,11 +38,76 @@ impl JsonValue {
     }
 }
 
+// Parsed JSON can be much deeper than the Rust call stack. Cloning and releasing it
+// use the same explicit traversal as parsing and flattening.
+impl Clone for JsonValue {
+    fn clone(&self) -> Self {
+        let mut stack = vec![(self, false)];
+        let mut values = Vec::new();
+        while let Some((node, done)) = stack.pop() {
+            if !done {
+                match node {
+                    JsonValue::Array(items) => {
+                        stack.push((node, true));
+                        stack.extend(items.iter().rev().map(|v| (v, false)));
+                        continue;
+                    }
+                    JsonValue::Object(entries) => {
+                        stack.push((node, true));
+                        stack.extend(entries.iter().rev().map(|(_, v)| (v, false)));
+                        continue;
+                    }
+                    _ => {}
+                }
+            }
+            let value = match node {
+                JsonValue::Null => JsonValue::Null,
+                JsonValue::Bool(v) => JsonValue::Bool(*v),
+                JsonValue::Number(v) => JsonValue::Number(*v),
+                JsonValue::String(v) => JsonValue::String(v.clone()),
+                JsonValue::Array(items) => {
+                    let children = values.split_off(values.len() - items.len());
+                    JsonValue::Array(children)
+                }
+                JsonValue::Object(entries) => {
+                    let children = values.split_off(values.len() - entries.len());
+                    JsonValue::Object(
+                        entries
+                            .iter()
+                            .map(|(k, _)| k.clone())
+                            .zip(children)
+                            .collect(),
+                    )
+                }
+            };
+            values.push(value);
+        }
+        values.pop().unwrap()
+    }
+}
+impl Drop for JsonValue {
+    fn drop(&mut self) {
+        fn drain(value: &mut JsonValue, pending: &mut Vec<JsonValue>) {
+            match value {
+                JsonValue::Array(items) => pending.extend(std::mem::take(items)),
+                JsonValue::Object(entries) => {
+                    pending.extend(std::mem::take(entries).into_iter().map(|(_, v)| v))
+                }
+                _ => {}
+            }
+        }
+        let mut pending = Vec::new();
+        drain(self, &mut pending);
+        while let Some(mut value) = pending.pop() {
+            drain(&mut value, &mut pending);
+        }
+    }
+}
+
 /// Reads JSON text, or gives the offset of the first character that is not valid JSON.
 struct Reader<'a> {
     bytes: &'a [u8],
     pos: usize,
-    depth: usize,
     limit: usize,
 }
 
@@ -72,93 +137,90 @@ impl Reader<'_> {
     }
 
     fn value(&mut self) -> Result<JsonValue, usize> {
-        if self.depth > self.limit {
-            return Err(self.pos);
+        enum Frame {
+            Array(Vec<JsonValue>),
+            Object(Vec<(String, JsonValue)>, String),
         }
-        self.ws();
-        match *self.bytes.get(self.pos).ok_or(self.pos)? {
-            b'{' => self.object(),
-            b'[' => self.array(),
-            b'"' => self.string().map(JsonValue::String),
-            b't' => {
-                if self.eat(b"true") {
-                    Ok(JsonValue::Bool(true))
-                } else {
-                    Err(self.pos)
-                }
-            }
-            b'f' => {
-                if self.eat(b"false") {
-                    Ok(JsonValue::Bool(false))
-                } else {
-                    Err(self.pos)
-                }
-            }
-            b'n' => {
-                if self.eat(b"null") {
-                    Ok(JsonValue::Null)
-                } else {
-                    Err(self.pos)
-                }
-            }
-            _ => self.number(),
-        }
-    }
-
-    fn object(&mut self) -> Result<JsonValue, usize> {
-        self.pos += 1;
-        self.depth += 1;
-        let mut out: Vec<(String, JsonValue)> = Vec::new();
-        self.ws();
-        if self.eat(b"}") {
-            self.depth -= 1;
-            return Ok(JsonValue::Object(out));
-        }
+        let mut stack: Vec<Frame> = Vec::new();
         loop {
-            self.ws();
-            if *self.bytes.get(self.pos).ok_or(self.pos)? != b'"' {
+            if stack.len() > self.limit {
                 return Err(self.pos);
             }
-            let key = self.string()?;
             self.ws();
-            if !self.eat(b":") {
-                return Err(self.pos);
-            }
-            let value = self.value()?;
-            // A repeated key keeps the place it took first and the value it was given last.
-            match out.iter_mut().find(|(name, _)| *name == key) {
-                Some(entry) => entry.1 = value,
-                None => out.push((key, value)),
-            }
-            self.ws();
-            if self.eat(b"}") {
-                self.depth -= 1;
-                return Ok(JsonValue::Object(out));
-            }
-            if !self.eat(b",") {
-                return Err(self.pos);
-            }
-        }
-    }
-
-    fn array(&mut self) -> Result<JsonValue, usize> {
-        self.pos += 1;
-        self.depth += 1;
-        let mut out = Vec::new();
-        self.ws();
-        if self.eat(b"]") {
-            self.depth -= 1;
-            return Ok(JsonValue::Array(out));
-        }
-        loop {
-            out.push(self.value()?);
-            self.ws();
-            if self.eat(b"]") {
-                self.depth -= 1;
-                return Ok(JsonValue::Array(out));
-            }
-            if !self.eat(b",") {
-                return Err(self.pos);
+            let mut value = match *self.bytes.get(self.pos).ok_or(self.pos)? {
+                b'[' => {
+                    self.pos += 1;
+                    self.ws();
+                    if self.eat(b"]") {
+                        JsonValue::Array(Vec::new())
+                    } else {
+                        stack.push(Frame::Array(Vec::new()));
+                        continue;
+                    }
+                }
+                b'{' => {
+                    self.pos += 1;
+                    self.ws();
+                    if self.eat(b"}") {
+                        JsonValue::Object(Vec::new())
+                    } else {
+                        let key = self.string()?;
+                        self.ws();
+                        if !self.eat(b":") {
+                            return Err(self.pos);
+                        }
+                        stack.push(Frame::Object(Vec::new(), key));
+                        continue;
+                    }
+                }
+                b'"' => JsonValue::String(self.string()?),
+                b't' if self.eat(b"true") => JsonValue::Bool(true),
+                b'f' if self.eat(b"false") => JsonValue::Bool(false),
+                b'n' if self.eat(b"null") => JsonValue::Null,
+                _ => self.number()?,
+            };
+            loop {
+                let Some(frame) = stack.last_mut() else {
+                    return Ok(value);
+                };
+                match frame {
+                    Frame::Array(items) => {
+                        items.push(value);
+                        self.ws();
+                        if self.eat(b"]") {
+                            value = JsonValue::Array(std::mem::take(items));
+                            stack.pop();
+                        } else {
+                            if !self.eat(b",") {
+                                return Err(self.pos);
+                            }
+                            break;
+                        }
+                    }
+                    Frame::Object(entries, key) => {
+                        if let Some(entry) = entries.iter_mut().find(|(name, _)| name == key) {
+                            entry.1 = value;
+                        } else {
+                            entries.push((std::mem::take(key), value));
+                        }
+                        self.ws();
+                        if self.eat(b"}") {
+                            value = JsonValue::Object(std::mem::take(entries));
+                            stack.pop();
+                        } else {
+                            if !self.eat(b",") {
+                                return Err(self.pos);
+                            }
+                            self.ws();
+                            *key = self.string()?;
+                            self.ws();
+                            if !self.eat(b":") {
+                                return Err(self.pos);
+                            }
+                            break;
+                        }
+                    }
+                }
             }
         }
     }
@@ -194,6 +256,9 @@ impl Reader<'_> {
     }
 
     fn string(&mut self) -> Result<String, usize> {
+        if self.bytes.get(self.pos) != Some(&b'"') {
+            return Err(self.pos);
+        }
         self.pos += 1;
         let mut out = String::new();
         loop {
@@ -339,7 +404,6 @@ pub(crate) fn parse_json(text: &str, limit: usize) -> Result<JsonValue, usize> {
     let mut reader = Reader {
         bytes: text.as_bytes(),
         pos: 0,
-        depth: 0,
         limit,
     };
     match reader.value() {
