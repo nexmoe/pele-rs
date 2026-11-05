@@ -239,7 +239,7 @@ pub(crate) fn render_gantt(db: &mut GanttDb, input: &Input<'_>) -> Result<Output
             &title,
             width / 2.0,
             pad + title.height / 2.0,
-            " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+            " class=\"pele-title\" font-weight=\"var(--_tw)\"",
         )
     };
 
@@ -473,7 +473,7 @@ pub(crate) fn render_gantt(db: &mut GanttDb, input: &Input<'_>) -> Result<Output
         let id = esc_text(&task.id);
         let _ = write!(
             vert_lines,
-            "<path class=\"pele-rs-vert\" data-id=\"{id}\" d=\"M{},{}V{}\"/>",
+            "<path class=\"pele-vert\" data-id=\"{id}\" d=\"M{},{}V{}\"/>",
             num(vx),
             num(plot_top - grid_lead),
             num(plot_bottom)
@@ -482,7 +482,7 @@ pub(crate) fn render_gantt(db: &mut GanttDb, input: &Input<'_>) -> Result<Output
             &label,
             cx,
             vert_top + line as f64 * vert_line + vert_line / 2.0,
-            &format!(" class=\"pele-rs-vert-label\" data-id=\"{id}\""),
+            &format!(" class=\"pele-vert-label\" data-id=\"{id}\""),
         );
     }
 
@@ -513,7 +513,7 @@ pub(crate) fn render_gantt(db: &mut GanttDb, input: &Input<'_>) -> Result<Output
         if categories.len() > 1 || !section.is_empty() {
             let _ = write!(
                 bands,
-                "<rect class=\"pele-rs-section pele-rs-section-{}\" x=\"0\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"{}\"/>",
+                "<rect class=\"pele-section pele-section-{}\" x=\"0\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"{}\"/>",
                 js_number(index),
                 num(y),
                 js_number(width),
@@ -531,7 +531,7 @@ pub(crate) fn render_gantt(db: &mut GanttDb, input: &Input<'_>) -> Result<Output
             pad + 8.0 + label.width / 2.0,
             y + h / 2.0,
             &format!(
-                " class=\"pele-rs-section-label\" data-id=\"{}\"",
+                " class=\"pele-section-label\" data-id=\"{}\"",
                 esc_text(section)
             ),
         );
@@ -594,24 +594,24 @@ pub(crate) fn render_gantt(db: &mut GanttDb, input: &Input<'_>) -> Result<Output
         } else {
             ""
         };
-        let mut classes = "pele-rs-task".to_string();
+        let mut classes = "pele-task".to_string();
         if !state.is_empty() {
-            classes += &format!(" pele-rs-{state}");
+            classes += &format!(" pele-{state}");
         }
         if task.crit {
-            classes += " pele-rs-crit";
+            classes += " pele-crit";
         }
         if task.milestone {
-            classes += " pele-rs-milestone";
+            classes += " pele-milestone";
         }
         if task.classes.iter().any(|c| c == "clickable") {
-            classes += " pele-rs-clickable";
+            classes += " pele-clickable";
         }
 
         let mut shape = String::new();
         let mut text_fill = "";
         if bar.x0.is_nan() {
-            classes += " pele-rs-unscheduled";
+            classes += " pele-unscheduled";
             text_fill = " fill=\"var(--_m)\"";
         } else {
             // A critical task takes the critical color in place of the accent. Done, it keeps
@@ -669,7 +669,7 @@ pub(crate) fn render_gantt(db: &mut GanttDb, input: &Input<'_>) -> Result<Output
                 &bar.label,
                 bar.label_x,
                 cy,
-                &format!(" class=\"pele-rs-label\"{text_fill}"),
+                &format!(" class=\"pele-label\"{text_fill}"),
             );
         if let Some(url) = db.links.get(&task.id) {
             body = linked(&body, url, &task.id, &mut links, options, "");
@@ -692,7 +692,7 @@ pub(crate) fn render_gantt(db: &mut GanttDb, input: &Input<'_>) -> Result<Output
         };
         let _ = write!(
             today,
-            "<g class=\"pele-rs-today\"><path d=\"M{},{}V{}\" fill=\"none\" stroke=\"var(--_c)\" stroke-width=\"2\"{style}/>",
+            "<g class=\"pele-today\"><path d=\"M{},{}V{}\" fill=\"none\" stroke=\"var(--_c)\" stroke-width=\"2\"{style}/>",
             num(tx),
             num(top),
             num(plot_bottom)
@@ -723,28 +723,28 @@ pub(crate) fn render_gantt(db: &mut GanttDb, input: &Input<'_>) -> Result<Output
     }
     let mut content = title_svg(width);
     if !bands.is_empty() {
-        let _ = write!(content, "<g class=\"pele-rs-sections\">{bands}</g>");
+        let _ = write!(content, "<g class=\"pele-sections\">{bands}</g>");
     }
     if !excluded.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-excluded\" fill=\"var(--_a)\">{excluded}</g>"
+            "<g class=\"pele-excluded\" fill=\"var(--_a)\">{excluded}</g>"
         );
     }
     let _ = write!(
         content,
-        "<g class=\"pele-rs-grid\" fill=\"none\"><path d=\"{grid}\" stroke=\"var(--_b)\" stroke-dasharray=\"1 3\"/><path d=\"{axis_line}\" stroke=\"var(--_b)\"/></g>"
+        "<g class=\"pele-grid\" fill=\"none\"><path d=\"{grid}\" stroke=\"var(--_b)\" stroke-dasharray=\"1 3\"/><path d=\"{axis_line}\" stroke=\"var(--_b)\"/></g>"
     );
     if !vert_lines.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-verts\" fill=\"none\" stroke=\"var(--_l)\" stroke-width=\"1.5\" stroke-dasharray=\"4 3\">{vert_lines}</g>"
+            "<g class=\"pele-verts\" fill=\"none\" stroke=\"var(--_l)\" stroke-width=\"1.5\" stroke-dasharray=\"4 3\">{vert_lines}</g>"
         );
     }
     content += &today;
     let _ = write!(
         content,
-        "<g class=\"pele-rs-tasks\" font-size=\"{}\">{tasks_out}</g><g class=\"pele-rs-section-labels\" font-size=\"{}\">{section_out}</g><g class=\"pele-rs-axis\" font-size=\"{}\" fill=\"var(--_m)\">{axis_bottom}{axis_top}</g>",
+        "<g class=\"pele-tasks\" font-size=\"{}\">{tasks_out}</g><g class=\"pele-section-labels\" font-size=\"{}\">{section_out}</g><g class=\"pele-axis\" font-size=\"{}\" fill=\"var(--_m)\">{axis_bottom}{axis_top}</g>",
         num(label_size),
         num(section_size),
         js_number(tick_size)
@@ -752,7 +752,7 @@ pub(crate) fn render_gantt(db: &mut GanttDb, input: &Input<'_>) -> Result<Output
     if !vert_labels.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-vert-labels\" font-size=\"{}\">{vert_labels}</g>",
+            "<g class=\"pele-vert-labels\" font-size=\"{}\">{vert_labels}</g>",
             num(label_size)
         );
     }

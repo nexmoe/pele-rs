@@ -31,9 +31,7 @@ impl Icons {
         let Some(Value::Map(settings)) = config.get("treeView") else {
             return icons;
         };
-        if let Some(Value::Bool(show)) = settings.get("showIcons") {
-            icons.show_icons = *show;
-        }
+        icons.show_icons = settings.get("showIcons").is_some_and(Value::truthy);
         if let Some(Value::String(pack)) = settings.get("defaultIconPack") {
             icons.default_icon_pack = pack.clone();
         }
@@ -126,6 +124,7 @@ fn is_builtin(icon: &str) -> bool {
 
 /// The name an icon is drawn under: the name of Mermaid's own icons without their pack, and
 /// the whole name of every other icon.
+#[cfg(test)]
 pub(crate) fn label(icon: &str) -> String {
     match icon.strip_prefix(&format!("{BUILTIN_PACK}:")) {
         Some(name) => name.to_string(),

@@ -139,7 +139,7 @@ fn reference<'a>(text: &'a str, keyword: &str) -> Option<&'a str> {
         let last_space = rest.len() - spaced.len();
         let before = &rest[..last_space];
         let c = before.chars().last()?;
-        (c == ' ')
+        (c == ' ' && before.chars().count() > 1)
             .then(|| ids_at(&rest[last_space - 1..]))
             .flatten()
     })

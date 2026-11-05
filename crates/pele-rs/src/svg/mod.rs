@@ -19,8 +19,22 @@ mod document;
     feature = "block",
     feature = "usecase",
     feature = "agentflow",
+    feature = "c4",
 ))]
 pub(crate) mod edges;
+#[cfg(any(
+    feature = "flowchart",
+    feature = "state",
+    feature = "class",
+    feature = "er",
+    feature = "requirement",
+    feature = "block",
+    feature = "usecase",
+    feature = "agentflow",
+    feature = "c4"
+))]
+pub(crate) mod fills;
+pub(crate) mod ink;
 #[cfg(any(
     feature = "flowchart",
     feature = "sequence",
@@ -35,6 +49,7 @@ pub(crate) mod edges;
     feature = "agentflow",
     feature = "c4",
     feature = "wardley",
+    feature = "eventmodeling",
 ))]
 pub(crate) mod markers;
 mod resolve;
@@ -66,7 +81,7 @@ pub(crate) use document::{Accessible, svg_document};
 pub(crate) use resolve::resolve_vars;
 pub(crate) use theme::{
     CRITICAL, FONT_MONO, ROOT_STYLE, ROUNDED, ResolvedStyle, class_names, font_style, parse_float,
-    resolve_style, rounded, series_color,
+    resolve_style, rounded, series_color, sets_fill,
 };
 pub(crate) use title::{title_label, with_title};
 
@@ -85,7 +100,13 @@ pub(crate) fn esc(text: &str) -> String {
             '<' => out.push_str("&lt;"),
             '>' => out.push_str("&gt;"),
             '"' => out.push_str("&quot;"),
-            '\0'..='\x08' | '\x0b' | '\x0c' | '\x0e'..='\x1f' | '\x7f' => {}
+            '\0'..='\x08'
+            | '\x0b'
+            | '\x0c'
+            | '\x0e'..='\x1f'
+            | '\x7f'
+            | '\u{fffe}'
+            | '\u{ffff}' => {}
             c => out.push(c),
         }
     }
@@ -286,7 +307,7 @@ pub(crate) fn label_svg(label: &Label, cx: f64, cy: f64, attrs: &str) -> String 
 /// trusted.
 pub(crate) fn icon_svg(name: &str, x: f64, y: f64, side: f64, markup: &str) -> String {
     format!(
-        "<svg class=\"pele-rs-icon\" data-icon=\"{}\" x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{markup}</svg>",
+        "<svg class=\"pele-icon\" data-icon=\"{}\" x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\">{markup}</svg>",
         esc_text(name),
         num(x),
         num(y),
@@ -353,10 +374,10 @@ impl MathLook {
 fn math_svg(math: &MathMarkup, boxed: &str, size: f64, attrs: &str) -> String {
     match math {
         MathMarkup::Svg { svg, .. } => {
-            format!("<svg class=\"pele-rs-math\" {boxed} overflow=\"visible\"{attrs}>{svg}</svg>")
+            format!("<svg class=\"pele-math\" {boxed} overflow=\"visible\"{attrs}>{svg}</svg>")
         }
         MathMarkup::Html { html, .. } => format!(
-            "<foreignObject class=\"pele-rs-math\" {boxed} overflow=\"visible\"{attrs}><div xmlns=\"http://www.w3.org/1999/xhtml\" style=\"display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:{}px;line-height:normal;white-space:nowrap\">{html}</div></foreignObject>",
+            "<foreignObject class=\"pele-math\" {boxed} overflow=\"visible\"{attrs}><div xmlns=\"http://www.w3.org/1999/xhtml\" style=\"display:flex;align-items:center;justify-content:center;width:100%;height:100%;font-size:{}px;line-height:normal;white-space:nowrap\">{html}</div></foreignObject>",
             num(size)
         ),
     }

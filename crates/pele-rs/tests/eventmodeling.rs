@@ -40,9 +40,9 @@ fn draws_the_lanes_and_the_frames() {
     assert_eq!(out.kind, DiagramKind::EventModeling);
     // Four lanes: the user interface, the commands, the events, and the namespace of the
     // event that is not a command.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-em-lane\""), 4);
+    assert_eq!(count(&out.svg, "<g class=\"pele-cluster pele-em-lane\""), 4);
     // Four frames.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-node pele-rs-em-"), 4);
+    assert_eq!(count(&out.svg, "<g class=\"pele-node pele-em-"), 4);
     // The lane of each frame is written as its label.
     assert!(out.svg.contains(">UI/Automation<"), "{}", out.svg);
     assert!(out.svg.contains(">C/RM: Inventory<"), "{}", out.svg);
@@ -51,20 +51,20 @@ fn draws_the_lanes_and_the_frames() {
     assert!(out.svg.contains(">AddItem<"), "{}", out.svg);
     assert!(out.svg.contains(">ItemAdded<"), "{}", out.svg);
     // A reset frame says so.
-    assert_eq!(count(&out.svg, "pele-rs-em-reset"), 1);
+    assert_eq!(count(&out.svg, "pele-em-reset"), 1);
 }
 
 #[test]
 fn draws_the_relations() {
     // Every frame but the first follows the one before it, unless it is a reset frame.
     let out = render(FULL);
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-edge\""), 2);
+    assert_eq!(count(&out.svg, "<g class=\"pele-edge\""), 2);
     // A frame that names its source is connected to that one.
     let out = render("eventmodeling\nrf 02 evt A\ntf 01 rmo C ->> 02\n");
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-edge\""), 1);
+    assert_eq!(count(&out.svg, "<g class=\"pele-edge\""), 1);
     // A reset frame without a source ends the chain.
     let out = render("eventmodeling\ntf 01 evt A\nrf 02 ui B\ntf 03 cmd C\n");
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-edge\""), 1);
+    assert_eq!(count(&out.svg, "<g class=\"pele-edge\""), 1);
 }
 
 #[test]
@@ -77,15 +77,13 @@ fn draws_the_data_of_a_frame() {
 }
 
 #[test]
-fn does_not_draw_the_notes_and_the_specifications() {
-    // Mermaid reads the notes and the given/when/then specifications, but its renderer draws
-    // only the lanes, the frames and the relations. pele-rs follows it, and the model keeps
-    // the notes, so that a caller can still read them.
+fn draws_the_notes_and_the_specifications() {
+    // Pele 1.13 draws notes and given/when/then cards alongside the frames.
     let out = render(
         "eventmodeling\nentity Cart\ntf 01 evt A\nnote 01 {\n  a note\n}\ngwt 01 given cmd Cart then evt Cart\n",
     );
-    assert!(!out.svg.contains("a note"), "{}", out.svg);
-    assert!(!out.svg.contains("Given"), "{}", out.svg);
+    assert!(out.svg.contains("a note"), "{}", out.svg);
+    assert!(out.svg.contains("Given"), "{}", out.svg);
     assert!(out.svg.contains(">A<"), "{}", out.svg);
 }
 

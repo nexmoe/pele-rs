@@ -131,7 +131,7 @@ fn base(node: &GraphNode, label: Label, w: f64, h: f64, font_size: f64) -> View<
     }
 }
 
-fn member_line(member: &ClassMember, measurer: &dyn TextMeasurer, size: f64) -> Line {
+fn member_line(member: &ClassMember, measurer: &dyn TextMeasurer, size: f64, mono: bool) -> Line {
     let decoded = decode_entities(&member.display_text());
     let text = trim(&decoded).to_string();
     let style = if member.classifier == Some('*') {
@@ -140,7 +140,11 @@ fn member_line(member: &ClassMember, measurer: &dyn TextMeasurer, size: f64) -> 
         Style::NONE
     };
     Line {
-        width: measurer.width(&text, size, style),
+        width: measurer.width(
+            &text,
+            size,
+            style | if mono { Style::MONO } else { Style::NONE },
+        ),
         text,
         classifier: member.classifier,
     }
@@ -327,6 +331,7 @@ fn draw(db: &ClassDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
                     tiny,
                     tiny_height,
                     hide_empty,
+                    options.monospace.contains(&crate::MonospacePart::Members),
                 );
                 let c = cnode(view.w, view.h);
                 (view, c)
@@ -822,7 +827,7 @@ fn draw(db: &ClassDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
                 c.x
             };
             let title_y = y - h / 2.0 + 8.0 + view.label.height / 2.0;
-            let title_attrs = " class=\"pele-rs-cluster-label\" fill=\"var(--_m)\"";
+            let title_attrs = " class=\"pele-cluster-label\" fill=\"var(--_m)\"";
             let struck = c.is_group && title_crossed(c, view.label.width, title_x, &crossings);
             if struck {
                 let mut depth = 1;
@@ -836,7 +841,7 @@ fn draw(db: &ClassDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
             }
             let _ = write!(
                 clusters,
-                "<g class=\"pele-rs-cluster pele-rs-namespace\" data-id=\"{id}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"var(--_a)\" fill-opacity=\"0.5\" stroke=\"var(--_b)\"{ROUNDED}/>{}</g>",
+                "<g class=\"pele-cluster pele-namespace\" data-id=\"{id}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"var(--_a)\" fill-opacity=\"0.5\" stroke=\"var(--_b)\"{ROUNDED}/>{}</g>",
                 num(x - w / 2.0),
                 num(y - h / 2.0),
                 num(w),
@@ -869,7 +874,7 @@ fn draw(db: &ClassDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
                 let t = -h / 2.0;
                 let _ = write!(
                     nodes_out,
-                    "<g class=\"pele-rs-node pele-rs-note\" data-id=\"{id}\"{at}><path d=\"M{},{}H{}L{},{}V{}H{}Z\" fill=\"var(--_a)\" stroke=\"var(--_b)\" stroke-linejoin=\"round\"/><path d=\"M{},{}V{}H{}\" fill=\"none\" stroke=\"var(--_b)\" stroke-linejoin=\"round\"/>{}</g>",
+                    "<g class=\"pele-node pele-note\" data-id=\"{id}\"{at}><path d=\"M{},{}H{}L{},{}V{}H{}Z\" fill=\"var(--_a)\" stroke=\"var(--_b)\" stroke-linejoin=\"round\"/><path d=\"M{},{}V{}H{}\" fill=\"none\" stroke=\"var(--_b)\" stroke-linejoin=\"round\"/>{}</g>",
                     num(-r),
                     num(t),
                     num(r - FOLD),
@@ -885,19 +890,19 @@ fn draw(db: &ClassDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
                         &view.label,
                         0.0,
                         0.0,
-                        &format!(" class=\"pele-rs-label\" font-size=\"{}\"", num(small))
+                        &format!(" class=\"pele-label\" font-size=\"{}\"", num(small))
                     )
                 );
             }
             None => {
                 let _ = write!(
                     nodes_out,
-                    "<g class=\"pele-rs-node pele-rs-interface\" data-id=\"{id}\"{at}>{}</g>",
+                    "<g class=\"pele-node pele-interface\" data-id=\"{id}\"{at}>{}</g>",
                     label_svg(
                         &view.label,
                         0.0,
                         0.0,
-                        &format!(" class=\"pele-rs-label\" font-size=\"{}\"", num(small))
+                        &format!(" class=\"pele-label\" font-size=\"{}\"", num(small))
                     )
                 );
             }
@@ -955,11 +960,11 @@ fn draw(db: &ClassDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
         };
         let _ = write!(
             edges_out,
-            "<g class=\"pele-rs-edge{}\" data-id=\"{}\"><path d=\"{}\"{attrs}/>{}{}</g>",
+            "<g class=\"pele-edge{}\" data-id=\"{}\"><path d=\"{}\"{attrs}/>{}{}</g>",
             if edge.pattern == Pattern::Dotted {
-                " pele-rs-note-edge"
+                " pele-note-edge"
             } else {
-                " pele-rs-relation"
+                " pele-relation"
             },
             esc_text(&edge.id),
             path.d,
@@ -978,13 +983,13 @@ fn draw(db: &ClassDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
                 math,
                 item.x + ox,
                 item.y + oy,
-                " class=\"pele-rs-cardinality\"",
+                " class=\"pele-cardinality\"",
             );
             continue;
         }
         let _ = write!(
             cards_out,
-            "<text class=\"pele-rs-cardinality\" x=\"{}\" y=\"{}\" text-anchor=\"middle\">{}</text>",
+            "<text class=\"pele-cardinality\" x=\"{}\" y=\"{}\" text-anchor=\"middle\">{}</text>",
             num(item.x + ox),
             num(item.y + oy + tiny * 0.35),
             esc(&item.text)
@@ -993,35 +998,35 @@ fn draw(db: &ClassDb, input: &Input<'_>, turned: bool, tight: bool) -> Output {
 
     let mut content = String::new();
     if !clusters.is_empty() {
-        let _ = write!(content, "<g class=\"pele-rs-clusters\">{clusters}</g>");
+        let _ = write!(content, "<g class=\"pele-clusters\">{clusters}</g>");
     }
     if !edges_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-edges\" fill=\"none\" stroke=\"{LINE}\" stroke-linecap=\"round\">{edges_out}</g>"
+            "<g class=\"pele-edges\" fill=\"none\" stroke=\"{LINE}\" stroke-linecap=\"round\">{edges_out}</g>"
         );
     }
     if !struck_titles.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-cluster-titles\">{struck_titles}</g>"
+            "<g class=\"pele-cluster-titles\">{struck_titles}</g>"
         );
     }
     if !labels_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-edge-labels\" font-size=\"{}\">{labels_out}</g>",
+            "<g class=\"pele-edge-labels\" font-size=\"{}\">{labels_out}</g>",
             num(small)
         );
     }
     if !cards_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-cardinalities\" font-size=\"{}\" fill=\"var(--_m)\">{cards_out}</g>",
+            "<g class=\"pele-cardinalities\" font-size=\"{}\" fill=\"var(--_m)\">{cards_out}</g>",
             num(tiny)
         );
     }
-    let _ = write!(content, "<g class=\"pele-rs-nodes\">{nodes_out}</g>");
+    let _ = write!(content, "<g class=\"pele-nodes\">{nodes_out}</g>");
 
     let titled = with_title(
         db.title.as_deref(),
@@ -1062,7 +1067,9 @@ fn class_view<'a>(
     tiny: f64,
     tiny_height: f64,
     hide_empty: bool,
+    monospaced: bool,
 ) -> View<'a> {
+    let mono = monospaced && !style.text.contains("font-family:");
     let font_size = style.font_size.unwrap_or(size);
     let member_size = round(font_size * 0.875);
     let line_height = round(member_size * 1.5);
@@ -1101,12 +1108,12 @@ fn class_view<'a>(
     let attributes: Vec<Line> = cls
         .members
         .iter()
-        .map(|m| member_line(m, measurer, member_size))
+        .map(|m| member_line(m, measurer, member_size, mono))
         .collect();
     let methods: Vec<Line> = cls
         .methods
         .iter()
-        .map(|m| member_line(m, measurer, member_size))
+        .map(|m| member_line(m, measurer, member_size, mono))
         .collect();
     let mut inner = label.width;
     let mut annotations_h = 0.0;
@@ -1167,6 +1174,18 @@ fn class_svg(
     input: &Input<'_>,
 ) -> String {
     let (w, h, style) = (view.w, view.h, &view.style);
+    let ink = crate::svg::ink::ink_fill(style, None);
+    let muted = crate::svg::ink::ink_fill(style, Some("var(--_m)"));
+    let mono = input
+        .options
+        .monospace
+        .contains(&crate::MonospacePart::Members)
+        && !style.text.contains("font-family:");
+    let family = if mono {
+        format!(" font-family=\"{}\"", crate::svg::FONT_MONO)
+    } else {
+        String::new()
+    };
     let left = -w / 2.0;
     let top = -h / 2.0;
     let member_size = round(view.font_size * 0.875);
@@ -1189,7 +1208,7 @@ fn class_svg(
             .unwrap_or_default();
         let _ = write!(
             body,
-            "<path class=\"pele-rs-divider\" d=\"M{},{}H{}M{},{}H{}\" fill=\"none\" stroke=\"var(--_b)\"{stroke}/>",
+            "<path class=\"pele-divider\" d=\"M{},{}H{}M{},{}H{}\" fill=\"none\" stroke=\"var(--_b)\"{stroke}/>",
             num(left),
             num(first),
             num(-left),
@@ -1204,7 +1223,7 @@ fn class_svg(
             Annotation::Text(text) => {
                 let _ = write!(
                     body,
-                    "<text class=\"pele-rs-annotation\" x=\"0\" y=\"{}\" text-anchor=\"middle\" font-size=\"{}\" fill=\"var(--_m)\">{}</text>",
+                    "<text class=\"pele-annotation\" x=\"0\" y=\"{}\" text-anchor=\"middle\" font-size=\"{}\"{muted}>{}</text>",
                     num(y + tiny_height / 2.0 + tiny * 0.35),
                     num(tiny),
                     esc(text)
@@ -1218,7 +1237,7 @@ fn class_svg(
                     0.0,
                     y + h / 2.0,
                     &format!(
-                        " class=\"pele-rs-annotation\" font-size=\"{}\" fill=\"var(--_m)\"",
+                        " class=\"pele-annotation\" font-size=\"{}\"{muted}",
                         num(tiny)
                     ),
                 );
@@ -1236,7 +1255,7 @@ fn class_svg(
         0.0,
         (y + first - TITLE_PAD) / 2.0,
         &format!(
-            " class=\"pele-rs-label\"{title_size} font-weight=\"var(--_hw)\"{}",
+            " class=\"pele-label\"{title_size} font-weight=\"var(--_hw)\"{ink}{}",
             style.text
         ),
     );
@@ -1247,20 +1266,20 @@ fn class_svg(
             let mark = match line.classifier {
                 Some('$') => {
                     if style.text.is_empty() {
-                        " pele-rs-static\" style=\"text-decoration:underline\"".to_string()
+                        " pele-static\" style=\"text-decoration:underline\"".to_string()
                     } else {
                         format!(
-                            " pele-rs-static\"{}text-decoration:underline\"",
+                            " pele-static\"{}text-decoration:underline\"",
                             &style.text[..style.text.len() - 1]
                         )
                     }
                 }
-                Some('*') => format!(" pele-rs-abstract\" font-style=\"italic\"{}", style.text),
+                Some('*') => format!(" pele-abstract\" font-style=\"italic\"{}", style.text),
                 _ => format!("\"{}", style.text),
             };
             let _ = write!(
                 out,
-                "<text class=\"pele-rs-member pele-rs-{kind}{mark} x=\"{}\" y=\"{}\">{}</text>",
+                "<text class=\"pele-member pele-{kind}{mark} x=\"{}\" y=\"{}\">{}</text>",
                 num(left + PAD_X),
                 num(baseline),
                 esc(&line.text)
@@ -1272,7 +1291,7 @@ fn class_svg(
     if !view.attributes.is_empty() || !view.methods.is_empty() {
         let _ = write!(
             body,
-            "<g class=\"pele-rs-members\" font-size=\"{}\">{}{}</g>",
+            "<g class=\"pele-members\" font-size=\"{}\"{ink}{family}>{}{}</g>",
             num(member_size),
             lines(&view.attributes, "attribute", first),
             lines(&view.methods, "method", second)
@@ -1298,7 +1317,7 @@ fn class_svg(
                     .unwrap_or(rest)
             });
     format!(
-        "<g class=\"pele-rs-node pele-rs-class{}\" data-id=\"{id}\"{at}>{body}</g>",
+        "<g class=\"pele-node pele-class{}\" data-id=\"{id}\"{at}>{body}</g>",
         class_names(classes)
     )
 }

@@ -53,10 +53,10 @@ fn draws_the_nodes_of_the_tree() {
     assert_eq!(out.kind, DiagramKind::TreeView);
     // Seven nodes: `src`, `index.js`, `components`, `App.tsx`, `Button.tsx`, `utils`,
     // `format.ts`, `package.json` and `README.md` are nine.
-    assert_eq!(count(&out.svg, "pele-rs-node "), 9);
-    assert_eq!(count(&out.svg, "pele-rs-tree-dir"), 3);
-    assert_eq!(count(&out.svg, "pele-rs-tree-file"), 6);
-    assert_eq!(count(&out.svg, "pele-rs-tree-guides"), 1);
+    assert_eq!(count(&out.svg, "pele-node "), 9);
+    assert_eq!(count(&out.svg, "pele-tree-dir"), 3);
+    assert_eq!(count(&out.svg, "pele-tree-file"), 6);
+    assert_eq!(count(&out.svg, "pele-tree-guides"), 1);
     for needle in [
         "data-id=\"src\"",
         "data-id=\"index.js\"",
@@ -74,13 +74,13 @@ fn draws_the_lines_that_join_a_node_to_the_ones_below_it() {
     let out = render(FULL);
     // The lines of `src`, `components` and `utils` join their children.
     assert_eq!(count(&out.svg, "<path d=\"M"), 3);
-    assert!(out.svg.contains("pele-rs-tree-guides"));
+    assert!(out.svg.contains("pele-tree-guides"));
 }
 
 #[test]
 fn reads_a_tree_that_is_drawn_with_box_drawing_characters() {
     let out = render("treeView-beta\n├── src\n│   └── index.js\n└── package.json\n");
-    assert_eq!(count(&out.svg, "pele-rs-node "), 3);
+    assert_eq!(count(&out.svg, "pele-node "), 3);
     assert!(out.svg.contains("data-id=\"src\""));
     assert!(out.svg.contains("data-id=\"index.js\""));
     assert!(out.svg.contains("data-id=\"package.json\""));
@@ -96,10 +96,10 @@ fn reads_the_annotations_of_a_node() {
     );
     // The class of a node is a class of the node.
     assert!(out.svg.contains(" highlight"), "{}", out.svg);
-    // pele-rs has no icon font, so the name of the icon is written in front of the name.
+    // Icons retain their resolver name and use a built-in vector fallback.
     assert!(
         out.svg
-            .contains("<tspan class=\"pele-rs-tree-icon\" fill=\"var(--_m)\">logos:react</tspan>"),
+            .contains("<svg class=\"pele-icon\" data-icon=\"logos:react\""),
         "{}",
         out.svg
     );
@@ -109,7 +109,7 @@ fn reads_the_annotations_of_a_node() {
 #[test]
 fn draws_no_icon_when_none_is_named() {
     let out = render("treeView-beta\n    a.txt\n");
-    assert!(!out.svg.contains("pele-rs-tree-icon"), "{}", out.svg);
+    assert!(!out.svg.contains("pele-icon"), "{}", out.svg);
 }
 
 #[test]
@@ -119,7 +119,11 @@ fn runs_down_in_a_narrow_host() {
     assert!(down.width < wide.width);
     // A name that does not fit is broken over several lines.
     let long = narrow("treeView-beta\n    averyveryverylongfilename-indeed.txt\n");
-    assert!(count(&long.svg, "<tspan>") > 1, "{}", long.svg);
+    assert!(
+        count(&long.svg, "<text class=\"pele-label\"") > 1,
+        "{}",
+        long.svg
+    );
     assert!(long.height > render("treeView-beta\n    a\n").height);
 }
 
@@ -265,8 +269,15 @@ fn reads_the_settings_of_the_diagram() {
     let src =
         "---\nconfig:\n  treeView:\n    showIcons: true\n---\ntreeView-beta\n    a.txt\n    b/\n";
     let out = render(src);
-    assert!(out.svg.contains("pele-rs-tree-icon"), "{}", out.svg);
-    // The name of Mermaid's own icon is written without its pack.
-    assert!(out.svg.contains(">file<"), "{}", out.svg);
-    assert!(out.svg.contains(">folder<"), "{}", out.svg);
+    assert!(out.svg.contains("pele-icon"), "{}", out.svg);
+    assert!(
+        out.svg.contains("data-icon=\"mermaid-treeview:file\""),
+        "{}",
+        out.svg
+    );
+    assert!(
+        out.svg.contains("data-icon=\"mermaid-treeview:folder\""),
+        "{}",
+        out.svg
+    );
 }

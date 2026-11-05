@@ -62,8 +62,6 @@ pub(crate) fn skip_trivia(src: &[u16], from: usize) -> usize {
         let c = at(src, p);
         if c == 37 && at(src, p + 1) != 123 {
             p = line_end(src, p);
-        } else if c != 125 && at(src, p + 1) == 37 && at(src, p + 2) == 37 {
-            p = line_end(src, p + 3);
         } else if c == 10 {
             return p;
         } else if space(c) {

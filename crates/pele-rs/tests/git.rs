@@ -48,15 +48,15 @@ fn draws_commits_and_branches() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::GitGraph);
     // Four commits: the first, the one on the branch, the merge and the last.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-commit "), 4);
+    assert_eq!(count(&out.svg, "<g class=\"pele-commit "), 4);
     // Two lanes: the main branch and the branch that grows from it.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-branch\""), 2);
+    assert_eq!(count(&out.svg, "<g class=\"pele-branch\""), 2);
     // The lane of each branch is a dashed line.
-    assert_eq!(count(&out.svg, "<path class=\"pele-rs-lane\""), 2);
+    assert_eq!(count(&out.svg, "<path class=\"pele-lane\""), 2);
     // The merge joins two commits.
-    assert_eq!(count(&out.svg, "<path class=\"pele-rs-edge\""), 3);
+    assert_eq!(count(&out.svg, "<path class=\"pele-edge\""), 3);
     // The tag of a commit is drawn next to it.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-tag\">"), 2);
+    assert_eq!(count(&out.svg, "<g class=\"pele-tag\">"), 2);
     // The id of a commit is written beside it.
     assert!(out.svg.contains(">init<"), "{}", out.svg);
     // The message of a commit is its tooltip.
@@ -80,11 +80,11 @@ fn reads_the_direction() {
 fn reads_the_config() {
     // The branches can be hidden.
     let shown = svg("gitGraph\nbranch other\ncommit\n");
-    assert!(shown.contains("pele-rs-branch"), "{shown}");
+    assert!(shown.contains("pele-branch"), "{shown}");
     let hidden = svg(
         "---\nconfig:\n  gitGraph:\n    showBranches: false\n---\ngitGraph\nbranch other\ncommit\n",
     );
-    assert!(!hidden.contains("pele-rs-branch"), "{hidden}");
+    assert!(!hidden.contains("pele-branch"), "{hidden}");
 
     // The ids of the commits can be hidden.
     let labelled = svg("gitGraph\ncommit id:\"abc\"\n");
@@ -123,7 +123,7 @@ fn reads_the_config() {
 fn draws_a_title() {
     let out = render("---\ntitle: The history\n---\ngitGraph\ncommit\n");
     assert!(out.svg.contains(">The history<"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-title"));
+    assert!(out.svg.contains("pele-title"));
 }
 
 #[test]
@@ -208,7 +208,7 @@ fn fits_a_narrow_host() {
     assert!(narrow.width <= 360.0, "{}", narrow.width);
     assert!(narrow.height > 0.0);
     // The history is still drawn.
-    assert_eq!(count(&narrow.svg, "<g class=\"pele-rs-commit "), 4);
+    assert_eq!(count(&narrow.svg, "<g class=\"pele-commit "), 4);
     let _ = wide;
 }
 

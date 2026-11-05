@@ -52,9 +52,9 @@ fn draws_entities_attributes_and_relationships() {
         "erDiagram\n CUSTOMER ||--o{ ORDER : places\n ORDER ||--|{ LINE-ITEM : contains\n CUSTOMER }|..|{ DELIVERY-ADDRESS : uses\n CUSTOMER {\n string name PK \"the name\"\n int age\n List~int~ ids FK, UK\n }\n PERSON u--o| PERSON : knows\n",
     );
     assert_eq!(out.kind, DiagramKind::Er);
-    assert_eq!(count(&out.svg, "pele-rs-node pele-rs-entity"), 5);
-    assert_eq!(count(&out.svg, "pele-rs-er-identifying"), 3);
-    assert_eq!(count(&out.svg, "pele-rs-er-non-identifying"), 1);
+    assert_eq!(count(&out.svg, "pele-node pele-entity"), 5);
+    assert_eq!(count(&out.svg, "pele-er-identifying"), 3);
+    assert_eq!(count(&out.svg, "pele-er-non-identifying"), 1);
     for needle in [
         ">places<",
         ">string<",
@@ -62,8 +62,8 @@ fn draws_entities_attributes_and_relationships() {
         ">the name<",
         "List&lt;int&gt;",
         ">FK, UK<",
-        "pele-rs-er-stripes",
-        "<circle class=\"pele-rs-marker\"",
+        "pele-er-stripes",
+        "<circle class=\"pele-marker\"",
     ] {
         assert!(out.svg.contains(needle), "{needle}");
     }
@@ -75,11 +75,11 @@ fn draws_aliases_subgraphs_and_classes() {
         "erDiagram\n subgraph Shop [The shop]\n direction LR\n p[\"Person\"]:::hot\n a[Address]\n end\n p ||--o{ a : has\n classDef hot fill:#f96,color:white\n style a stroke:red\n",
     );
     for needle in [
-        "pele-rs-cluster",
+        "pele-cluster",
         ">The shop<",
         ">Person<",
         ">Address<",
-        "pele-rs-entity hot",
+        "pele-entity hot",
         "fill:#f96",
         "stroke:red",
     ] {
@@ -323,12 +323,8 @@ fn draws_a_marker_for_every_cardinality() {
         ("erDiagram\n A u--o{ B : x\n", 1),
     ] {
         let svg = svg(src);
-        assert_eq!(
-            count(&svg, "<circle class=\"pele-rs-marker\""),
-            rings,
-            "{src}"
-        );
-        assert_eq!(count(&svg, "<path class=\"pele-rs-marker\""), 2, "{src}");
+        assert_eq!(count(&svg, "<circle class=\"pele-marker\""), rings, "{src}");
+        assert_eq!(count(&svg, "<path class=\"pele-marker\""), 2, "{src}");
     }
 }
 
@@ -360,7 +356,7 @@ fn accepts_the_cardinality_aliases() {
     ] {
         let src = format!("erDiagram\n A {alias} to {alias} B : x\n");
         let out = render(&src);
-        assert!(out.svg.contains("pele-rs-er-identifying"), "{alias}");
+        assert!(out.svg.contains("pele-er-identifying"), "{alias}");
     }
 }
 
@@ -369,13 +365,13 @@ fn draws_the_accessible_title_and_description() {
     let out = render("erDiagram\n accTitle: the title\n accDescr: the description\n A\n");
     assert!(
         out.svg
-            .contains("<title id=\"pele-rs-title\">the title</title>"),
+            .contains("<title id=\"pele-title\">the title</title>"),
         "{}",
         out.svg
     );
     assert!(
         out.svg
-            .contains("<desc id=\"pele-rs-desc\">the description</desc>"),
+            .contains("<desc id=\"pele-desc\">the description</desc>"),
         "{}",
         out.svg
     );
@@ -387,7 +383,7 @@ fn puts_the_class_on_the_named_entity() {
         render("erDiagram\n A\n B\n classDef hot fill:#f96\n class B hot\n style A stroke:red\n");
     let b = out.svg.split("data-id=\"B\"").next().expect("B is drawn");
     assert!(
-        b.contains("pele-rs-entity hot"),
+        b.contains("pele-entity hot"),
         "the class went to the wrong entity"
     );
     assert!(out.svg.contains("stroke:red"), "{}", out.svg);
@@ -396,12 +392,8 @@ fn puts_the_class_on_the_named_entity() {
 #[test]
 fn marks_non_identifying_relationships_dashed() {
     let out = render("erDiagram\n A ||--o{ B : x\n A }|..|{ C : y\n");
-    assert!(out.svg.contains("pele-rs-er-identifying"), "{}", out.svg);
-    assert!(
-        out.svg.contains("pele-rs-er-non-identifying"),
-        "{}",
-        out.svg
-    );
+    assert!(out.svg.contains("pele-er-identifying"), "{}", out.svg);
+    assert!(out.svg.contains("pele-er-non-identifying"), "{}", out.svg);
     assert!(out.svg.contains("stroke-dasharray=\"4 3\""), "{}", out.svg);
 }
 

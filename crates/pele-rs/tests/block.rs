@@ -46,23 +46,23 @@ fn draws_blocks_and_links() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Block);
     // The three blocks: the first, the second and the third. The space is no block.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-node "), 3);
+    assert_eq!(count(&out.svg, "<g class=\"pele-node "), 3);
     // The link between the first and the second.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-edge\""), 1);
+    assert_eq!(count(&out.svg, "<g class=\"pele-edge\""), 1);
     // The labels of the blocks are written.
     assert!(out.svg.contains(">First<"), "{}", out.svg);
     assert!(out.svg.contains(">Second<"), "{}", out.svg);
     assert!(out.svg.contains(">Third<"), "{}", out.svg);
     // The diamond of the third block.
-    assert!(out.svg.contains("pele-rs-shape-diam"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-diam"), "{}", out.svg);
 }
 
 #[test]
 fn draws_a_composite() {
     let out = render("block\nblock:group[\"A group\"]\n  a\n  b\nend\n");
     // The composite is a cluster, and it holds the two blocks.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-cluster\""), 1);
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-node "), 2);
+    assert_eq!(count(&out.svg, "<g class=\"pele-cluster\""), 1);
+    assert_eq!(count(&out.svg, "<g class=\"pele-node "), 2);
     assert!(out.svg.contains(">A group<"), "{}", out.svg);
 }
 
@@ -81,7 +81,7 @@ fn puts_the_blocks_in_a_grid() {
 #[test]
 fn draws_an_arrow_block() {
     let out = render("block\nblockArrow<[\"go\"]>(right)\n");
-    assert!(out.svg.contains("pele-rs-shape-block-arrow"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-block-arrow"), "{}", out.svg);
     assert!(out.svg.contains(">go<"), "{}", out.svg);
 }
 
@@ -97,7 +97,7 @@ fn reads_the_config() {
 fn draws_a_title() {
     let out = render("---\ntitle: A block diagram\n---\nblock\nA\n");
     assert!(out.svg.contains(">A block diagram<"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-title"));
+    assert!(out.svg.contains("pele-title"));
 }
 
 #[test]
@@ -127,12 +127,11 @@ fn refuses_a_composite_without_blocks() {
 }
 
 #[test]
-fn keeps_only_the_last_link_of_a_chain() {
-    // Mermaid's grammar reads a chain of links from the left and keeps only the last one, so
-    // the nodes before it are not part of the diagram.
+fn keeps_every_link_of_a_chain() {
+    // Pele preserves complete chains rather than Mermaid's lossy last-link-only result.
     let out = render("block\nA --> B --> C\n");
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-node "), 2);
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-edge\""), 0);
+    assert_eq!(count(&out.svg, "<g class=\"pele-node "), 3);
+    assert_eq!(count(&out.svg, "<g class=\"pele-edge\""), 2);
 }
 
 #[test]
@@ -142,7 +141,7 @@ fn fits_a_narrow_host() {
     assert!(narrow.width <= 360.0, "{}", narrow.width);
     assert!(narrow.height > 0.0);
     // The blocks are still drawn.
-    assert_eq!(count(&narrow.svg, "<g class=\"pele-rs-node "), 3);
+    assert_eq!(count(&narrow.svg, "<g class=\"pele-node "), 3);
     let _ = wide;
 }
 
@@ -152,8 +151,8 @@ fn draws_a_link_when_a_block_stands_twice() {
     // room a block holds and the blocks that wait for a class shift the places of the blocks.
     let out = render("block\nspace\nA\nA\nA --> B\n");
     // The room a block holds is not drawn, and the block that stands twice is one block.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-node "), 2);
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-edge\""), 1);
+    assert_eq!(count(&out.svg, "<g class=\"pele-node "), 2);
+    assert_eq!(count(&out.svg, "<g class=\"pele-edge\""), 1);
 }
 
 #[test]

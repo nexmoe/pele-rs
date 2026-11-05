@@ -38,7 +38,7 @@ fn face(x: f64, y: f64, score: f64) -> String {
         ("neutral", "M-4.5,4.5H4.5")
     };
     format!(
-        "<g class=\"pele-rs-face pele-rs-face-{mood}\" transform=\"translate({},{})\"><circle r=\"{}\" fill=\"var(--_bg)\" stroke=\"var(--_l)\"/><g fill=\"var(--_l)\">{EYES}</g><path d=\"{mouth}\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\"/></g>",
+        "<g class=\"pele-face pele-face-{mood}\" transform=\"translate({},{})\"><circle r=\"{}\" fill=\"var(--_bg)\" stroke=\"var(--_l)\"/><g fill=\"var(--_l)\">{EYES}</g><path d=\"{mouth}\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\"/></g>",
         num(x),
         num(y),
         num(FACE)
@@ -227,7 +227,7 @@ fn draw(db: &JourneyDb, input: &Input<'_>) -> Output {
         }
         let _ = write!(
             body,
-            "<path class=\"pele-rs-grid\" d=\"{grid}\" fill=\"none\" stroke=\"var(--_a)\"/><g class=\"pele-rs-scale\" font-size=\"{}\" text-anchor=\"end\" fill=\"var(--_m)\">{scale}</g>",
+            "<path class=\"pele-grid\" d=\"{grid}\" fill=\"none\" stroke=\"var(--_a)\"/><g class=\"pele-scale\" font-size=\"{}\" text-anchor=\"end\" fill=\"var(--_m)\">{scale}</g>",
             num(tiny)
         );
 
@@ -273,7 +273,7 @@ fn draw(db: &JourneyDb, input: &Input<'_>) -> Output {
             for (k, name) in people.iter().enumerate() {
                 let _ = write!(
                     dots,
-                    "<circle class=\"pele-rs-actor\" cx=\"{}\" cy=\"{}\" r=\"{}\" fill=\"{}\" stroke=\"var(--_s)\"><title>{}</title></circle>",
+                    "<circle class=\"pele-actor\" cx=\"{}\" cy=\"{}\" r=\"{}\" fill=\"{}\" stroke=\"var(--_s)\"><title>{}</title></circle>",
                     num(cx + (k as f64 - (count - 1.0) / 2.0) * step),
                     num(cards_y + card_h - PAD_Y - DOT),
                     num(DOT),
@@ -282,7 +282,7 @@ fn draw(db: &JourneyDb, input: &Input<'_>) -> Output {
                 );
             }
             cards.push(format!(
-                "<g class=\"pele-rs-node pele-rs-task\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"var(--_s)\" stroke=\"var(--_b)\"{ROUNDED}/>{}{dots}</g>",
+                "<g class=\"pele-node pele-task\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"var(--_s)\" stroke=\"var(--_b)\"{ROUNDED}/>{}{dots}</g>",
                 esc_text(trim(&task.task)),
                 num(x),
                 num(cards_y),
@@ -298,12 +298,12 @@ fn draw(db: &JourneyDb, input: &Input<'_>) -> Output {
         }
         let _ = write!(
             body,
-            "<path class=\"pele-rs-stems\" d=\"{stems}\" fill=\"none\" stroke=\"var(--_b)\" stroke-dasharray=\"2 3\"/>"
+            "<path class=\"pele-stems\" d=\"{stems}\" fill=\"none\" stroke=\"var(--_b)\" stroke-dasharray=\"2 3\"/>"
         );
         if n > 1 {
             let _ = write!(
                 body,
-                "<path class=\"pele-rs-edge\" d=\"{line}\" fill=\"none\" stroke=\"var(--_l)\" stroke-linejoin=\"round\"/>"
+                "<path class=\"pele-edge\" d=\"{line}\" fill=\"none\" stroke=\"var(--_l)\" stroke-linejoin=\"round\"/>"
             );
         }
         body += &faces;
@@ -318,7 +318,7 @@ fn draw(db: &JourneyDb, input: &Input<'_>) -> Output {
             let w = run.count as f64 * pitch - GAP;
             let _ = write!(
                 body,
-                "<g class=\"pele-rs-cluster pele-rs-section\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"var(--_a)\"{ROUNDED}/>{}{members}</g>",
+                "<g class=\"pele-cluster pele-section\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"var(--_a)\"{ROUNDED}/>{}{members}</g>",
                 esc_text(trim(&tasks[run.start].section)),
                 num(x),
                 num(top),
@@ -342,7 +342,7 @@ fn draw(db: &JourneyDb, input: &Input<'_>) -> Output {
                 let cy = y0 + item.y + item.h / 2.0;
                 let _ = write!(
                     items,
-                    "<g class=\"pele-rs-legend-item\" data-id=\"{}\"><circle cx=\"{}\" cy=\"{}\" r=\"{}\" fill=\"{}\"/>{}</g>",
+                    "<g class=\"pele-legend-item\" data-id=\"{}\"><circle cx=\"{}\" cy=\"{}\" r=\"{}\" fill=\"{}\"/>{}</g>",
                     esc_text(item.name),
                     num(x0 + item.x + DOT),
                     num(cy),
@@ -358,7 +358,7 @@ fn draw(db: &JourneyDb, input: &Input<'_>) -> Output {
             }
             let _ = write!(
                 body,
-                "<g class=\"pele-rs-legend\" font-size=\"{}\">{items}</g>",
+                "<g class=\"pele-legend\" font-size=\"{}\">{items}</g>",
                 num(small)
             );
             bottom = y0 + legend_h;
@@ -371,7 +371,7 @@ fn draw(db: &JourneyDb, input: &Input<'_>) -> Output {
         &title,
         pad + width / 2.0,
         pad + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
     ) + &body;
     output(db, input, total_width, total_height, size, &content)
 }
@@ -442,7 +442,7 @@ fn vertical(db: &JourneyDb, input: &Input<'_>) -> Output {
                     &head,
                     pad + 8.0 + head.width / 2.0,
                     y + head.height / 2.0,
-                    " class=\"pele-rs-cluster-label\" font-weight=\"var(--_hw)\"",
+                    " class=\"pele-cluster-label\" font-weight=\"var(--_hw)\"",
                 );
                 width = width.max(head.width + 16.0);
                 y += head.height + 8.0;
@@ -468,7 +468,7 @@ fn vertical(db: &JourneyDb, input: &Input<'_>) -> Output {
         let w = room.max(label.width + 72.0);
         let _ = write!(
             body,
-            "<g class=\"pele-rs-node pele-rs-journey-step\" data-id=\"{index}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"var(--_s)\" stroke=\"var(--_b)\"{ROUNDED}/>",
+            "<g class=\"pele-node pele-journey-step\" data-id=\"{index}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"var(--_s)\" stroke=\"var(--_b)\"{ROUNDED}/>",
             num(pad),
             num(y),
             num(w),
@@ -478,14 +478,14 @@ fn vertical(db: &JourneyDb, input: &Input<'_>) -> Output {
             &label,
             pad + PAD_X + label.width / 2.0,
             y + PAD_Y + label.height / 2.0,
-            " class=\"pele-rs-label\"",
+            " class=\"pele-label\"",
         );
         let cx = pad + w - 28.0;
         body += &face(cx, y + PAD_Y + FACE, task.score);
         if !task.score.is_nan() {
             let _ = write!(
                 body,
-                "<text class=\"pele-rs-journey-score\" x=\"{}\" y=\"{}\" font-size=\"{}\" text-anchor=\"middle\">{}</text>",
+                "<text class=\"pele-journey-score\" x=\"{}\" y=\"{}\" font-size=\"{}\" text-anchor=\"middle\">{}</text>",
                 num(cx),
                 num(y + PAD_Y + 2.0 * FACE + small),
                 num(small),
@@ -497,7 +497,7 @@ fn vertical(db: &JourneyDb, input: &Input<'_>) -> Output {
             let ph = 16f64.max(l.height);
             let _ = write!(
                 body,
-                "<circle class=\"pele-rs-actor\" cx=\"{}\" cy=\"{}\" r=\"{}\" fill=\"{}\"/>",
+                "<circle class=\"pele-actor\" cx=\"{}\" cy=\"{}\" r=\"{}\" fill=\"{}\"/>",
                 num(pad + 16.0),
                 num(py + ph / 2.0),
                 num(DOT),
@@ -507,10 +507,7 @@ fn vertical(db: &JourneyDb, input: &Input<'_>) -> Output {
                 l,
                 pad + 28.0 + l.width / 2.0,
                 py + ph / 2.0,
-                &format!(
-                    " class=\"pele-rs-journey-actor\" font-size=\"{}\"",
-                    num(small)
-                ),
+                &format!(" class=\"pele-journey-actor\" font-size=\"{}\"", num(small)),
             );
             py += ph + 4.0;
         }
@@ -519,7 +516,7 @@ fn vertical(db: &JourneyDb, input: &Input<'_>) -> Output {
         if index + 1 < count {
             let _ = write!(
                 body,
-                "<path class=\"pele-rs-edge\" d=\"M{},{}v16\" fill=\"none\" stroke=\"var(--_l)\"/>",
+                "<path class=\"pele-edge\" d=\"M{},{}v16\" fill=\"none\" stroke=\"var(--_l)\"/>",
                 num(pad + w / 2.0),
                 num(y)
             );
@@ -533,7 +530,7 @@ fn vertical(db: &JourneyDb, input: &Input<'_>) -> Output {
         &title,
         total_width / 2.0,
         pad + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
     ) + &body;
     output(db, input, total_width, height, size, &content)
 }

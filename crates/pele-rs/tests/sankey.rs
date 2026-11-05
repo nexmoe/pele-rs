@@ -47,9 +47,9 @@ fn try_render(src: &str) -> Option<String> {
 fn draws_nodes_and_bands() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Sankey);
-    assert_eq!(count(&out.svg, "<rect class=\"pele-rs-sankey-node\""), 7);
-    assert_eq!(count(&out.svg, "<path class=\"pele-rs-sankey-link\""), 6);
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-label\""), 7);
+    assert_eq!(count(&out.svg, "<rect class=\"pele-sankey-node\""), 7);
+    assert_eq!(count(&out.svg, "<path class=\"pele-sankey-link\""), 6);
+    assert_eq!(count(&out.svg, "<g class=\"pele-label\""), 7);
     // The values are shown next to the names.
     assert!(
         out.svg.contains(">Agricultural waste <tspan"),
@@ -67,7 +67,7 @@ fn draws_nodes_and_bands() {
 #[test]
 fn reads_quoted_fields() {
     let out = render("sankey\n\"a, b\",\"c\"\"d\",1\n");
-    assert_eq!(count(&out.svg, "<rect class=\"pele-rs-sankey-node\""), 2);
+    assert_eq!(count(&out.svg, "<rect class=\"pele-sankey-node\""), 2);
     assert!(out.svg.contains(">a, b <tspan"), "{}", out.svg);
     // The doubled quote of a quoted field is one quote.
     assert!(out.svg.contains("data-id=\"c&quot;d\""), "{}", out.svg);
@@ -77,8 +77,8 @@ fn reads_quoted_fields() {
 fn reads_the_config() {
     let plain = svg("sankey\na,b,1\n");
     let no_values = svg("---\nconfig:\n  sankey:\n    showValues: false\n---\nsankey\na,b,1\n");
-    assert!(plain.contains("pele-rs-sankey-value"));
-    assert!(!no_values.contains("pele-rs-sankey-value"));
+    assert!(plain.contains("pele-sankey-value"));
+    assert!(!no_values.contains("pele-sankey-value"));
 
     let prefixed =
         svg("---\nconfig:\n  sankey:\n    prefix: '$'\n    suffix: ' kWh'\n---\nsankey\na,b,1\n");
@@ -105,7 +105,7 @@ fn reads_the_config() {
 fn draws_a_title() {
     let out = render("---\ntitle: Energy flows\n---\nsankey\na,b,1\n");
     assert!(out.svg.contains(">Energy flows<"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-title"));
+    assert!(out.svg.contains("pele-title"));
 }
 
 #[test]
@@ -131,13 +131,10 @@ fn reports_errors_with_positions() {
 }
 
 #[test]
-fn refuses_a_name_mermaid_cannot_read() {
-    // Mermaid's grammar lists only the printable ASCII characters as the text of a field, so a
-    // name with a letter outside that range is a parse error there. pele reads it; pele-rs
-    // follows Mermaid.
-    let err = pele_rs::render("sankey\nCafé,Thé,1\n", &RenderOptions::default()).unwrap_err();
-    assert_eq!(err.code, ErrorCode::Syntax);
-    assert_eq!(err.kind, Some(DiagramKind::Sankey));
+fn reads_unicode_names_like_pele() {
+    let out = render("sankey\nCafé,Thé,1\n");
+    assert!(out.svg.contains("Café"));
+    assert!(out.svg.contains("Thé"));
 }
 
 #[test]
@@ -154,7 +151,7 @@ fn fits_a_narrow_host() {
     assert!(narrow.width <= 360.0, "{}", narrow.width);
     assert!(narrow.height > 0.0);
     // The chart is still drawn.
-    assert_eq!(count(&narrow.svg, "<rect class=\"pele-rs-sankey-node\""), 7);
+    assert_eq!(count(&narrow.svg, "<rect class=\"pele-sankey-node\""), 7);
     let _ = wide;
 }
 

@@ -215,6 +215,11 @@ fn match_title(src: &[char], i: usize) -> Option<usize> {
     let after = at + "title".chars().count();
     match src.get(after) {
         Some(&c) if c == ' ' || c == '\t' => Some(line_end(src, after + 1)),
+        _ if src.get(after).is_some_and(|&c| c != '\n' && c != '\r')
+            && !starts_with(src, after, "%%") =>
+        {
+            None
+        }
         _ => Some(after),
     }
 }

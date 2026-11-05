@@ -254,6 +254,27 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool, gap: f64) -> Result<(Outp
 
     // Every line is drawn before any label is placed, so that labels can keep off the
     // arrowheads.
+    let mut casings = String::new();
+    let fills: Vec<_> = layout
+        .order
+        .iter()
+        .copied()
+        .filter(|&g| g != root)
+        .filter_map(|g| {
+            let group = &layout.groups[g];
+            let frame = &group.frame;
+            let shape = user_style(
+                model.boundaries[group.boundary].element.bg_color.as_deref(),
+                None,
+                None,
+            )
+            .shape;
+            crate::svg::ink::paints(&shape).then_some(crate::svg::fills::Fill {
+                bounds: [frame.x, frame.y, frame.x + frame.w, frame.y + frame.h],
+                shape,
+            })
+        })
+        .collect();
     let mut edges_out = String::new();
     let trim = marker_trim("arrow_point");
     let mut lanes = Lanes::default();
@@ -267,7 +288,7 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool, gap: f64) -> Result<(Outp
         let a = &ends[index * 2];
         let b = &ends[index * 2 + 1];
         let style = user_style(None, rel.line_color.as_deref(), None);
-        let color = style
+        let mut color = style
             .stroke
             .as_deref()
             .map(esc)
@@ -307,6 +328,49 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool, gap: f64) -> Result<(Outp
                 line.ey + ARROW,
             ]);
         }
+        let over = crate::svg::fills::over_fills(
+            &line.d,
+            &[line.sx, line.sy, line.ex, line.ey],
+            &fills,
+            &style.line,
+        );
+        if over.as_deref() == Some("") {
+            let markers = (if start_arrow {
+                marker(
+                    "arrow_point",
+                    line.sx,
+                    line.sy,
+                    line.sdx,
+                    line.sdy,
+                    "var(--_bg)",
+                )
+            } else {
+                String::new()
+            }) + &if end_arrow {
+                marker(
+                    "arrow_point",
+                    line.ex,
+                    line.ey,
+                    line.edx,
+                    line.edy,
+                    "var(--_bg)",
+                )
+            } else {
+                String::new()
+            };
+            casings += &crate::svg::fills::casing(
+                &line.d,
+                &markers.replace("stroke=\"none\"", "stroke=\"var(--_bg)\""),
+                &style.line,
+                false,
+            );
+        }
+        if let Some(over) = over.as_ref().filter(|s| !s.is_empty()) {
+            color = over.clone();
+        }
+        let over_attr = over
+            .filter(|s| !s.is_empty())
+            .map_or_else(String::new, |s| format!(" stroke=\"{s}\""));
         let mut arrows = String::new();
         if start_arrow {
             arrows += &marker("arrow_point", line.sx, line.sy, line.sdx, line.sdy, &color);
@@ -315,7 +379,7 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool, gap: f64) -> Result<(Outp
             arrows += &marker("arrow_point", line.ex, line.ey, line.edx, line.edy, &color);
         }
         edges_out += &format!(
-            "<g class=\"pele-rs-edge\" data-id=\"{}\"{}><path d=\"{}\"/>{}</g>",
+            "<g class=\"pele-edge\" data-id=\"{}\"{over_attr}{}><path d=\"{}\"/>{}</g>",
             esc_text(&format!("{}-{}", rel.from, rel.to)),
             style.line,
             line.d,
@@ -470,10 +534,7 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool, gap: f64) -> Result<(Outp
                     &techn,
                     cx,
                     top + label.height + techn.height / 2.0,
-                    &format!(
-                        " class=\"pele-rs-c4-techn\" fill=\"var(--_m)\"{}",
-                        style.text
-                    ),
+                    &format!(" class=\"pele-c4-techn\" fill=\"var(--_m)\"{}", style.text),
                 )),
             rel.link.as_deref(),
             &id,
@@ -481,7 +542,7 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool, gap: f64) -> Result<(Outp
             options,
         );
         labels_out += &format!(
-            "<g class=\"pele-rs-edge-label\" data-id=\"{}\">{body}</g>",
+            "<g class=\"pele-edge-label\" data-id=\"{}\">{body}</g>",
             esc_text(&id)
         );
     }
@@ -496,6 +557,8 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool, gap: f64) -> Result<(Outp
                 boundary.element.border_color.as_deref(),
                 boundary.element.font_color.as_deref(),
             );
+            let color = crate::svg::ink::ink_fill(&style, None);
+            let muted = crate::svg::ink::ink_fill(&style, Some("var(--_m)"));
             let frame = &layout.groups[group].frame;
             let x = frame.x + layout.groups[group].head_x;
             let mut y = frame.y + HEAD_TOP;
@@ -505,7 +568,7 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool, gap: f64) -> Result<(Outp
                 x,
                 y,
                 &format!(
-                    " class=\"pele-rs-cluster-label\" font-weight=\"var(--_hw)\"{}",
+                    " class=\"pele-cluster-label\" font-weight=\"var(--_hw)\"{color}{}",
                     style.text
                 ),
             );
@@ -515,7 +578,7 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool, gap: f64) -> Result<(Outp
                 x,
                 y,
                 &format!(
-                    " class=\"pele-rs-c4-type\" font-size=\"{small}\" fill=\"var(--_m)\"{}",
+                    " class=\"pele-c4-type\" font-size=\"{small}\"{muted}{}",
                     style.text
                 ),
             );
@@ -525,16 +588,16 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool, gap: f64) -> Result<(Outp
                 x,
                 y,
                 &format!(
-                    " class=\"pele-rs-c4-descr\" font-size=\"{small}\" fill=\"var(--_m)\"{}",
+                    " class=\"pele-c4-descr\" font-size=\"{small}\"{muted}{}",
                     style.text
                 ),
             );
             clusters += &format!(
-                "<g class=\"pele-rs-cluster {}\" data-id=\"{}\">",
+                "<g class=\"pele-cluster {}\" data-id=\"{}\">",
                 if boundary.node_type.is_some() {
-                    "pele-rs-c4-node"
+                    "pele-c4-node"
                 } else {
-                    "pele-rs-c4-boundary"
+                    "pele-c4-boundary"
                 },
                 esc_text(&boundary.element.alias)
             );
@@ -589,14 +652,19 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool, gap: f64) -> Result<(Outp
             } else {
                 0.0
             };
-            let muted = format!(" fill=\"var(--_m)\"{}", style.text);
+            let color = crate::svg::ink::ink_fill(&style, None);
+            let muted = format!(
+                "{}{}",
+                crate::svg::ink::ink_fill(&style, Some("var(--_m)")),
+                style.text
+            );
             let mut y = dy - node.text_h / 2.0;
             let mut text = label_svg(
                 &node.labels[0],
                 dx,
                 y + node.labels[0].height / 2.0,
                 &format!(
-                    " class=\"pele-rs-c4-type\" font-size=\"{}\"{muted}",
+                    " class=\"pele-c4-type\" font-size=\"{}\"{muted}",
                     small - 1.0
                 ),
             );
@@ -606,7 +674,7 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool, gap: f64) -> Result<(Outp
                 dx,
                 y + node.labels[1].height / 2.0,
                 &format!(
-                    " class=\"pele-rs-label\" font-weight=\"var(--_hw)\"{}",
+                    " class=\"pele-label\" font-weight=\"var(--_hw)\"{color}{}",
                     style.text
                 ),
             );
@@ -615,7 +683,7 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool, gap: f64) -> Result<(Outp
                 &node.labels[2],
                 dx,
                 y + node.labels[2].height / 2.0,
-                &format!(" class=\"pele-rs-c4-techn\" font-size=\"{small}\"{muted}"),
+                &format!(" class=\"pele-c4-techn\" font-size=\"{small}\"{muted}"),
             );
             y += node.labels[2].height + 4.0;
             text += &label_svg(
@@ -623,15 +691,15 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool, gap: f64) -> Result<(Outp
                 dx,
                 y + node.labels[3].height / 2.0,
                 &format!(
-                    " class=\"pele-rs-c4-descr\" font-size=\"{small}\"{}",
+                    " class=\"pele-c4-descr\" font-size=\"{small}\"{color}{}",
                     style.text
                 ),
             );
             nodes_out += &format!(
-                "<g class=\"pele-rs-node pele-rs-shape-{} pele-rs-c4-{}{}\" data-id=\"{}\" transform=\"translate({},{})\">",
+                "<g class=\"pele-node pele-shape-{} pele-c4-{}{}\" data-id=\"{}\" transform=\"translate({},{})\">",
                 node.form.as_str(),
                 shape.kind,
-                if external { " pele-rs-c4-external" } else { "" },
+                if external { " pele-c4-external" } else { "" },
                 esc_text(&shape.element.alias),
                 num(node.frame.x + node.frame.w / 2.0),
                 num(node.frame.y + node.frame.h / 2.0)
@@ -685,26 +753,31 @@ fn draw(model: &Model, input: &Input<'_>, tight: bool, gap: f64) -> Result<(Outp
         &title,
         width / 2.0,
         pad + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
     ) + &format!("<g transform=\"translate({},{})\">", num(ox), num(oy))
         + &if clusters.is_empty() {
             String::new()
         } else {
-            format!("<g class=\"pele-rs-clusters\">{clusters}</g>")
+            format!("<g class=\"pele-clusters\">{clusters}</g>")
+                + &crate::svg::fills::casings_svg(&casings)
         }
         + &if edges_out.is_empty() {
             String::new()
         } else {
             format!(
-                "<g class=\"pele-rs-edges\" fill=\"none\" stroke=\"var(--_l)\" \
+                "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" \
                  stroke-linecap=\"round\">{edges_out}</g>"
             )
         }
-        + &format!("<g class=\"pele-rs-nodes\">{nodes_out}</g>")
+        + &if nodes_out.is_empty() {
+            String::new()
+        } else {
+            format!("<g class=\"pele-nodes\">{nodes_out}</g>")
+        }
         + &if labels_out.is_empty() {
             String::new()
         } else {
-            format!("<g class=\"pele-rs-edge-labels\" font-size=\"{small}\">{labels_out}</g>")
+            format!("<g class=\"pele-edge-labels\" font-size=\"{small}\">{labels_out}</g>")
         }
         + "</g>";
 

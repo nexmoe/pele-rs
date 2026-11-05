@@ -36,7 +36,7 @@ pub(crate) fn class_marker(
             let bx = x - dx * TRIANGLE;
             let by = y - dy * TRIANGLE;
             format!(
-                "<path class=\"pele-rs-marker\" d=\"M{},{}L{},{}L{},{}Z\" stroke-linejoin=\"round\"/>",
+                "<path class=\"pele-marker\" d=\"M{},{}L{},{}L{},{}Z\" stroke-linejoin=\"round\"/>",
                 num(x),
                 num(y),
                 num(bx + nx * HALF),
@@ -55,7 +55,7 @@ pub(crate) fn class_marker(
                 String::new()
             };
             format!(
-                "<path class=\"pele-rs-marker\" d=\"M{},{}L{},{}L{},{}L{},{}Z\" stroke-linejoin=\"round\"{fill}/>",
+                "<path class=\"pele-marker\" d=\"M{},{}L{},{}L{},{}L{},{}Z\" stroke-linejoin=\"round\"{fill}/>",
                 num(x),
                 num(y),
                 num(mx + nx * half),
@@ -67,7 +67,7 @@ pub(crate) fn class_marker(
             )
         }
         EndMarker::Lollipop => format!(
-            "<circle class=\"pele-rs-marker\" cx=\"{}\" cy=\"{}\" r=\"{}\"/>",
+            "<circle class=\"pele-marker\" cx=\"{}\" cy=\"{}\" r=\"{}\"/>",
             num(x - dx * RING),
             num(y - dy * RING),
             num(RING)

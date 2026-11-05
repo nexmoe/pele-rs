@@ -6,8 +6,8 @@
   },
   "pele": {
     "repository": "https://github.com/obsidianmd/pele",
-    "version": "1.9.0",
-    "commit": "e7f092a4de147cc32210913c20e36eaa5fcd0ef1"
+    "version": "1.13.0",
+    "commit": "3a2f075ee0c3d914f0fad3545fc0f193693975ac"
   },
   "mermaid_syntax": "12.2.0"
 }

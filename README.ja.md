@@ -2,17 +2,16 @@
 
 [English](README.md) | [繁體中文](README.zh-TW.md) | [简体中文](README.zh-CN.md) | **日本語**
 
-[fermaid](https://github.com/tenyi/fermaid) から派生した独立プロジェクトで、ネイティブエディター向けに最適化しています。元の Git 履歴、著作者、ライセンスを保持しています。Obsidian の公式プロジェクトではありません。現在のバージョンは Git からインストールしてください。
+pele-rs は Mermaid ダイアグラムを SVG に変換するネイティブ Rust ライブラリです。エディター、デスクトップアプリ、コマンドラインツール向けに同期描画を提供し、JavaScript ランタイム、ブラウザー、Node.js は不要です。
 
 ```toml
 [dependencies]
 pele-rs = { git = "https://github.com/nexmoe/pele-rs" }
 ```
 
-全図種で再利用できる `parse` / `ParsedDiagram::render`、上限付き `CachingMeasurer`、元ソースへのエラー位置の対応、配色設定の互換性、数値検証を追加しました。オプションの `scene` 機能は usvg による `SvgScene` と resvg に一致する `FontMeasurer` を提供します。既定のビルドには実行時依存関係がありません。[ネイティブ統合ガイド](docs/NATIVE.md)を参照してください。crates.io にはまだ公開していません。
+再利用可能な `parse` / `ParsedDiagram::render`、容量制限付き `CachingMeasurer`、元のソース位置を示す診断、テーマパレット、数値検証を提供します。任意の `scene` 機能では usvg ベースの `SvgScene` と `FontMeasurer` を利用でき、標準ビルドに実行時依存はありません。API の範囲と例は[ネイティブ統合](docs/NATIVE.md)を参照してください。現在の 0.6.0 は Git 経由で配布しており、crates.io には未公開です。
 
-
-pele-rs は [Mermaid](https://mermaid.js.org) のダイアグラムを純粋な Rust で SVG に変換します。JavaScript ランタイム、ヘッドレスブラウザ、Node.js は不要です。小さく依存関係のない TypeScript 製レンダラー [pele](https://github.com/obsidianmd/pele) の移植で、Mermaid 12.2.0 の構文を対象とし、pele 独自のレイアウトとビジュアルスタイルを採用しています。
+全 33 種のダイアグラムで Mermaid 12.2.0 の構文を対象とし、Pele と互換性のあるレイアウトと SVG スタイルを使用します。参照先は **Pele 1.13.0** に固定しています。Rust テストで **178,887 件の公式描画呼び出し**と **19,308 件のユーティリティ／レイアウト呼び出し**を再現し、構造、スタイル、座標を比較します。テーマの互換性を保つため、SVG は `pele-*` / `--pele-*` を使用します。許容誤差、除外項目、ブラウザー動作との境界、再現手順は[互換性検証](docs/CONFORMANCE.md)を参照してください。
 
 > **ステータス:** alpha。Mermaid 12.2.0 のすべてのダイアグラムに対応しています。下の表は、それぞれが読み取る記法をまとめたものです。[ロードマップ](docs/ROADMAP.md)を参照してください。
 
@@ -42,7 +41,7 @@ pele-rs は [Mermaid](https://mermaid.js.org) のダイアグラムを純粋な 
 | C4 図（`C4Context`、`C4Container`、`C4Component`、`C4Dynamic`、`C4Deployment`） | 対応済み：`title`、`accTitle` と `accDescr`、人物、システム、コンテナ、コンポーネントと、その境界と関係、および `UpdateLayoutConfig` 文 |
 | ユースケース図（`usecase-beta`） | 対応済み：`title`、`accTitle` と `accDescr`、アクターとユースケース、その関係。`usecase` の設定キー `nodeSpacing` と `rankSpacing` に対応 |
 | インフォメーション図（`info`） | 対応済み：`title`、`accTitle` と `accDescr`、バージョンと本文の行 |
-| ベン図（`venn-beta`） | 対応済み：各円とラベル。`venn` の設定キー `width`、`height`、`padding` に対応 |
+| ベン図（`venn-beta`） | 対応済み：集合、交差領域、ラベル、領域スタイル、内容に合わせたサイズ調整 |
 | ツリービュー図（`treeView-beta`） | 対応済み：罫線文字で描かれる木、ラベルの前のアイコン、`classDef` と `class`。`treeView` の設定キー `rowIndent`、`paddingX`、`paddingY`、`lineThickness`、`showIcons`、`defaultIconPack`、`filenameIcons`、`extensionIcons` に対応 |
 | Cynefin 図（`cynefin-beta:`） | 対応済み：`title`、`accTitle` と `accDescr`、四つの領域の項目と領域間の遷移。`cynefin` の設定キー `width`、`height`、`showDomainDescriptions`、`boundaryAmplitude`、`seed` に対応 |
 | 石川図（`ishikawa`） | 対応済み：各段階の原因と背骨 |
@@ -95,15 +94,15 @@ SVG の色とフォントは CSS カスタムプロパティから取得され�
 
 ```css
 svg {
-  --pele-rs-bg: #1e1e1e;
-  --pele-rs-fg: #dcddde;
-  --pele-rs-line: #999;
-  --pele-rs-accent: #7f6df2;
-  --pele-rs-font: "Inter", sans-serif;
+  --pele-bg: #1e1e1e;
+  --pele-fg: #dcddde;
+  --pele-line: #999;
+  --pele-accent: #7f6df2;
+  --pele-font: "Inter", sans-serif;
 }
 ```
 
-使用できる変数：`--pele-rs-bg`、`--pele-rs-fg`、`--pele-rs-muted`、`--pele-rs-line`、`--pele-rs-surface`、`--pele-rs-surface-alt`、`--pele-rs-border`、`--pele-rs-accent`、`--pele-rs-radius`、`--pele-rs-font`、`--pele-rs-font-mono`、そして円グラフの扇形などデータ系列の色に使う `--pele-rs-series-1` から `--pele-rs-series-8`。
+使用できる変数：`--pele-bg`、`--pele-fg`、`--pele-muted`、`--pele-line`、`--pele-surface`、`--pele-surface-alt`、`--pele-border`、`--pele-accent`、`--pele-radius`、`--pele-font`、`--pele-font-mono`、そして円グラフの扇形などデータ系列の色に使う `--pele-series-1` から `--pele-series-8`。
 
 ### CSS 変数を読めないビューア
 
@@ -135,11 +134,12 @@ node tools/oracle/diff.mjs ../pele   # Mermaid 自身のパーサーとの差分
 
 ## クレジット
 
-pele-rs のアルゴリズム、テキスト計測データ、制限は、Obsidian チームの kepano による [pele](https://github.com/obsidianmd/pele)（MIT）から移植しています。ダイアグラムの構文と、テストに使うパーサー仕様は [Mermaid](https://github.com/mermaid-js/mermaid)（MIT）に由来します。詳しくは [NOTICE](NOTICE) を参照してください。
+描画アルゴリズムとテキスト計測データは kepano の [Pele](https://github.com/obsidianmd/pele) に基づき、構文とパーサー仕様は [Mermaid](https://github.com/mermaid-js/mermaid) に由来します。元の著作権、実装の出典、第三者ライセンスは [NOTICE](NOTICE) にまとめています。pele-rs は独立して開発・保守されており、Obsidian とは提携していません。
 
 ## ライセンス
 
 以下から選択して利用できます：
+
 - [MIT](LICENSE-MIT)
 - [Apache-2.0](LICENSE-APACHE)
 - [BSD-3-Clause](LICENSE-BSD3)

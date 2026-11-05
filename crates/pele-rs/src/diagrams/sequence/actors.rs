@@ -135,16 +135,23 @@ fn figure(kind: &str, cx: f64, top: f64) -> String {
 }
 
 /// Draws a participant whose bounding box has its top center at (cx, top).
-pub(crate) fn draw_actor(kind: &str, cx: f64, top: f64, size: ActorSize, label: &Label) -> String {
+pub(crate) fn draw_actor(
+    kind: &str,
+    cx: f64,
+    top: f64,
+    size: ActorSize,
+    label: &Label,
+    ink: &str,
+) -> String {
     let ActorSize { w, h } = size;
-    let text = " class=\"pele-rs-label\"";
+    let text = " class=\"pele-label\"";
     if is_figure(kind) {
         return figure(kind, cx, top)
             + &label_svg(
                 label,
                 cx,
                 top + GLYPH + GLYPH_GAP + label.height / 2.0,
-                text,
+                &format!("{text}{ink}"),
             );
     }
     let left = cx - w / 2.0;

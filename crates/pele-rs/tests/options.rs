@@ -124,11 +124,8 @@ fn draws_with_the_given_font_family() {
         ..RenderOptions::default()
     };
     let svg = svg("pie\n\"a\" : 1\n", &options);
-    assert!(svg.contains("--pele-rs-font-mono,Fira Code"), "{svg}");
-    assert!(
-        svg.contains("font-family:var(--pele-rs-font,Inter)"),
-        "{svg}"
-    );
+    assert!(svg.contains("--pele-font-mono,Fira Code"), "{svg}");
+    assert!(svg.contains("font-family:var(--pele-font,Inter)"), "{svg}");
 }
 
 #[test]
@@ -140,7 +137,7 @@ fn falls_back_to_the_generic_fonts_for_a_family_list_that_could_end_the_declarat
     };
     let svg = svg("pie\n\"a\" : 1\n", &options);
     assert!(
-        svg.contains("font-family:var(--pele-rs-font,sans-serif)"),
+        svg.contains("font-family:var(--pele-font,sans-serif)"),
         "{svg}"
     );
     assert!(!svg.contains("javascript"), "{svg}");
@@ -159,7 +156,7 @@ fn draws_with_the_given_font_size() {
 #[test]
 fn adds_the_responsive_style_only_when_asked() {
     let responsive = RenderOptions {
-        responsive: true,
+        responsive: Some(true),
         ..RenderOptions::default()
     };
     assert!(
@@ -168,7 +165,7 @@ fn adds_the_responsive_style_only_when_asked() {
     );
 
     let fixed = RenderOptions {
-        responsive: false,
+        responsive: Some(false),
         ..RenderOptions::default()
     };
     assert!(
@@ -180,7 +177,7 @@ fn adds_the_responsive_style_only_when_asked() {
 #[test]
 fn prefixes_the_ids_it_writes_with_the_given_prefix() {
     let options = RenderOptions {
-        id_prefix: "d1".to_string(),
+        id_prefix: Some("d1".to_string()),
         ..RenderOptions::default()
     };
     let svg = svg("pie\naccTitle: the title\n\"a\" : 1\n", &options);

@@ -400,7 +400,7 @@ fn draw(model: &GitModel, input: &Input<'_>, direction: Direction) -> Output {
                 py(end + TAIL, c),
             );
             branches.push_str(&format!(
-                "<g class=\"pele-rs-branch\" data-id=\"{}\"><path class=\"pele-rs-lane\" \
+                "<g class=\"pele-branch\" data-id=\"{}\"><path class=\"pele-lane\" \
                  d=\"M{}L{}\" stroke=\"{color}\" stroke-dasharray=\"2 4\"/>",
                 esc_text(&model.lanes[i]),
                 point(-LABEL_GAP, c),
@@ -418,7 +418,7 @@ fn draw(model: &GitModel, input: &Input<'_>, direction: Direction) -> Output {
                         name,
                         cx,
                         cy,
-                        " class=\"pele-rs-label\" fill=\"var(--_bg)\"",
+                        &format!(" class=\"pele-label\"{}", { let ink = crate::palette::series_ink_fill(i); if ink.is_empty() { " fill=\"var(--_bg)\"".to_string() } else { ink } }),
                     )
                 ));
             }
@@ -468,7 +468,7 @@ fn draw(model: &GitModel, input: &Input<'_>, direction: Direction) -> Output {
             let m1 = views[parent].m;
             if views[parent].lane == view.lane {
                 lines.push_str(&format!(
-                    "<path class=\"pele-rs-edge\" d=\"M{}L{}\" stroke=\"{}\"/>",
+                    "<path class=\"pele-edge\" d=\"M{}L{}\" stroke=\"{}\"/>",
                     point(m1, c1),
                     point(m2, c2),
                     series_color(view.lane)
@@ -535,11 +535,11 @@ fn draw(model: &GitModel, input: &Input<'_>, direction: Direction) -> Output {
                 }
             }
             curves.push_str(&format!(
-                "<path class=\"pele-rs-edge{}\" d=\"{d}\" stroke=\"{}\"{}/>",
+                "<path class=\"pele-edge{}\" d=\"{d}\" stroke=\"{}\"{}/>",
                 if merged {
-                    " pele-rs-edge-merge"
+                    " pele-edge-merge"
                 } else if picked {
-                    " pele-rs-edge-cherry-pick"
+                    " pele-edge-cherry-pick"
                 } else {
                     ""
                 },
@@ -601,7 +601,7 @@ fn draw(model: &GitModel, input: &Input<'_>, direction: Direction) -> Output {
                         if flip { ay + k } else { ay + reach },
                     );
                     body.push_str(&format!(
-                        "<g class=\"pele-rs-commit-label\" transform=\"rotate({} {} {})\">{}{}</g>",
+                        "<g class=\"pele-commit-label\" transform=\"rotate({} {} {})\">{}{}</g>",
                         if flip { 45 } else { -45 },
                         num(ax),
                         num(ay),
@@ -613,7 +613,7 @@ fn draw(model: &GitModel, input: &Input<'_>, direction: Direction) -> Output {
                     let cy = if vertical { y } else { y + DOT + 6.0 + h / 2.0 };
                     bounds.grow(cx - w / 2.0, cy - h / 2.0, cx + w / 2.0, cy + h / 2.0);
                     body.push_str(&format!(
-                        "<g class=\"pele-rs-commit-label\">{}{}</g>",
+                        "<g class=\"pele-commit-label\">{}{}</g>",
                         back(cx, cy),
                         label_svg(label, cx, cy, "")
                     ));
@@ -637,7 +637,7 @@ fn draw(model: &GitModel, input: &Input<'_>, direction: Direction) -> Output {
             offset += if vertical { w + 4.0 } else { h + 3.0 };
             bounds.grow(left, cy - h / 2.0, left + w, cy + h / 2.0);
             body.push_str(&format!(
-                "<g class=\"pele-rs-tag\"><path d=\"M{},{}L{},{}H{}V{}H{}Z\" fill=\"var(--_s)\" \
+                "<g class=\"pele-tag\"><path d=\"M{},{}L{},{}H{}V{}H{}Z\" fill=\"var(--_s)\" \
                  stroke=\"var(--_b)\" stroke-linejoin=\"round\"/><circle cx=\"{}\" cy=\"{}\" \
                  r=\"1.5\" fill=\"var(--_b)\"/>{}</g>",
                 num(left),
@@ -660,12 +660,12 @@ fn draw(model: &GitModel, input: &Input<'_>, direction: Direction) -> Output {
         }
 
         let merge = if commit.kind == CommitKind::Merge && kind != CommitKind::Merge {
-            " pele-rs-commit-merge"
+            " pele-commit-merge"
         } else {
             ""
         };
         commits_svg.push_str(&format!(
-            "<g class=\"pele-rs-commit pele-rs-commit-{}{}\" data-id=\"{}\">{}</g>",
+            "<g class=\"pele-commit pele-commit-{}{}\" data-id=\"{}\">{}</g>",
             CLASSES[kind.index()],
             merge,
             esc_text(&commit.id),
@@ -701,7 +701,7 @@ fn draw(model: &GitModel, input: &Input<'_>, direction: Direction) -> Output {
             &title,
             width / 2.0,
             pad + title.height / 2.0,
-            " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+            " class=\"pele-title\" font-weight=\"var(--_tw)\"",
         ),
         num(dx),
         num(dy),
@@ -709,14 +709,14 @@ fn draw(model: &GitModel, input: &Input<'_>, direction: Direction) -> Output {
             String::new()
         } else {
             format!(
-                "<g class=\"pele-rs-branches\" fill=\"none\" font-size=\"{medium}\">{branches}</g>"
+                "<g class=\"pele-branches\" fill=\"none\" font-size=\"{medium}\">{branches}</g>"
             )
         },
         if curves.is_empty() && lines.is_empty() {
             String::new()
         } else {
             format!(
-                "<g class=\"pele-rs-edges\" fill=\"none\" stroke-width=\"2\" \
+                "<g class=\"pele-edges\" fill=\"none\" stroke-width=\"2\" \
                  stroke-linecap=\"round\">{curves}{lines}</g>"
             )
         },
@@ -724,7 +724,7 @@ fn draw(model: &GitModel, input: &Input<'_>, direction: Direction) -> Output {
             String::new()
         } else {
             format!(
-                "<g class=\"pele-rs-commits\" font-size=\"{small}\" fill=\"var(--_m)\">\
+                "<g class=\"pele-commits\" font-size=\"{small}\" fill=\"var(--_m)\">\
                  {commits_svg}</g>"
             )
         },

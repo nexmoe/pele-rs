@@ -36,8 +36,8 @@ pub(crate) enum Node {
     /// the element may be taken as often as wanted.
     Repetition {
         element: Box<Node>,
-        min: u64,
-        max: Option<u64>,
+        min: f64,
+        max: Option<f64>,
     },
 }
 
@@ -89,11 +89,27 @@ impl Node {
     }
 
     /// An element that is taken between `min` and `max` times.
-    pub(crate) fn repetition(element: Node, min: u64, max: Option<u64>) -> Node {
+    pub(crate) fn repetition(element: Node, min: f64, max: Option<f64>) -> Node {
         Node::Repetition {
             element: Box::new(element),
             min,
             max,
+        }
+    }
+}
+
+// The parser and renderer walk explicitly; releasing a deep expression must do so too.
+impl Drop for RailroadModel {
+    fn drop(&mut self) {
+        let mut pending: Vec<_> = self.rules.drain(..).map(|rule| rule.definition).collect();
+        while let Some(node) = pending.pop() {
+            match node {
+                Node::Sequence(children) | Node::Choice(children) => pending.extend(children),
+                Node::Optional(child) | Node::Repetition { element: child, .. } => {
+                    pending.push(*child)
+                }
+                _ => {}
+            }
         }
     }
 }

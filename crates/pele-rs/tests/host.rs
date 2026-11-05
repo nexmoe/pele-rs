@@ -62,8 +62,8 @@ fn without_resolvers_icons_are_left_out_and_math_stays_text() {
         "flowchart LR\n  A[fa:fa-car Car] --> B[\"$$x^2$$\"]",
         &RenderOptions::default(),
     );
-    assert!(!out.contains("pele-rs-icon"));
-    assert!(!out.contains("pele-rs-math"));
+    assert!(!out.contains("pele-icon"));
+    assert!(!out.contains("pele-math"));
     assert!(out.contains("Car"));
     assert!(!out.contains("fa:fa-car"));
     assert!(out.contains("$$x^2$$"));
@@ -81,7 +81,7 @@ fn draws_an_icon_the_host_has_and_leaves_out_one_it_has_not() {
         "flowchart LR\n  A[fa:fa-car Car] --> B[fa:fa-boat Boat]",
         &options,
     );
-    assert_eq!(out.matches("class=\"pele-rs-icon\"").count(), 1);
+    assert_eq!(out.matches("class=\"pele-icon\"").count(), 1);
     assert!(out.contains("data-icon=\"fa:fa-car\""));
     assert!(out.contains(ICON));
     // The icon has room of its own, so the label is wider than the same label without it.
@@ -118,7 +118,7 @@ fn typesets_math_and_makes_room_for_it() {
         ..Default::default()
     };
     let out = svg("flowchart LR\n  A[\"$$x^2$$\"]", &options);
-    assert!(out.contains("class=\"pele-rs-math\""));
+    assert!(out.contains("class=\"pele-math\""));
     assert!(out.contains(MATH));
     assert!(!out.contains("$$"));
     assert_inert(&out, "math");
@@ -148,7 +148,7 @@ fn math_that_the_host_does_not_typeset_stays_as_written() {
         ..Default::default()
     };
     let out = svg("flowchart LR\n  A[\"$$ok$$ and $$other$$\"]", &options);
-    assert_eq!(out.matches("class=\"pele-rs-math\"").count(), 1);
+    assert_eq!(out.matches("class=\"pele-math\"").count(), 1);
     assert!(out.contains("$$other$$"));
 }
 
@@ -166,7 +166,7 @@ fn ignores_math_with_a_size_that_cannot_be_drawn() {
             ..Default::default()
         };
         let out = svg("flowchart LR\n  A[\"$$x$$\"]", &options);
-        assert!(!out.contains("pele-rs-math"), "{width} {height}");
+        assert!(!out.contains("pele-math"), "{width} {height}");
         assert!(out.contains("$$x$$"));
     }
 }
@@ -202,7 +202,7 @@ fn a_title_is_plain_text() {
         ..Default::default()
     };
     let out = svg("---\ntitle: $$a$$\n---\nflowchart LR\n  A", &options);
-    assert!(!out.contains("pele-rs-math"));
+    assert!(!out.contains("pele-math"));
     assert!(out.contains("$$a$$"));
 }
 
@@ -252,9 +252,9 @@ fn mindmap_draws_the_icon_of_a_node_the_host_has() {
     };
     let out = pele_rs::render(src, &with).unwrap();
     let plain = pele_rs::render(src, &RenderOptions::default()).unwrap();
-    assert_eq!(out.svg.matches("class=\"pele-rs-icon\"").count(), 1);
+    assert_eq!(out.svg.matches("class=\"pele-icon\"").count(), 1);
     assert!(out.svg.contains("data-icon=\"fa fa-book\""));
-    assert!(!plain.svg.contains("pele-rs-icon"));
+    assert!(!plain.svg.contains("pele-icon"));
     // The icon has room in the node, so the map is wider.
     assert!(out.width > plain.width);
     assert_inert(&out.svg, src);
@@ -269,7 +269,7 @@ fn mindmap_typesets_math() {
         ..Default::default()
     };
     let out = svg(src, &options);
-    assert!(out.contains("class=\"pele-rs-math\""));
+    assert!(out.contains("class=\"pele-math\""));
     assert!(!out.contains("$$"));
 }
 
@@ -301,9 +301,9 @@ fn flowchart_draws_the_icon_of_an_icon_shape() {
     let src = "flowchart LR\n  A@{ icon: \"myicon\", form: \"square\", label: \"Car\" }\n  B@{ icon: \"other\", form: \"square\" }";
     let (hosted, plain) = both(src);
     assert!(hosted.contains(ICON));
-    assert_eq!(hosted.matches("<svg class=\"pele-rs-icon\"").count(), 1);
-    // An icon the host has not is a dashed frame, as it is without a host.
-    assert!(hosted.contains("stroke-dasharray=\"3 3\""));
+    assert_eq!(hosted.matches("<svg class=\"pele-icon\"").count(), 2);
+    // Unresolved icons retain an empty SVG slot, as in the official renderer.
+    assert!(hosted.contains("data-icon=\"other\""));
     assert!(!plain.contains(ICON));
     assert_inert(&hosted, src);
 }
@@ -313,9 +313,9 @@ fn flowchart_draws_the_icon_of_an_icon_shape() {
 fn kanban_draws_icons_and_widens_for_math() {
     let src = "kanban\n  todo[To do]@{ icon: 'myicon' }\n    t1[Task]@{ icon: 'myicon' }\n    t2[Math $$x$$]\n";
     let (hosted, plain) = both(src);
-    assert_eq!(hosted.matches("<svg class=\"pele-rs-icon\"").count(), 2);
-    assert!(hosted.contains("class=\"pele-rs-math\""));
-    assert!(!plain.contains("pele-rs-icon"));
+    assert_eq!(hosted.matches("<svg class=\"pele-icon\"").count(), 2);
+    assert!(hosted.contains("class=\"pele-math\""));
+    assert!(!plain.contains("pele-icon"));
     assert_inert(&hosted, src);
     // The column is at least as wide as the math and its room.
     let wide = pele_rs::render(
@@ -335,9 +335,9 @@ fn kanban_draws_icons_and_widens_for_math() {
 fn er_draws_icons_and_math_in_a_cell() {
     let src = "erDiagram\n  CUSTOMER {\n    string name \"fa:fa-car $$x$$\"\n  }\n";
     let (hosted, plain) = both(src);
-    assert!(hosted.contains("class=\"pele-rs-icon\""), "{hosted}");
-    assert!(hosted.contains("class=\"pele-rs-math\""));
-    assert!(!plain.contains("pele-rs-icon"));
+    assert!(hosted.contains("class=\"pele-icon\""), "{hosted}");
+    assert!(hosted.contains("class=\"pele-math\""));
+    assert!(!plain.contains("pele-icon"));
     assert_inert(&hosted, src);
 }
 
@@ -346,7 +346,7 @@ fn er_draws_icons_and_math_in_a_cell() {
 fn requirement_draws_math() {
     let src = "requirementDiagram\n  requirement r {\n    id: 1\n    text: \"$$x$$\"\n    risk: high\n    verifymethod: test\n  }\n";
     let (hosted, plain) = both(src);
-    assert!(hosted.contains("class=\"pele-rs-math\""), "{hosted}");
+    assert!(hosted.contains("class=\"pele-math\""), "{hosted}");
     assert!(plain.contains("$$x$$"));
     assert_inert(&hosted, src);
 }
@@ -356,12 +356,8 @@ fn requirement_draws_math() {
 fn class_typesets_cardinalities_and_annotations() {
     let src = "classDiagram\n  class A {\n    <<$$x$$>>\n  }\n  A \"$$y$$\" --> \"1\" B\n";
     let (hosted, plain) = both(src);
-    assert!(hosted.contains("class=\"pele-rs-cardinality\""));
-    assert_eq!(
-        hosted.matches("class=\"pele-rs-math\"").count(),
-        2,
-        "{hosted}"
-    );
+    assert!(hosted.contains("class=\"pele-cardinality\""));
+    assert_eq!(hosted.matches("class=\"pele-math\"").count(), 2, "{hosted}");
     assert!(plain.contains("$$y$$"));
     assert_inert(&hosted, src);
 }
@@ -371,7 +367,7 @@ fn class_typesets_cardinalities_and_annotations() {
 fn block_typesets_math() {
     let src = "block-beta\n  a[\"$$x$$\"]\n";
     let (hosted, plain) = both(src);
-    assert!(hosted.contains("class=\"pele-rs-math\""));
+    assert!(hosted.contains("class=\"pele-math\""));
     assert!(plain.contains("$$x$$"));
     assert_inert(&hosted, src);
 }

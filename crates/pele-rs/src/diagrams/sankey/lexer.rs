@@ -56,7 +56,10 @@ enum S {
 /// the quote and the comma. Mermaid's grammar has no rule for a character outside that range,
 /// so a field that holds one is a parse error there, and pele-rs reads it the same way.
 fn is_text_data(c: u32) -> bool {
-    (32..=126).contains(&c) && c != 34 && c != 44
+    ((32..=126).contains(&c) && c != 34 && c != 44)
+        || (0xa0..=0xd7ff).contains(&c)
+        || (0xe000..=0xfffd).contains(&c)
+        || (0x10000..=0x10ffff).contains(&c)
 }
 
 /// The characters a word is made of, as the jison lexer's word rule counts them.

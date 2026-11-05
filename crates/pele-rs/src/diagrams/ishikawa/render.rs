@@ -217,11 +217,11 @@ fn draw(model: &IshikawaModel, input: &Input<'_>, down: bool) -> Output {
             min_y = min_y.min(box_y - category.box_h / 2.0);
             max_y = max_y.max(box_y + category.box_h / 2.0);
             groups += &format!(
-                "<g class=\"pele-rs-ishikawa-category\" data-id=\"{}\">",
+                "<g class=\"pele-ishikawa-category\" data-id=\"{}\">",
                 esc_text(model.text(category.node))
             );
             groups += &format!(
-                "<path class=\"pele-rs-ishikawa-bones\" d=\"{d}\" fill=\"none\" stroke=\"var(--_l)\"/>"
+                "<path class=\"pele-ishikawa-bones\" d=\"{d}\" fill=\"none\" stroke=\"var(--_l)\"/>"
             );
             groups += &marker(
                 "arrow_point",
@@ -238,10 +238,10 @@ fn draw(model: &IshikawaModel, input: &Input<'_>, down: bool) -> Output {
                 num(category.box_w),
                 num(category.box_h)
             );
-            groups += &label_svg(&category.label, end_x, box_y, " class=\"pele-rs-label\"");
+            groups += &label_svg(&category.label, end_x, box_y, " class=\"pele-label\"");
             if !texts.is_empty() {
                 groups += &format!(
-                    "<g class=\"pele-rs-ishikawa-causes\" font-size=\"{}\">{texts}</g>",
+                    "<g class=\"pele-ishikawa-causes\" font-size=\"{}\">{texts}</g>",
                     num(small)
                 );
             }
@@ -250,14 +250,14 @@ fn draw(model: &IshikawaModel, input: &Input<'_>, down: bool) -> Output {
 
         let r = head_h / 2.0;
         body += &format!(
-            "<path class=\"pele-rs-ishikawa-spine\" d=\"M{},0H{}\" fill=\"none\" stroke=\"var(--_l)\"/>",
+            "<path class=\"pele-ishikawa-spine\" d=\"M{},0H{}\" fill=\"none\" stroke=\"var(--_l)\"/>",
             num(tail),
             num(-(ARROW - 1.0))
         );
         body += &marker("arrow_point", 0.0, 0.0, 1.0, 0.0, "var(--_l)");
         body += &groups;
         body += &format!(
-            "<g class=\"pele-rs-ishikawa-head\" data-id=\"{}\">",
+            "<g class=\"pele-ishikawa-head\" data-id=\"{}\">",
             esc_text(model.text(root))
         );
         body += &format!(
@@ -273,7 +273,7 @@ fn draw(model: &IshikawaModel, input: &Input<'_>, down: bool) -> Output {
             &head,
             12.0 + head.width / 2.0,
             0.0,
-            " class=\"pele-rs-label\" font-weight=\"var(--_hw)\"",
+            " class=\"pele-label\" font-weight=\"var(--_hw)\"",
         );
         body += "</g>";
     }
@@ -287,7 +287,7 @@ fn draw(model: &IshikawaModel, input: &Input<'_>, down: bool) -> Output {
         &title,
         width / 2.0,
         pad + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
     );
     if !body.is_empty() {
         content += &format!(
@@ -553,12 +553,12 @@ fn vertical_causes(model: &IshikawaModel, input: &Input<'_>) -> Output {
         }
         let framed = entry_depth < 2;
         let class = match entry_depth {
-            0 => "pele-rs-ishikawa-head",
-            1 => "pele-rs-ishikawa-category",
-            _ => "pele-rs-ishikawa-cause",
+            0 => "pele-ishikawa-head",
+            1 => "pele-ishikawa-category",
+            _ => "pele-ishikawa-cause",
         };
         nodes += &format!(
-            "<g class=\"pele-rs-node {class}\" data-id=\"{}\">",
+            "<g class=\"pele-node {class}\" data-id=\"{}\">",
             esc_text(model.text(node))
         );
         if framed {
@@ -571,7 +571,7 @@ fn vertical_causes(model: &IshikawaModel, input: &Input<'_>) -> Output {
                 if entry_depth == 0 { 12 } else { 4 }
             );
         }
-        let mut attrs = String::from(" class=\"pele-rs-label\"");
+        let mut attrs = String::from(" class=\"pele-label\"");
         if entry_depth < 2 {
             attrs.push_str(" font-weight=\"var(--_hw)\"");
         }
@@ -584,7 +584,7 @@ fn vertical_causes(model: &IshikawaModel, input: &Input<'_>) -> Output {
             let parent = &order[parent];
             let gx = parent.x + indent / 2.0;
             edges += &format!(
-                "<path class=\"pele-rs-edge\" d=\"M{},{}V{}H{}\" fill=\"none\" stroke=\"var(--_b)\"/>",
+                "<path class=\"pele-edge\" d=\"M{},{}V{}H{}\" fill=\"none\" stroke=\"var(--_b)\"/>",
                 num(gx),
                 num(parent.y + parent.h),
                 num(entry_y + h / 2.0),
@@ -598,7 +598,7 @@ fn vertical_causes(model: &IshikawaModel, input: &Input<'_>) -> Output {
         &title,
         total_width / 2.0,
         pad + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
     ) + &edges
         + &nodes;
     let svg = svg_document(

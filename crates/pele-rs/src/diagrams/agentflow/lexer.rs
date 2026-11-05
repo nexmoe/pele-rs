@@ -347,8 +347,6 @@ impl Lexer<'_> {
                     break;
                 }
                 q += 1;
-            } else if ch == 61 && self.c(q + 1) != 61 {
-                q += 1;
             } else {
                 break;
             }

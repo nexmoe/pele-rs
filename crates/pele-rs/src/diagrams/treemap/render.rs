@@ -14,23 +14,14 @@ use crate::text::label::layout_label;
 use crate::util::round;
 
 use super::db::{NodeKind, TreemapDb};
-use super::format::format_value;
 use super::layout::{Insets, layout_treemap};
 
 /// The space a section keeps for its header.
 const HEADER: f64 = 28.0;
 /// The space a section keeps around its children on the other three sides.
 const SIDE: f64 = 6.0;
-/// The space between two boxes.
-const GAP: f64 = 4.0;
 /// The height of a line of text, as a multiple of its size.
 const LINE: f64 = 1.25;
-/// Mermaid sizes the diagram as ten times `nodeWidth` by ten times `nodeHeight`, which are 64
-/// and 40 by default. The type reads no configuration, so these are always the sizes.
-const WIDTH: f64 = 640.0;
-const HEIGHT: f64 = 400.0;
-/// The space around the drawing.
-const PADDING: f64 = 8.0;
 
 /// One line of text fitted into a width.
 struct Fitted {
@@ -38,29 +29,76 @@ struct Fitted {
     size: f64,
 }
 
-/// Draws a treemap.
+fn option(input: &Input<'_>, key: &str, fallback: f64, min: f64, max: f64) -> f64 {
+    match input.config.get("treemap") {
+        Some(crate::preprocess::Value::Map(v)) => match v.get(key) {
+            Some(crate::preprocess::Value::Number(v)) if *v >= min => v.min(max),
+            _ => fallback,
+        },
+        _ => fallback,
+    }
+}
+fn corners(attrs: &str, b: &super::layout::Box) -> String {
+    let cap = b.w.min(b.h) / 4.0;
+    let attrs = rounded(attrs);
+    if cap < 4.0 {
+        attrs.replace("rx:var(--_r)", &format!("rx:min(var(--_r),{}px)", num(cap)))
+    } else {
+        attrs
+    }
+}
+fn title_part(raw: &str) -> String {
+    crate::util::trim(&esc(crate::util::trim(&decode_entities(raw)))).to_string()
+}
+/// Draws a treemap with the official adaptive gaps, headers, labels and tooltips.
 pub(crate) fn render_treemap(db: &TreemapDb, input: &Input<'_>) -> Result<Output, Error> {
+    use crate::preprocess::Value;
     let options = input.options;
     let measurer = input.measurer;
     let size = options.font_size.unwrap_or(16.0);
     let small = round(size * 0.875);
     let tiny = round(size * 0.75);
     let least = round(size * 0.5625);
-    let pad = options.padding.unwrap_or(PADDING);
-    let width = round(cap_width(options, WIDTH, 200.0, 2.0 * pad));
-    let height = HEIGHT;
-
+    let conf = match input.config.get("treemap") {
+        Some(Value::Map(v)) => Some(v),
+        _ => None,
+    };
+    let pad = options
+        .padding
+        .unwrap_or_else(|| option(input, "diagramPadding", 8.0, 0.0, 2000.0));
+    let width = round(cap_width(
+        options,
+        option(input, "nodeWidth", 64.0, 1.0, 400.0) * 10.0,
+        200.0,
+        2.0 * pad,
+    ));
+    let height = round(option(input, "nodeHeight", 40.0, 1.0, 400.0) * 10.0);
+    let show_values = conf.and_then(|v| v.get("showValues")) != Some(&Value::Bool(false));
+    let spec = match conf.and_then(|v| v.get("valueFormat")) {
+        Some(Value::String(s)) => s.as_str(),
+        _ => ",",
+    };
+    let count = db
+        .tree
+        .nodes
+        .iter()
+        .filter(|n| n.kind == NodeKind::Leaf && n.value.is_some_and(|v| v.is_finite() && v > 0.0))
+        .count()
+        .max(1);
+    let crowd = ((width * height) / count as f64 / 800.0)
+        .log10()
+        .clamp(0.0, 1.0);
     let boxes = layout_treemap(
         &db.tree,
         width,
         height,
         Insets {
-            gap: GAP,
+            gap: option(input, "padding", round(2.0 + 2.0 * crowd), 0.0, 200.0),
             header: HEADER,
-            side: SIDE,
+            short: 18.0,
+            side: round(3.0 + 3.0 * crowd),
         },
     );
-
     let title = layout_label(
         db.title.as_deref(),
         false,
@@ -76,171 +114,238 @@ pub(crate) fn render_treemap(db: &TreemapDb, input: &Input<'_>) -> Result<Output
     };
     let left = pad + (title.width - width).max(0.0) / 2.0;
     let top = pad + title_height;
-
     let mut sections = String::new();
     let mut leaves = String::new();
     for b in &boxes {
         let node = &db.tree.nodes[b.node];
         let style = resolve_style(&node.styles);
         let color = series_color(b.series);
-        let x = left + b.x;
-        let y = top + b.y;
-        let name = decode_entities(&node.name).trim().to_string();
-        let value = format_value(b.value);
+        let (x, y) = (left + b.x, top + b.y);
+        let name = crate::util::trim(&decode_entities(&node.name)).to_string();
+        let value = if show_values {
+            super::format::format_spec(b.value, spec)
+        } else {
+            String::new()
+        };
         let group = format!("data-id=\"{}\">", esc_text(&node.name));
+        let own = title_part(&node.name);
+        let mut path = if own.is_empty() {
+            Vec::new()
+        } else {
+            vec![own.clone()]
+        };
+        let mut parent = b.parent;
+        while let Some(p) = parent {
+            if boxes[p].headed {
+                break;
+            }
+            let section = title_part(&db.tree.nodes[boxes[p].node].name);
+            if !section.is_empty() {
+                path.insert(0, section);
+            }
+            parent = boxes[p].parent;
+        }
+        let full = path.join(" › ");
+        let tooltip = |drawn: Option<&str>| {
+            if full.is_empty() || (drawn == Some(name.as_str()) && full == own) {
+                String::new()
+            } else {
+                format!("<title>{full}</title>")
+            }
+        };
         let rect = format!(
-            "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"{}\"",
+            "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"{color}\"",
             num(x),
             num(y),
             num(b.w),
-            num(b.h),
-            color
+            num(b.h)
         );
         let classes = format!(
-            "pele-rs-node pele-rs-{}{}",
+            "pele-node pele-{}{}",
             node.kind.as_str().to_lowercase(),
             class_names(node.class_selector.as_deref().unwrap_or(""))
         );
-
+        let fixed = style.font_size;
+        let text_style = (if style.bold { Style::BOLD } else { Style::NONE })
+            | if style.italic {
+                Style::ITALIC
+            } else {
+                Style::NONE
+            };
+        let ink = if crate::svg::sets_fill(&style.shape) {
+            crate::svg::ink::ink_fill(&style, None)
+        } else {
+            crate::palette::series_ink_fill(b.series)
+        };
         if node.kind == NodeKind::Section {
             let mut text = String::new();
-            if b.h >= HEADER {
+            let mut drawn = None;
+            if b.headed {
+                let short = b.header < HEADER;
+                let label_size = fixed.unwrap_or(if short { tiny } else { small });
+                let value_size = fixed.unwrap_or(tiny);
                 let room = b.w - 2.0 * SIDE - 4.0;
                 let value_width = if value.is_empty() {
                     0.0
                 } else {
-                    measurer.width(&value, tiny, Style::NONE)
+                    measurer.width(&value, value_size, text_style)
                 };
-                let with_value = value_width > 0.0 && room - value_width - 12.0 >= 3.0 * small;
-                let label = fit_text(
-                    &name,
-                    if with_value {
-                        room - value_width - 12.0
-                    } else {
-                        room
-                    },
-                    small,
-                    small,
-                    measurer,
-                    Style::BOLD,
-                );
-                let baseline = y + HEADER / 2.0 + 1.0;
+                let with_value =
+                    !short && value_width > 0.0 && room - value_width - 12.0 >= 3.0 * label_size;
+                let label = if label_size * LINE < b.header {
+                    fit_text(
+                        &name,
+                        if with_value {
+                            room - value_width - 12.0
+                        } else {
+                            room
+                        },
+                        label_size,
+                        label_size,
+                        measurer,
+                        text_style | Style::BOLD,
+                    )
+                } else {
+                    None
+                };
+                let baseline = y + b.header / 2.0 + 1.0;
                 if let Some(label) = label {
                     text += &format!(
-                        "<text x=\"{}\" y=\"{}\" font-weight=\"var(--_hw)\"{}>{}</text>",
+                        "<text x=\"{}\" y=\"{}\" font-weight=\"var(--_hw)\"{}{ink}{}>{}</text>",
                         num(x + SIDE + 2.0),
-                        num(baseline + small * 0.35),
+                        num(baseline + label_size * 0.35),
+                        if short {
+                            format!(" font-size=\"{}\"", num(label_size))
+                        } else {
+                            String::new()
+                        },
                         style.text,
                         esc(&label.text)
                     );
+                    drawn = Some(label.text);
                 }
-                if with_value {
+                if with_value && value_size * LINE <= HEADER {
                     text += &format!(
-                        "<text class=\"pele-rs-value\" x=\"{}\" y=\"{}\" font-size=\"{}\" \
-                         text-anchor=\"end\" fill=\"var(--_m)\"{}>{}</text>",
+                        "<text class=\"pele-value\" x=\"{}\" y=\"{}\" font-size=\"{}\" text-anchor=\"end\"{}{}>{}</text>",
                         num(x + b.w - SIDE - 2.0),
-                        num(baseline + tiny * 0.35),
+                        num(baseline + value_size * 0.35),
                         num(tiny),
+                        if ink.is_empty() {
+                            " fill=\"var(--_m)\""
+                        } else {
+                            &ink
+                        },
                         style.text,
                         esc(&value)
                     );
                 }
             }
-            // A section is a tint of its color, unless a class gives it a fill of its own.
             let tint = if has_fill(&style.shape) {
                 ""
             } else {
                 " fill-opacity=\"0.12\""
             };
+            let shape = if b.headed {
+                format!(
+                    "{rect}{}/>",
+                    corners(&format!("{tint} stroke=\"{color}\"{}", style.shape), b)
+                )
+            } else {
+                format!(
+                    "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"none\"/>",
+                    num(x),
+                    num(y),
+                    num(b.w),
+                    num(b.h)
+                )
+            };
             sections += &format!(
-                "<g class=\"{classes}\" {group}{rect}{}/>{text}</g>",
-                rounded(&format!("{tint} stroke=\"{color}\"{}", style.shape))
+                "<g class=\"{classes}\" {group}{}{shape}{text}</g>",
+                tooltip(drawn.as_deref())
             );
             continue;
         }
-
         let mut text = String::new();
         let room = b.w - 8.0;
-        let tallest = size.min(((b.h - 4.0) / LINE).floor());
-        if tallest >= least {
-            if let Some(label) = fit_text(&name, room, tallest, least, measurer, Style::NONE) {
-                let cx = num(x + b.w / 2.0);
-                let cy = y + b.h / 2.0;
-                let value_size = least.max(round(label.size * 0.8));
-                let lines = (label.size + value_size) * LINE;
-                if !value.is_empty()
-                    && lines <= b.h - 4.0
-                    && measurer.width(&value, value_size, Style::NONE) <= room
-                {
-                    let first = cy - lines / 2.0 + (label.size * LINE) / 2.0;
-                    let second = cy + lines / 2.0 - (value_size * LINE) / 2.0;
-                    text = format!(
-                        "<text x=\"{cx}\" y=\"{}\" font-size=\"{}\"{}>{}</text>\
-                         <text class=\"pele-rs-value\" x=\"{cx}\" y=\"{}\" font-size=\"{}\"{}>{}</text>",
-                        num(first + label.size * 0.35),
-                        num(label.size),
-                        style.text,
-                        esc(&label.text),
-                        num(second + value_size * 0.35),
-                        num(value_size),
-                        style.text,
-                        esc(&value)
-                    );
-                } else {
-                    text = format!(
-                        "<text x=\"{cx}\" y=\"{}\" font-size=\"{}\"{}>{}</text>",
-                        num(cy + label.size * 0.35),
-                        num(label.size),
-                        style.text,
-                        esc(&label.text)
-                    );
-                }
+        let smallest = fixed.unwrap_or(least);
+        let tallest = match fixed {
+            None => size.min(((b.h - 4.0) / LINE).floor()),
+            Some(fixed) if fixed * LINE <= b.h - 4.0 => fixed,
+            _ => 0.0,
+        };
+        let label = if tallest >= smallest {
+            fit_text(&name, room, tallest, smallest, measurer, text_style)
+        } else {
+            None
+        };
+        if let Some(label) = &label {
+            let cx = num(x + b.w / 2.0);
+            let cy = y + b.h / 2.0;
+            let value_size = fixed.unwrap_or_else(|| least.max(round(label.size * 0.8)));
+            let lines = (label.size + value_size) * LINE;
+            if !value.is_empty()
+                && lines <= b.h - 4.0
+                && measurer.width(&value, value_size, text_style) <= room
+            {
+                let first = cy - lines / 2.0 + (label.size * LINE) / 2.0;
+                let second = cy + lines / 2.0 - (value_size * LINE) / 2.0;
+                text = format!(
+                    "<text x=\"{cx}\" y=\"{}\" font-size=\"{}\"{ink}{}>{}</text><text class=\"pele-value\" x=\"{cx}\" y=\"{}\" font-size=\"{}\"{ink}{}>{}</text>",
+                    num(first + label.size * 0.35),
+                    num(label.size),
+                    style.text,
+                    esc(&label.text),
+                    num(second + value_size * 0.35),
+                    num(value_size),
+                    style.text,
+                    esc(&value)
+                );
+            } else {
+                text = format!(
+                    "<text x=\"{cx}\" y=\"{}\" font-size=\"{}\"{ink}{}>{}</text>",
+                    num(cy + label.size * 0.35),
+                    num(label.size),
+                    style.text,
+                    esc(&label.text)
+                );
             }
         }
         leaves += &format!(
-            "<g class=\"{classes}\" {group}{rect}{}/>{text}</g>",
-            rounded(&style.shape)
+            "<g class=\"{classes}\" {group}{}{rect}{}/>{text}</g>",
+            tooltip(label.as_ref().map(|l| l.text.as_str())),
+            corners(&style.shape, b)
         );
     }
-
     let total_width = (width.max(title.width) + 2.0 * pad).ceil();
     let total_height = (height + title_height + 2.0 * pad).ceil();
-    let content = format!(
-        "{}{}{}",
-        label_svg(
-            &title,
-            total_width / 2.0,
-            pad + title.height / 2.0,
-            " class=\"pele-rs-title\" font-weight=\"var(--_tw)\""
-        ),
-        if sections.is_empty() {
-            String::new()
-        } else {
-            format!("<g class=\"pele-rs-sections\" font-size=\"{small}\">{sections}</g>")
-        },
-        if leaves.is_empty() {
-            String::new()
-        } else {
-            format!(
-                "<g class=\"pele-rs-leaves\" text-anchor=\"middle\" fill=\"var(--_bg)\">{leaves}</g>"
-            )
-        }
-    );
+    let content = label_svg(
+        &title,
+        total_width / 2.0,
+        pad + title.height / 2.0,
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
+    ) + &if sections.is_empty() {
+        String::new()
+    } else {
+        format!("<g class=\"pele-sections\" font-size=\"{small}\">{sections}</g>")
+    } + &if leaves.is_empty() {
+        String::new()
+    } else {
+        format!("<g class=\"pele-leaves\" text-anchor=\"middle\" fill=\"var(--_bg)\">{leaves}</g>")
+    };
     let acc = Accessible {
         title: db.acc_title.clone(),
         descr: db.acc_descr.clone(),
     };
-    let svg = svg_document(
-        DiagramKind::Treemap,
-        total_width,
-        total_height,
-        size,
-        options,
-        &acc,
-        &content,
-    );
     Ok(Output {
-        svg,
+        svg: svg_document(
+            DiagramKind::Treemap,
+            total_width,
+            total_height,
+            size,
+            options,
+            &acc,
+            &content,
+        ),
         width: total_width,
         height: total_height,
         links: Vec::new(),

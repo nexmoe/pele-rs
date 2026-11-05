@@ -206,18 +206,18 @@ fn option(conf: &Config, key: &str, fallback: f64) -> f64 {
     }
 }
 
-fn half(x: f64, y: f64, dir: f64, up: f64, stick: bool) -> String {
+fn half(x: f64, y: f64, dir: f64, up: f64, stick: bool, color: &str) -> String {
     let bx = num(x - dir * ARROW);
     if stick {
         return format!(
-            "<path class=\"pele-rs-marker\" d=\"M{},{}L{bx},{}\"/>",
+            "<path class=\"pele-marker\" d=\"M{},{}L{bx},{}\"/>",
             num(x),
             num(y),
             num(y + up * 5.0)
         );
     }
     format!(
-        "<path class=\"pele-rs-marker\" d=\"M{},{}L{bx},{}V{}Z\" fill=\"var(--_l)\" stroke=\"none\"/>",
+        "<path class=\"pele-marker\" d=\"M{},{}L{bx},{}V{}Z\" fill=\"{color}\" stroke=\"none\"/>",
         num(x),
         num(y),
         num(y + up * 4.5),
@@ -227,12 +227,12 @@ fn half(x: f64, y: f64, dir: f64, up: f64, stick: bool) -> String {
 
 /// Draws the head whose tip is at (x, y) and points along `dir`. `up` is the side a half head
 /// sits on.
-fn head(kind: Head, x: f64, y: f64, dir: f64, up: f64) -> String {
+fn head(kind: Head, x: f64, y: f64, dir: f64, up: f64, color: &str) -> String {
     match kind {
-        Head::Arrow => marker("arrow_point", x, y, dir, 0.0, "var(--_l)"),
-        Head::Cross => marker("arrow_cross", x, y, dir, 0.0, "var(--_l)"),
+        Head::Arrow => marker("arrow_point", x, y, dir, 0.0, color),
+        Head::Cross => marker("arrow_cross", x, y, dir, 0.0, color),
         Head::Open => format!(
-            "<path class=\"pele-rs-marker\" d=\"M{},{}L{},{}L{},{}\" stroke-linejoin=\"round\"/>",
+            "<path class=\"pele-marker\" d=\"M{},{}L{},{}L{},{}\" stroke-linejoin=\"round\"/>",
             num(x - dir * ARROW),
             num(y - 4.5),
             num(x),
@@ -240,8 +240,8 @@ fn head(kind: Head, x: f64, y: f64, dir: f64, up: f64) -> String {
             num(x - dir * ARROW),
             num(y + 4.5)
         ),
-        Head::HalfSolid => half(x, y, dir, up, false),
-        Head::HalfStick => half(x, y, dir, up, true),
+        Head::HalfSolid => half(x, y, dir, up, false, color),
+        Head::HalfStick => half(x, y, dir, up, true, color),
         Head::None => String::new(),
     }
 }
@@ -259,6 +259,10 @@ pub(crate) fn render_sequence(db: &SeqDb, input: &Input<'_>) -> Output {
 }
 
 fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
+    draw_with_hold(db, input, tight, 0.0, true)
+}
+
+fn draw_with_hold(db: &SeqDb, input: &Input<'_>, tight: bool, hold: f64, by_need: bool) -> Output {
     let options = input.options;
     let measurer = input.measurer;
     let empty = Config::new();
@@ -305,17 +309,34 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
         db,
         matches!(conf.get("showSequenceNumbers"), Some(Value::Bool(true))),
     );
-    let text = |raw: &str, font_size: f64, wrap: bool, width: f64| -> Label {
+    struct MessageMeasurer<'a>(&'a dyn crate::TextMeasurer, bool);
+    impl crate::TextMeasurer for MessageMeasurer<'_> {
+        fn width(&self, text: &str, size: f64, style: Style) -> f64 {
+            self.0
+                .width(text, size, if self.1 { style | Style::MONO } else { style })
+        }
+        fn host(&self) -> Option<&crate::text::Host<'_>> {
+            self.0.host()
+        }
+    }
+    let monospaced = options.monospace.contains(&crate::MonospacePart::Messages);
+    let message_measurer = MessageMeasurer(measurer, monospaced);
+    let text = |raw: &str,
+                font_size: f64,
+                wrap: bool,
+                width: f64,
+                by: &dyn crate::TextMeasurer|
+     -> Label {
         let label = layout_label(
             Some(raw),
             false,
-            measurer,
+            by,
             font_size,
             if tight || wrap { width } else { f64::INFINITY },
             Style::NONE,
         );
         if tight {
-            break_label(label, measurer, 120f64.max(width))
+            break_label(label, by, 120f64.max(width))
         } else {
             label
         }
@@ -348,7 +369,7 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
             continue;
         }
         let kind = actor_kind(&actor.kind);
-        let label = text(&actor.description, size, actor.wrap, wrap_w);
+        let label = text(&actor.description, size, actor.wrap, wrap_w, measurer);
         let mut create_at = db.created.get(id).and_then(|&c| next_line[c.min(count)]);
         if create_at.is_some_and(|c| messages[c].to.as_deref() != Some(id)) {
             create_at = None;
@@ -417,7 +438,7 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
         };
         let (ai, bi) = (a as i64, b as i64);
         if m.kind == Some(line::NOTE) {
-            let label = text(message, small, m.wrap, wrap_w);
+            let label = text(message, small, m.wrap, wrap_w, measurer);
             let w = label.width + 2.0 * note_pad;
             match m.placement {
                 Some(LEFT_OF) => need(ai - 1, ai, w + 2.0 * NOTE_GAP + ACT_W),
@@ -437,7 +458,7 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
                 w,
             });
         } else if is_line_message(m.kind) {
-            let label = text(message, small, m.wrap, wrap_w);
+            let label = text(message, small, m.wrap, wrap_w, &message_measurer);
             let badge = badge_width(i);
             if a == b {
                 need(
@@ -498,7 +519,13 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
             boxed,
             first: i,
             last: i,
-            title: text(b.name.as_deref().unwrap_or(""), small, b.wrap, wrap_w),
+            title: text(
+                b.name.as_deref().unwrap_or(""),
+                small,
+                b.wrap,
+                wrap_w,
+                measurer,
+            ),
             grow: 0.0,
         });
     }
@@ -562,187 +589,306 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
     }
     place(&mut cols, &gaps);
 
-    let mut min_x = f64::INFINITY;
-    let mut max_x = f64::NEG_INFINITY;
-    let extend = |min_x: &mut f64, max_x: &mut f64, x0: f64, x1: f64| {
-        if x0 < *min_x {
-            *min_x = x0;
-        }
-        if x1 > *max_x {
-            *max_x = x1;
-        }
-    };
-    for col in &cols {
-        extend(
-            &mut min_x,
-            &mut max_x,
-            col.x - col.size.w / 2.0,
-            col.x + col.size.w / 2.0,
-        );
-    }
-    for run in &runs {
-        extend(
-            &mut min_x,
-            &mut max_x,
-            cols[run.first].x - cols[run.first].size.w / 2.0 - box_pad - run.grow,
-            cols[run.last].x + cols[run.last].size.w / 2.0 + box_pad + run.grow,
-        );
-    }
-
-    // Horizontal extents of every block, from what it holds.
     let mut frames: Vec<Option<usize>> = vec![None; count];
     let mut frame_list: Vec<Frame> = Vec::new();
-    let mut open: Vec<usize> = Vec::new();
-    let span_all = || {
-        if n_cols == 0 {
-            (0.0, 120.0)
-        } else {
-            (cols[0].x - frame_pad, cols[n_cols - 1].x + frame_pad)
+    let layout = |cols: &mut Vec<Column<'_>>,
+                  views: &mut Vec<Option<View>>,
+                  frames: &mut Vec<Option<usize>>,
+                  frame_list: &mut Vec<Frame>,
+                  gaps: &[f64]| {
+        place(cols, gaps);
+        frames.fill(None);
+        frame_list.clear();
+        let mut min_x = f64::INFINITY;
+        let mut max_x = f64::NEG_INFINITY;
+        let extend = |min_x: &mut f64, max_x: &mut f64, x0: f64, x1: f64| {
+            if x0 < *min_x {
+                *min_x = x0;
+            }
+            if x1 > *max_x {
+                *max_x = x1;
+            }
+        };
+        for col in cols.iter() {
+            extend(
+                &mut min_x,
+                &mut max_x,
+                col.x - col.size.w / 2.0,
+                col.x + col.size.w / 2.0,
+            );
         }
-    };
-    let no_label = Label::default();
-    for i in 0..count {
-        let m = &messages[i];
-        let kind = m.kind;
-        if let Some(fk) = frame_kind(kind) {
-            let fill = match (&m.message, fk) {
-                (MessageText::Text(t), "rect") => t.clone(),
-                _ => String::new(),
-            };
-            frames[i] = Some(frame_list.len());
-            open.push(frame_list.len());
-            frame_list.push(Frame {
-                kind: fk,
-                x0: f64::INFINITY,
-                x1: f64::NEG_INFINITY,
-                top: 0.0,
-                title: no_label.clone(),
-                tab_w: 0.0,
-                fill,
-                dividers: vec![i],
-                divider_y: Vec::new(),
-                divider_labels: Vec::new(),
-            });
-        } else if matches!(
-            kind,
-            Some(line::ALT_ELSE | line::PAR_AND | line::CRITICAL_OPTION)
-        ) {
-            if let Some(&f) = open.last() {
-                frame_list[f].dividers.push(i);
+        for run in &runs {
+            extend(
+                &mut min_x,
+                &mut max_x,
+                cols[run.first].x - cols[run.first].size.w / 2.0 - box_pad - run.grow,
+                cols[run.last].x + cols[run.last].size.w / 2.0 + box_pad + run.grow,
+            );
+        }
+
+        // Horizontal extents of every block, from what it holds.
+        let mut open: Vec<usize> = Vec::new();
+        let span_all = || {
+            if n_cols == 0 {
+                (0.0, 120.0)
+            } else {
+                (cols[0].x - frame_pad, cols[n_cols - 1].x + frame_pad)
             }
-        } else if matches!(
-            kind,
-            Some(
-                line::LOOP_END
-                    | line::ALT_END
-                    | line::OPT_END
-                    | line::PAR_END
-                    | line::CRITICAL_END
-                    | line::BREAK_END
-                    | line::RECT_END
-            )
-        ) {
-            let Some(f) = open.pop() else { continue };
-            frames[i] = Some(f);
-            if frame_list[f].x0 > frame_list[f].x1 {
-                let (x0, x1) = span_all();
-                frame_list[f].x0 = x0;
-                frame_list[f].x1 = x1;
-            }
-            if frame_list[f].kind != "rect" {
-                let tab_w = measurer.width(frame_list[f].kind, tiny, Style::BOLD) + 14.0;
-                frame_list[f].tab_w = tab_w;
-                // A block grows to the right to give its texts up to FRAME_TEXT of width.
-                for k in 0..frame_list[f].dividers.len() {
-                    let raw = match &messages[frame_list[f].dividers[k]].message {
-                        MessageText::Text(t) => t.clone(),
-                        MessageText::Numbering { .. } => String::new(),
-                    };
-                    let tab = if k == 0 { tab_w + 8.0 } else { 0.0 };
-                    let room = frame_list[f].x1 - frame_list[f].x0 - 16.0 - tab;
-                    let label = if raw.is_empty() {
-                        no_label.clone()
-                    } else {
-                        let limit = if tight {
-                            FRAME_TEXT.min(wrap_w)
-                        } else {
-                            FRAME_TEXT
+        };
+        let no_label = Label::default();
+        for i in 0..count {
+            let m = &messages[i];
+            let kind = m.kind;
+            if let Some(fk) = frame_kind(kind) {
+                let fill = match (&m.message, fk) {
+                    (MessageText::Text(t), "rect") => t.clone(),
+                    _ => String::new(),
+                };
+                frames[i] = Some(frame_list.len());
+                open.push(frame_list.len());
+                frame_list.push(Frame {
+                    kind: fk,
+                    x0: f64::INFINITY,
+                    x1: f64::NEG_INFINITY,
+                    top: 0.0,
+                    title: no_label.clone(),
+                    tab_w: 0.0,
+                    fill,
+                    dividers: vec![i],
+                    divider_y: Vec::new(),
+                    divider_labels: Vec::new(),
+                });
+            } else if matches!(
+                kind,
+                Some(line::ALT_ELSE | line::PAR_AND | line::CRITICAL_OPTION)
+            ) {
+                if let Some(&f) = open.last() {
+                    frame_list[f].dividers.push(i);
+                }
+            } else if matches!(
+                kind,
+                Some(
+                    line::LOOP_END
+                        | line::ALT_END
+                        | line::OPT_END
+                        | line::PAR_END
+                        | line::CRITICAL_END
+                        | line::BREAK_END
+                        | line::RECT_END
+                )
+            ) {
+                let Some(f) = open.pop() else { continue };
+                frames[i] = Some(f);
+                if frame_list[f].x0 > frame_list[f].x1 {
+                    let (x0, x1) = span_all();
+                    frame_list[f].x0 = x0;
+                    frame_list[f].x1 = x1;
+                }
+                if frame_list[f].kind != "rect" {
+                    let tab_w = measurer.width(frame_list[f].kind, tiny, Style::BOLD) + 14.0;
+                    frame_list[f].tab_w = tab_w;
+                    // A block grows to the right to give its texts up to FRAME_TEXT of width.
+                    for k in 0..frame_list[f].dividers.len() {
+                        let raw = match &messages[frame_list[f].dividers[k]].message {
+                            MessageText::Text(t) => t.clone(),
+                            MessageText::Numbering { .. } => String::new(),
                         };
-                        text(&format!("[{raw}]"), small, true, room.max(limit))
-                    };
-                    if label.width > room {
-                        frame_list[f].x1 += label.width - room;
-                    }
-                    if k == 0 {
-                        frame_list[f].title = label;
-                    } else {
-                        frame_list[f].divider_labels.push(label);
+                        let tab = if k == 0 { tab_w + 8.0 } else { 0.0 };
+                        let room = frame_list[f].x1 - frame_list[f].x0 - 16.0 - tab;
+                        let label = if raw.is_empty() {
+                            no_label.clone()
+                        } else {
+                            let limit = if tight {
+                                FRAME_TEXT.min(wrap_w)
+                            } else {
+                                FRAME_TEXT
+                            };
+                            text(&format!("[{raw}]"), small, true, room.max(limit), measurer)
+                        };
+                        if label.width > room {
+                            frame_list[f].x1 += label.width - room;
+                        }
+                        if k == 0 {
+                            frame_list[f].title = label;
+                        } else {
+                            frame_list[f].divider_labels.push(label);
+                        }
                     }
                 }
-            }
-            let (fx0, fx1) = (frame_list[f].x0, frame_list[f].x1);
-            extend(&mut min_x, &mut max_x, fx0, fx1);
-            if let Some(&parent) = open.last() {
-                frame_list[parent].x0 = frame_list[parent].x0.min(fx0 - frame_nest);
-                frame_list[parent].x1 = frame_list[parent].x1.max(fx1 + frame_nest);
-            }
-        } else if let Some(view) = views[i].as_mut() {
-            let (a, b) = (&cols[view.a], &cols[view.b]);
-            let (x0, x1);
-            match view.kind {
-                V::Note => {
-                    if m.placement == Some(LEFT_OF) {
-                        view.x = a.x - NOTE_GAP - view.w;
-                    } else if m.placement == Some(RIGHT_OF) {
-                        view.x = a.x + NOTE_GAP;
-                    } else if view.a == view.b {
-                        view.x = a.x - view.w / 2.0;
-                    } else {
-                        let lo = a.x.min(b.x) - note_over;
-                        let hi = a.x.max(b.x) + note_over;
+                let (fx0, fx1) = (frame_list[f].x0, frame_list[f].x1);
+                extend(&mut min_x, &mut max_x, fx0, fx1);
+                if let Some(&parent) = open.last() {
+                    frame_list[parent].x0 = frame_list[parent].x0.min(fx0 - frame_nest);
+                    frame_list[parent].x1 = frame_list[parent].x1.max(fx1 + frame_nest);
+                }
+            } else if let Some(view) = views[i].as_mut() {
+                let (a, b) = (&cols[view.a], &cols[view.b]);
+                let (x0, x1);
+                match view.kind {
+                    V::Note => {
+                        if m.placement == Some(LEFT_OF) {
+                            view.x = a.x - NOTE_GAP - view.w;
+                        } else if m.placement == Some(RIGHT_OF) {
+                            view.x = a.x + NOTE_GAP;
+                        } else if view.a == view.b {
+                            view.x = a.x - view.w / 2.0;
+                        } else {
+                            let lo = a.x.min(b.x) - note_over;
+                            let hi = a.x.max(b.x) + note_over;
+                            if tight || m.wrap {
+                                if let MessageText::Text(t) = &m.message {
+                                    view.label = text(
+                                        t,
+                                        small,
+                                        true,
+                                        wrap_w.max(hi - lo - 2.0 * note_pad),
+                                        measurer,
+                                    );
+                                }
+                            }
+                            view.w = (hi - lo).max(view.label.width + 2.0 * note_pad);
+                            view.x = (lo + hi - view.w) / 2.0;
+                        }
+                        x0 = view.x;
+                        x1 = view.x + view.w;
+                    }
+                    V::SelfLoop => {
+                        x0 = a.x;
+                        x1 = a.x + ACT_W + SELF_W + 8.0 + view.label.width + badge_width(i);
+                    }
+                    V::Line => {
+                        let mut lo = a.x.min(b.x);
+                        let mut hi = a.x.max(b.x);
                         if tight || m.wrap {
                             if let MessageText::Text(t) = &m.message {
-                                view.label =
-                                    text(t, small, true, wrap_w.max(hi - lo - 2.0 * note_pad));
+                                view.label = text(
+                                    t,
+                                    small,
+                                    true,
+                                    wrap_w.max(hi - lo - 2.0 * msg_pad - ACT_W),
+                                    &message_measurer,
+                                );
                             }
                         }
-                        view.w = (hi - lo).max(view.label.width + 2.0 * note_pad);
-                        view.x = (lo + hi - view.w) / 2.0;
-                    }
-                    x0 = view.x;
-                    x1 = view.x + view.w;
-                }
-                V::SelfLoop => {
-                    x0 = a.x;
-                    x1 = a.x + ACT_W + SELF_W + 8.0 + view.label.width + badge_width(i);
-                }
-                V::Line => {
-                    let mut lo = a.x.min(b.x);
-                    let mut hi = a.x.max(b.x);
-                    if tight || m.wrap {
-                        if let MessageText::Text(t) = &m.message {
-                            view.label =
-                                text(t, small, true, wrap_w.max(hi - lo - 2.0 * msg_pad - ACT_W));
+                        if b.create_at == Some(i) {
+                            if b.x > a.x {
+                                hi += b.size.w / 2.0;
+                            } else {
+                                lo -= b.size.w / 2.0;
+                            }
                         }
+                        x0 = lo;
+                        x1 = hi;
                     }
-                    if b.create_at == Some(i) {
-                        if b.x > a.x {
-                            hi += b.size.w / 2.0;
-                        } else {
-                            lo -= b.size.w / 2.0;
-                        }
-                    }
-                    x0 = lo;
-                    x1 = hi;
+                }
+                extend(&mut min_x, &mut max_x, x0, x1);
+                if let Some(&f) = open.last() {
+                    frame_list[f].x0 = frame_list[f].x0.min(x0 - frame_pad);
+                    frame_list[f].x1 = frame_list[f].x1.max(x1 + frame_pad);
                 }
             }
-            extend(&mut min_x, &mut max_x, x0, x1);
-            if let Some(&f) = open.last() {
-                frame_list[f].x0 = frame_list[f].x0.min(x0 - frame_pad);
-                frame_list[f].x1 = frame_list[f].x1.max(x1 + frame_pad);
+        }
+
+        (min_x, max_x)
+    };
+    let (mut min_x, mut max_x) = layout(&mut cols, &mut views, &mut frames, &mut frame_list, &gaps);
+    let mut grown = false;
+    let mut uneven = false;
+    if tight {
+        if let Some(max_width) = options.max_width {
+            let spare = max_width.floor() - (max_x - min_x + 2.0 * pad).ceil() - hold;
+            let mut stretch = vec![0i32; cols.len()];
+            let mut want = vec![0.0f64; gaps.len()];
+            let mut wrapped = Vec::new();
+            let mut lines = 0usize;
+            if spare > 0.0 {
+                for (i, view) in views.iter().enumerate() {
+                    let Some(view) = view.as_ref().filter(|v| matches!(v.kind, V::Line)) else {
+                        continue;
+                    };
+                    let MessageText::Text(raw) = &messages[i].message else {
+                        continue;
+                    };
+                    let natural = text(raw, small, false, f64::INFINITY, &message_measurer);
+                    if view.label.lines.len() <= natural.lines.len() {
+                        continue;
+                    }
+                    wrapped.push(i);
+                    lines += view.label.lines.len();
+                    let lo = view.a.min(view.b);
+                    let hi = view.a.max(view.b);
+                    stretch[lo] += 1;
+                    stretch[hi] -= 1;
+                    let short = (natural.width - (cols[hi].x - cols[lo].x - 2.0 * msg_pad - ACT_W))
+                        / (hi - lo) as f64;
+                    for w in &mut want[lo..hi] {
+                        *w = w.max(short);
+                    }
+                }
+            }
+            let mut active = 0;
+            let mut crossed = 0;
+            for v in &mut stretch[..gaps.len()] {
+                active += *v;
+                *v = i32::from(active > 0);
+                crossed += *v;
+            }
+            if crossed > 0 {
+                let before = gaps.clone();
+                let even: Vec<_> = stretch[..gaps.len()]
+                    .iter()
+                    .map(|&v| f64::from(v) * spare / f64::from(crossed))
+                    .collect();
+                let mut spread = |shares: &[f64],
+                                  cols: &mut Vec<Column<'_>>,
+                                  views: &mut Vec<Option<View>>,
+                                  frames: &mut Vec<Option<usize>>,
+                                  frame_list: &mut Vec<Frame>| {
+                    for g in 0..gaps.len() {
+                        gaps[g] = before[g] + shares[g];
+                    }
+                    let bounds = layout(cols, views, frames, frame_list, &gaps);
+                    (
+                        bounds,
+                        wrapped
+                            .iter()
+                            .map(|&i| views[i].as_ref().unwrap().label.lines.len())
+                            .collect::<Vec<_>>(),
+                    )
+                };
+                let (mut bounds, mut counts) =
+                    spread(&even, &mut cols, &mut views, &mut frames, &mut frame_list);
+                let missing: f64 = want.iter().sum();
+                let needs: Vec<_> = want.iter().map(|&v| v * (spare - 0.01) / missing).collect();
+                if by_need
+                    && crossed > 1
+                    && missing > 0.0
+                    && needs.iter().zip(&even).any(|(n, e)| n > e)
+                {
+                    let first = counts;
+                    (bounds, counts) =
+                        spread(&needs, &mut cols, &mut views, &mut frames, &mut frame_list);
+                    uneven = counts.iter().sum::<usize>() < first.iter().sum::<usize>()
+                        && counts.iter().zip(&first).all(|(n, f)| n <= f);
+                    if !uneven {
+                        (bounds, counts) =
+                            spread(&even, &mut cols, &mut views, &mut frames, &mut frame_list);
+                    }
+                }
+                grown = counts.iter().sum::<usize>() < lines;
+                (min_x, max_x) = if grown {
+                    bounds
+                } else {
+                    gaps = before;
+                    layout(&mut cols, &mut views, &mut frames, &mut frame_list, &gaps)
+                };
             }
         }
     }
+    let extend = |min_x: &mut f64, max_x: &mut f64, x0: f64, x1: f64| {
+        *min_x = min_x.min(x0);
+        *max_x = max_x.max(x1);
+    };
 
     // Vertical placement, top to bottom, drawing as it goes.
     let box_title_h = runs.iter().map(|r| r.title.height).fold(0.0, f64::max);
@@ -773,7 +919,38 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
         let lo = xs.partition_point(|&x| x <= x0);
         lo < xs.len() && xs[lo] < x1
     };
-    let backed = |label: &Label, cx: f64, cy: f64, attrs: &str| -> String {
+    let backgrounds: Vec<(f64, f64, &str)> = runs
+        .iter()
+        .map(|run| {
+            (
+                cols[run.first].x - cols[run.first].size.w / 2.0 - box_pad - run.grow,
+                cols[run.last].x + cols[run.last].size.w / 2.0 + box_pad + run.grow,
+                db.boxes[run.boxed].fill.as_str(),
+            )
+        })
+        .collect();
+    let ink_of =
+        |fill: &str| crate::svg::ink::ink(&resolve_style(&[format!("fill:{fill}")]).shape, "");
+    let under = |l: f64, r: f64, stack: &[usize], frames: &[Frame]| -> Option<&'static str> {
+        for &f in stack.iter().rev() {
+            if frames[f].kind == "rect" {
+                return ink_of(&frames[f].fill);
+            }
+        }
+        for &(x0, x1, fill) in &backgrounds {
+            if l >= x0 && r <= x1 {
+                return ink_of(fill);
+            }
+        }
+        None
+    };
+    let backed = |label: &Label,
+                  cx: f64,
+                  cy: f64,
+                  attrs: &str,
+                  stack: &[usize],
+                  frames: &[Frame]|
+     -> String {
         if label.width == 0.0 {
             return String::new();
         }
@@ -789,7 +966,18 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
         } else {
             String::new()
         };
-        back + &label_svg(label, cx, cy, attrs)
+        let attrs = if back.is_empty() {
+            match under(l, l + label.width, stack, frames) {
+                Some(color) if attrs.contains("pele-frame-label") => {
+                    attrs.replace("fill=\"var(--_m)\"", &format!("fill=\"{color}\""))
+                }
+                Some(color) => format!("{attrs} fill=\"{color}\""),
+                None => attrs.to_string(),
+            }
+        } else {
+            attrs.to_string()
+        };
+        back + &label_svg(label, cx, cy, &attrs)
     };
     let left_edge = |col: &Column<'_>, extra: usize| {
         if col.activations.len() + extra > 0 {
@@ -829,7 +1017,7 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
         *min_x = min_x.min(x);
         *max_x = max_x.max(x + ACT_W);
         out.push(format!(
-            "<rect class=\"pele-rs-activation\" data-id=\"{}\" x=\"{}\" y=\"{}\" width=\"{ACT_W}\" height=\"{}\" rx=\"2\"/>",
+            "<rect class=\"pele-activation\" data-id=\"{}\" x=\"{}\" y=\"{}\" width=\"{ACT_W}\" height=\"{}\" rx=\"2\"/>",
             esc_text(col.id),
             num(x),
             num(start),
@@ -845,7 +1033,7 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
         col.life_end = cy;
         let _ = write!(
             out,
-            "<path class=\"pele-rs-destroy\" data-id=\"{}\" d=\"M{},{}L{},{}M{},{}L{},{}\"/>",
+            "<path class=\"pele-destroy\" data-id=\"{}\" d=\"M{},{}L{},{}M{},{}L{},{}\"/>",
             esc_text(col.id),
             num(cx - 6.0),
             num(cy - 6.0),
@@ -870,16 +1058,30 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
             })
             .unwrap_or_default();
         format!(
-            "<g class=\"pele-rs-node pele-rs-actor pele-rs-actor-{}{}{class}\" data-id=\"{}\">{}</g>",
+            "<g class=\"pele-node pele-actor pele-actor-{}{}{class}\" data-id=\"{}\">{}</g>",
             col.kind,
-            if footer { " pele-rs-actor-footer" } else { "" },
+            if footer { " pele-actor-footer" } else { "" },
             esc_text(col.id),
-            draw_actor(col.kind, col.x, top, col.size, &col.label)
+            draw_actor(
+                col.kind,
+                col.x,
+                top,
+                col.size,
+                &col.label,
+                &if is_figure(col.kind) {
+                    col.actor
+                        .boxed
+                        .and_then(|b| ink_of(&db.boxes[b].fill))
+                        .map_or_else(String::new, |c| format!(" fill=\"{c}\""))
+                } else {
+                    String::new()
+                }
+            )
         )
     };
     let badge = |i: usize, cx: f64, cy: f64, w: f64| -> String {
         format!(
-            "<g class=\"pele-rs-sequence-number\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{BADGE_H}\" rx=\"{}\" fill=\"var(--_l)\" \
+            "<g class=\"pele-sequence-number\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{BADGE_H}\" rx=\"{}\" fill=\"var(--_l)\" \
              stroke=\"none\"/><text x=\"{}\" y=\"{}\" text-anchor=\"middle\" font-size=\"{}\" fill=\"var(--_bg)\" stroke=\"none\">{}</text></g>",
             num(cx - w / 2.0),
             num(cy - BADGE_H / 2.0),
@@ -938,10 +1140,16 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
                     resolve_style(&[format!("fill:{}", fr.fill)]).shape
                 };
                 rects_out.push(format!(
-                    "<rect class=\"pele-rs-rect\" x=\"{x}\" y=\"{}\" width=\"{w}\" height=\"{}\"{}/>",
+                    "<rect class=\"pele-rect\" x=\"{x}\" y=\"{}\" width=\"{w}\" height=\"{}\"{}/>",
                     num(fr.top),
                     num(bottom - fr.top),
-                    rounded(&(if fill.is_empty() { " fill-opacity=\"0.5\"".to_string() } else { String::new() } + &fill))
+                    rounded(
+                        &(if fill.is_empty() {
+                            " fill-opacity=\"0.5\"".to_string()
+                        } else {
+                            String::new()
+                        } + &fill)
+                    )
                 ));
             } else {
                 let mut inner = format!(
@@ -956,12 +1164,14 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
                         label,
                         fr.x0 + 8.0 + label.width / 2.0,
                         dy + 2.0 + label.height / 2.0,
-                        " class=\"pele-rs-frame-label\" fill=\"var(--_m)\" stroke=\"none\"",
+                        " class=\"pele-frame-label\" fill=\"var(--_m)\" stroke=\"none\"",
+                        &stack,
+                        &frame_list,
                     );
                 }
                 let _ = write!(
                     inner,
-                    "<rect x=\"{x}\" y=\"{}\" width=\"{}\" height=\"{TAB_H}\" fill=\"var(--_s)\"{ROUNDED}/><text class=\"pele-rs-frame-kind\" \
+                    "<rect x=\"{x}\" y=\"{}\" width=\"{}\" height=\"{TAB_H}\" fill=\"var(--_s)\"{ROUNDED}/><text class=\"pele-frame-kind\" \
                      x=\"{}\" y=\"{}\" text-anchor=\"middle\" font-size=\"{}\" font-weight=\"var(--_hw)\" fill=\"var(--_m)\" stroke=\"none\">{}</text>",
                     num(fr.top),
                     num(fr.tab_w),
@@ -974,11 +1184,13 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
                     &fr.title,
                     fr.x0 + fr.tab_w + 8.0 + fr.title.width / 2.0,
                     fr.top + TAB_H.max(fr.title.height) / 2.0,
-                    " class=\"pele-rs-frame-label\" fill=\"var(--_m)\" stroke=\"none\"",
+                    " class=\"pele-frame-label\" fill=\"var(--_m)\" stroke=\"none\"",
+                    &stack,
+                    &frame_list,
                 );
                 let _ = write!(
                     frames_out,
-                    "<g class=\"pele-rs-frame pele-rs-frame-{}\">{inner}</g>",
+                    "<g class=\"pele-frame pele-frame-{}\">{inner}</g>",
                     fr.kind
                 );
             }
@@ -1009,7 +1221,7 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
             extend(&mut min_x, &mut max_x, x, x + view.w);
             let _ = write!(
                 notes_out,
-                "<g class=\"pele-rs-note\" data-id=\"i{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\"{ROUNDED}/>{}</g>",
+                "<g class=\"pele-note\" data-id=\"i{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\"{ROUNDED}/>{}</g>",
                 m.id,
                 num(x),
                 num(top),
@@ -1019,7 +1231,7 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
                     &view.label,
                     x + view.w / 2.0,
                     top + h / 2.0,
-                    " class=\"pele-rs-label\" stroke=\"none\" fill=\"var(--_fg)\""
+                    " class=\"pele-label\" stroke=\"none\" fill=\"var(--_fg)\""
                 )
             );
             y = top + h;
@@ -1053,9 +1265,9 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
             let circle_to = cc == line::CENTRAL_CONNECTION || cc == line::CENTRAL_CONNECTION_DUAL;
             let circle_from =
                 cc == line::CENTRAL_CONNECTION_REVERSE || cc == line::CENTRAL_CONNECTION_DUAL;
-            let circle = |cx: f64, cy: f64| {
+            let circle = |cx: f64, cy: f64, color: &str| {
                 format!(
-                    "<circle class=\"pele-rs-central\" cx=\"{}\" cy=\"{}\" r=\"{CENTRAL_R}\" fill=\"var(--_l)\" stroke=\"none\"/>",
+                    "<circle class=\"pele-central\" cx=\"{}\" cy=\"{}\" r=\"{CENTRAL_R}\" fill=\"{color}\" stroke=\"none\"/>",
                     num(cx),
                     num(cy)
                 )
@@ -1064,6 +1276,8 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
             let head_trim = trim(st.head);
             let mut inner = String::new();
             let line_y;
+            let color;
+            let stroke;
 
             if view.kind == V::SelfLoop {
                 let a = &cols[ai];
@@ -1080,11 +1294,14 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
                     right_edge(a, starting)
                 };
                 let out = x0.max(x1) + SELF_W + bw / 2.0;
+                let found = under(a.x, out, &stack, &frame_list);
+                color = found.unwrap_or("var(--_l)");
+                stroke = found.map_or_else(String::new, |c| format!(" stroke=\"{c}\""));
                 if circle_from {
-                    inner += &circle(a.x, top);
+                    inner += &circle(a.x, top, color);
                 }
                 if circle_to {
-                    inner += &circle(a.x, bottom);
+                    inner += &circle(a.x, bottom, color);
                 }
                 if bw > 0.0 {
                     inner += &badge(
@@ -1102,11 +1319,11 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
                 // The loop leaves to the right and comes back heading left, which turns a half
                 // head over.
                 let heads = (if st.at_start {
-                    head(st.head, x0, top, -1.0, up)
+                    head(st.head, x0, top, -1.0, up, color)
                 } else {
                     String::new()
                 }) + &(if st.at_end {
-                    head(st.head, x1, bottom, -1.0, -up)
+                    head(st.head, x1, bottom, -1.0, -up, color)
                 } else {
                     String::new()
                 });
@@ -1131,13 +1348,14 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
                 if label.width > 0.0 {
                     let _ = write!(
                         labels_out,
-                        "<g class=\"pele-rs-edge-label\" data-id=\"i{}\">{}</g>",
+                        "<g class=\"pele-edge-label\" data-id=\"i{}\">{}</g>",
                         m.id,
                         label_svg(
                             label,
                             out + 8.0 + label.width / 2.0,
                             (top + bottom) / 2.0,
-                            ""
+                            &under(out + 8.0, out + 8.0 + label.width, &stack, &frame_list)
+                                .map_or_else(String::new, |c| format!(" fill=\"{c}\""))
                         )
                     );
                 }
@@ -1146,6 +1364,9 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
             } else {
                 let (ax, bx) = (cols[ai].x, cols[bi].x);
                 let dir = if bx > ax { 1.0 } else { -1.0 };
+                let found = under(ax.min(bx), ax.max(bx), &stack, &frame_list);
+                color = found.unwrap_or("var(--_l)");
+                stroke = found.map_or_else(String::new, |c| format!(" stroke=\"{c}\""));
                 let creating = cols[bi].create_at == Some(i);
                 let b_size = cols[bi].size;
                 line_y = y
@@ -1183,11 +1404,11 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
                             };
                 }
                 if circle_from {
-                    inner += &circle(ax, line_y);
+                    inner += &circle(ax, line_y, color);
                     x0 = ax + dir * CENTRAL_R;
                 }
                 if circle_to {
-                    inner += &circle(bx, line_y);
+                    inner += &circle(bx, line_y, color);
                     x1 = bx - dir * CENTRAL_R;
                 }
                 if bw > 0.0 {
@@ -1212,11 +1433,11 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
                     }
                 }
                 let heads = (if st.at_start {
-                    head(st.head, x0, line_y, -dir, up * dir)
+                    head(st.head, x0, line_y, -dir, up * dir, color)
                 } else {
                     String::new()
                 }) + &(if st.at_end {
-                    head(st.head, x1, line_y, dir, up * dir)
+                    head(st.head, x1, line_y, dir, up * dir, color)
                 } else {
                     String::new()
                 });
@@ -1244,9 +1465,16 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
                     );
                     let _ = write!(
                         labels_out,
-                        "<g class=\"pele-rs-edge-label\" data-id=\"i{}\">{}</g>",
+                        "<g class=\"pele-edge-label\" data-id=\"i{}\">{}</g>",
                         m.id,
-                        backed(label, cx, line_y - 4.0 - label.height / 2.0, "")
+                        backed(
+                            label,
+                            cx,
+                            line_y - 4.0 - label.height / 2.0,
+                            "",
+                            &stack,
+                            &frame_list
+                        )
                     );
                 }
                 if creating {
@@ -1255,7 +1483,7 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
             }
             let _ = write!(
                 edges_out,
-                "<g class=\"pele-rs-edge pele-rs-message\" data-id=\"i{}\">{inner}</g>",
+                "<g class=\"pele-edge pele-message\" data-id=\"i{}\"{stroke}>{inner}</g>",
                 m.id
             );
             y = y.max(line_y);
@@ -1293,7 +1521,7 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
         if end > col.life_start {
             let _ = write!(
                 lifelines,
-                "<path class=\"pele-rs-lifeline\" data-id=\"{}\" d=\"M{},{}V{}\"/>",
+                "<path class=\"pele-lifeline\" data-id=\"{}\" d=\"M{},{}V{}\"/>",
                 esc_text(col.id),
                 num(col.x),
                 num(col.life_start),
@@ -1314,7 +1542,7 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
         };
         let _ = write!(
             boxes_out,
-            "<g class=\"pele-rs-cluster pele-rs-box\"{}><rect x=\"{}\" y=\"0\" width=\"{}\" height=\"{}\" fill=\"var(--_a)\" stroke=\"var(--_b)\"{}/>{}</g>",
+            "<g class=\"pele-cluster pele-box\"{}><rect x=\"{}\" y=\"0\" width=\"{}\" height=\"{}\" fill=\"var(--_a)\" stroke=\"var(--_b)\"{}/>{}</g>",
             b.name
                 .as_deref()
                 .filter(|n| !n.is_empty())
@@ -1333,7 +1561,10 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
                 &run.title,
                 (x0 + x1) / 2.0,
                 box_pad / 2.0 + 2.0 + run.title.height / 2.0,
-                " class=\"pele-rs-cluster-label\" fill=\"var(--_m)\""
+                &format!(
+                    " class=\"pele-cluster-label\" fill=\"{}\"",
+                    crate::svg::ink::ink(&fill, "").unwrap_or("var(--_m)")
+                )
             )
         );
     }
@@ -1371,11 +1602,21 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
             &title,
             cx,
             min_y + title.height / 2.0,
-            " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+            " class=\"pele-title\" font-weight=\"var(--_tw)\"",
         );
     }
 
     let width = (max_x - min_x + 2.0 * pad).ceil();
+    if grown && options.max_width.is_some_and(|max| width > max) {
+        let next_hold = if uneven {
+            hold
+        } else if hold > 0.0 {
+            f64::INFINITY
+        } else {
+            width - options.max_width.unwrap().floor()
+        };
+        return draw_with_hold(db, input, tight, next_hold, false);
+    }
     let height = (bottom - min_y + 2.0 * pad).ceil();
     let small_size = num(small);
     let mut content = format!(
@@ -1386,63 +1627,68 @@ fn draw(db: &SeqDb, input: &Input<'_>, tight: bool) -> Output {
     if !boxes_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-boxes\" font-size=\"{small_size}\">{boxes_out}</g>"
+            "<g class=\"pele-boxes\" font-size=\"{small_size}\">{boxes_out}</g>"
         );
     }
     if !rects_out.is_empty() {
         rects_out.reverse();
         let _ = write!(
             content,
-            "<g class=\"pele-rs-rects\" fill=\"var(--_a)\">{}</g>",
+            "<g class=\"pele-rects\" fill=\"var(--_a)\">{}</g>",
             rects_out.join("")
         );
     }
     if !lifelines.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-lifelines\" fill=\"none\" stroke=\"var(--_b)\">{lifelines}</g>"
+            "<g class=\"pele-lifelines\" fill=\"none\" stroke=\"var(--_b)\">{lifelines}</g>"
         );
     }
     if !activations_out.is_empty() {
         activations_out.reverse();
         let _ = write!(
             content,
-            "<g class=\"pele-rs-activations\" fill=\"var(--_s)\" stroke=\"var(--_b)\">{}</g>",
+            "<g class=\"pele-activations\" fill=\"var(--_s)\" stroke=\"var(--_b)\">{}</g>",
             activations_out.join("")
         );
     }
     if !frames_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-frames\" font-size=\"{small_size}\" stroke=\"var(--_b)\">{frames_out}</g>"
+            "<g class=\"pele-frames\" font-size=\"{small_size}\" stroke=\"var(--_b)\">{frames_out}</g>"
         );
     }
     if !edges_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">{edges_out}</g>"
+            "<g class=\"pele-edges\" fill=\"none\" stroke=\"var(--_l)\" stroke-linecap=\"round\">{edges_out}</g>"
         );
     }
     if !crosses_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-destroys\" fill=\"none\" stroke=\"var(--_l)\" stroke-width=\"1.5\" stroke-linecap=\"round\">{crosses_out}</g>"
+            "<g class=\"pele-destroys\" fill=\"none\" stroke=\"var(--_l)\" stroke-width=\"1.5\" stroke-linecap=\"round\">{crosses_out}</g>"
         );
     }
     if !labels_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-edge-labels\" font-size=\"{small_size}\">{labels_out}</g>"
+            "<g class=\"pele-edge-labels\" font-size=\"{small_size}\"{}>{labels_out}</g>",
+            if monospaced {
+                format!(" font-family=\"{}\"", crate::svg::FONT_MONO)
+            } else {
+                String::new()
+            }
         );
     }
     if !notes_out.is_empty() {
         let _ = write!(
             content,
-            "<g class=\"pele-rs-notes\" font-size=\"{small_size}\" fill=\"var(--_a)\" stroke=\"var(--_b)\">{notes_out}</g>"
+            "<g class=\"pele-notes\" font-size=\"{small_size}\" fill=\"var(--_a)\" stroke=\"var(--_b)\">{notes_out}</g>"
         );
     }
     if !actors_out.is_empty() {
-        let _ = write!(content, "<g class=\"pele-rs-nodes\">{actors_out}</g>");
+        let _ = write!(content, "<g class=\"pele-nodes\">{actors_out}</g>");
     }
     content.push_str("</g>");
     let acc = Accessible {

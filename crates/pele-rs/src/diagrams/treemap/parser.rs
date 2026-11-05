@@ -17,7 +17,7 @@
 //! as in Chevrotain.
 
 use crate::diagrams::common::tokens::{
-    ACC_DESCR, ACC_TITLE, END, Found, Pattern, Reader, TITLE, TokenType, acc_descr_value,
+    ACC_DESCR, ACC_TITLE, END, Found, Pattern, Reader, TITLE_WORD, TokenType, acc_descr_value,
     acc_title_value, literal_token, match_token, title_value, tokenize,
 };
 use crate::error::Error;
@@ -40,7 +40,7 @@ const STRING2: usize = 14;
 static TOKENS: [TokenType; 15] = [
     ACC_DESCR,
     ACC_TITLE,
-    TITLE,
+    TITLE_WORD,
     match_token("TREEMAP_KEYWORD", keyword),
     match_token("CLASS_DEF", class_def),
     literal_token(":::"),

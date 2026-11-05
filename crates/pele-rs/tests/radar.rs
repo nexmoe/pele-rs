@@ -45,15 +45,15 @@ fn draws_a_radar_chart() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Radar);
     // The grid of the chart, the spokes of the axes and the two curves.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-radar-graticule\""), 1);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-radar-axes\""), 1);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-radar-curve\""), 2);
+    assert_eq!(count(&out.svg, "<g class=\"pele-graticule\""), 1);
+    assert_eq!(count(&out.svg, "class=\"pele-axes\""), 1);
+    assert_eq!(count(&out.svg, "class=\"pele-curve\""), 2);
     // The labels of the axes.
-    assert_eq!(count(&out.svg, "class=\"pele-rs-radar-axis-label\""), 3);
+    assert_eq!(count(&out.svg, "class=\"pele-axis-label\""), 3);
     assert!(out.svg.contains(">Axis A<"), "{}", out.svg);
     assert!(out.svg.contains(">Axis C<"), "{}", out.svg);
     // The legend holds the two curves.
-    assert_eq!(count(&out.svg, "class=\"pele-rs-radar-legend-item\""), 2);
+    assert_eq!(count(&out.svg, "class=\"pele-legend-item\""), 2);
 }
 
 #[test]
@@ -74,12 +74,8 @@ fn reads_the_options() {
     // The legend may be turned off.
     let with = svg("radar-beta\naxis A\ncurve c{1}\n");
     let without = svg("radar-beta\naxis A\ncurve c{1}\nshowLegend false\n");
-    assert!(with.contains("pele-rs-radar-legend-item"), "{}", with);
-    assert!(
-        !without.contains("pele-rs-radar-legend-item"),
-        "{}",
-        without
-    );
+    assert!(with.contains("pele-legend-item"), "{}", with);
+    assert!(!without.contains("pele-legend-item"), "{}", without);
 }
 
 #[test]
@@ -100,20 +96,20 @@ fn reads_the_values_of_the_axes() {
 fn draws_a_title_and_the_accessible_text() {
     let out = render("---\ntitle: A radar chart\n---\nradar-beta\naxis A\ncurve c{1}\n");
     assert!(out.svg.contains(">A radar chart<"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-title"));
+    assert!(out.svg.contains("pele-title"));
 
     let out = render(
         "radar-beta\naccTitle: A radar chart\naccDescr: A chart of one axis\naxis A\ncurve c{1}\n",
     );
     assert!(
         out.svg
-            .contains("<title id=\"pele-rs-title\">A radar chart</title>"),
+            .contains("<title id=\"pele-title\">A radar chart</title>"),
         "{}",
         out.svg
     );
     assert!(
         out.svg
-            .contains("<desc id=\"pele-rs-desc\">A chart of one axis</desc>"),
+            .contains("<desc id=\"pele-desc\">A chart of one axis</desc>"),
         "{}",
         out.svg
     );
@@ -159,7 +155,7 @@ fn fits_a_narrow_host() {
     assert!(narrow.width <= 360.0, "{}", narrow.width);
     assert!(narrow.height > 0.0);
     // The chart is still drawn.
-    assert_eq!(count(&narrow.svg, "class=\"pele-rs-radar-curve\""), 2);
+    assert_eq!(count(&narrow.svg, "class=\"pele-curve\""), 2);
     let _ = wide;
 }
 

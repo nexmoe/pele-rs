@@ -13,7 +13,7 @@ use crate::text::Style;
 use crate::text::label::layout_label;
 
 /// The version of the library, as the diagram shows it.
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+const VERSION: &str = "1.13.0";
 
 /// The space between the title and the version under it.
 const TITLE_GAP: f64 = 8.0;
@@ -41,7 +41,7 @@ pub(crate) fn render_info(model: &InfoModel, input: &Input<'_>) -> Output {
     } else {
         0.0
     };
-    let version_text = format!("pele-rs v{VERSION}");
+    let version_text = format!("Pele v{VERSION}");
     let version = layout_label(
         Some(&version_text),
         false,
@@ -59,13 +59,13 @@ pub(crate) fn render_info(model: &InfoModel, input: &Input<'_>) -> Output {
             &title,
             width / 2.0,
             pad + title.height / 2.0,
-            " class=\"pele-rs-title\" font-weight=\"var(--_tw)\""
+            " class=\"pele-title\" font-weight=\"var(--_tw)\""
         ),
         label_svg(
             &version,
             width / 2.0,
             pad + title_height + version.height / 2.0,
-            " class=\"pele-rs-version\" fill=\"var(--_m)\""
+            " class=\"pele-version\" fill=\"var(--_m)\""
         )
     );
 

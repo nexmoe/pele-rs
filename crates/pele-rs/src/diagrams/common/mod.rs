@@ -30,7 +30,8 @@ pub(crate) mod chars;
     feature = "railroad",
     feature = "c4",
     feature = "wardley",
-    feature = "agentflow"
+    feature = "agentflow",
+    feature = "eventmodeling"
 ))]
 pub(crate) mod fit;
 #[cfg(any(feature = "class", feature = "er"))]
@@ -70,7 +71,12 @@ pub(crate) mod generics;
 ))]
 #[allow(dead_code, reason = "each type uses only part of the golden helpers")]
 pub(crate) mod golden;
-#[cfg(any(feature = "sequence", feature = "ishikawa"))]
+#[cfg(any(
+    feature = "sequence",
+    feature = "ishikawa",
+    feature = "treeview",
+    feature = "eventmodeling"
+))]
 pub(crate) mod literal;
 #[cfg(any(
     feature = "state",
@@ -109,7 +115,8 @@ pub(crate) mod scan;
     feature = "treemap",
     feature = "architecture",
     feature = "railroad",
-    feature = "wardley"
+    feature = "wardley",
+    feature = "eventmodeling"
 ))]
 #[cfg_attr(
     not(all(

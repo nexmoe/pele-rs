@@ -107,12 +107,16 @@ pub(crate) fn with_host_config(host: &str, config: &Config) -> Result<Config, Er
     };
     let mut merged = Config::new();
     merge(&mut merged, &base);
-    merge(&mut merged, config);
+    for (key, value) in config {
+        if !UNSAFE_KEYS.contains(&key.as_str()) {
+            merged.insert(key.clone(), value.clone());
+        }
+    }
     Ok(merged)
 }
 
 /// Removes `%%` comment lines, along with the blank lines before each.
-fn cleanup_comments(text: &str) -> String {
+pub(crate) fn cleanup_comments(text: &str) -> String {
     if !text.contains("%%") {
         return trim_start(text).to_string();
     }

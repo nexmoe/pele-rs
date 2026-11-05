@@ -1,7 +1,6 @@
 //! The parser of a block diagram: Mermaid's jison grammar for `block.jison`. The grammar is
-//! followed as Mermaid reads it, including the parts where it drops what it read: a chain of
-//! three or more nodes keeps only its last link, and a composite whose header is a chain has no
-//! id of its own.
+//! read with Pele 1.13's complete link chains. A composite whose header is a chain has no
+//! id of its own, as in the reference parser.
 
 use super::db::Kind;
 use super::lexer::{T, Tokens, tokenize};
@@ -196,16 +195,14 @@ impl<'a> Parser<'a> {
 
     /// A node with the links that follow it.
     ///
-    /// Mermaid's grammar reads a chain of links from the left, and every link but the last one
-    /// is thrown away: the nodes before the last link are not part of the diagram, and the link
-    /// that is kept starts at nothing.
+    /// Preserve every node and link, following Pele's correction of Mermaid's lossy grammar.
     fn node_statement(&mut self) -> Result<NodeStatement, Error> {
         let first = self.node()?;
         // A node may take a width, and a link may follow it: Mermaid's grammar reads the width
         // as part of the node, and the link as part of the chain that follows.
         let mut width = None;
         if self.t() == T::Size {
-            width = Some(self.tokens.texts[self.i].parse::<i64>().unwrap_or(1));
+            width = Some(self.tokens.texts[self.i].parse::<i64>().unwrap_or(i64::MAX));
             self.i += 1;
         }
 
@@ -227,66 +224,42 @@ impl<'a> Parser<'a> {
             }));
         }
 
-        if links.len() == 1 {
-            let (label, text, to) = &links[0];
+        let mut chain = vec![Statement::Block(ParsedBlock {
+            id: Some(first.id.clone()),
+            kind: first.kind.unwrap_or(Kind::Na),
+            label: first.label.clone(),
+            directions: first.directions.clone(),
+            ..ParsedBlock::default()
+        })];
+        let mut from = first.id;
+        for (label, text, to) in links {
             let edge = ParsedEdge {
-                id: format!("{}-{}", first.id, to.id),
-                start: Some(first.id.clone()),
+                id: format!("{}-{}", from, to.id),
+                start: Some(from),
                 end: Some(to.id.clone()),
-                label: label.clone(),
-                arrow_type_start: edge_str_to_edge_start_data(text).to_string(),
-                arrow_type_end: edge_str_to_edge_data(text).to_string(),
-                thickness: edge_str_to_thickness(text).to_string(),
-                pattern: edge_str_to_pattern(text).to_string(),
+                label,
+                arrow_type_start: edge_str_to_edge_start_data(&text).to_string(),
+                arrow_type_end: edge_str_to_edge_data(&text).to_string(),
+                thickness: edge_str_to_thickness(&text).to_string(),
+                pattern: edge_str_to_pattern(&text).to_string(),
             };
-            return Ok(NodeStatement::Chain(vec![
-                Statement::Block(ParsedBlock {
-                    id: Some(first.id.clone()),
-                    kind: first.kind.unwrap_or(Kind::Na),
-                    label: first.label.clone(),
-                    directions: first.directions.clone(),
-                    ..ParsedBlock::default()
-                }),
-                Statement::Edge(edge),
-                Statement::Block(ParsedBlock {
-                    id: Some(to.id.clone()),
-                    kind: to.kind.unwrap_or(Kind::Na),
-                    label: to.label.clone(),
-                    directions: to.directions.clone(),
-                    ..ParsedBlock::default()
-                }),
-            ]));
-        }
-
-        // Mermaid keeps the last link of the chain, and the node it names. The link starts at
-        // nothing, because the node it came from is not part of the diagram any more.
-        let (label, text, to) = &links[links.len() - 1];
-        let edge = ParsedEdge {
-            id: format!("undefined-{}", to.id),
-            start: None,
-            end: Some(to.id.clone()),
-            label: label.clone(),
-            arrow_type_start: edge_str_to_edge_start_data(text).to_string(),
-            arrow_type_end: edge_str_to_edge_data(text).to_string(),
-            thickness: edge_str_to_thickness(text).to_string(),
-            pattern: edge_str_to_pattern(text).to_string(),
-        };
-        Ok(NodeStatement::Chain(vec![
-            Statement::Block(ParsedBlock::default()),
-            Statement::Edge(edge),
-            Statement::Block(ParsedBlock {
-                id: Some(to.id.clone()),
+            from = to.id.clone();
+            chain.push(Statement::Edge(edge));
+            chain.push(Statement::Block(ParsedBlock {
+                id: Some(to.id),
                 kind: to.kind.unwrap_or(Kind::Na),
-                label: to.label.clone(),
-                directions: to.directions.clone(),
+                label: to.label,
+                directions: to.directions,
                 ..ParsedBlock::default()
-            }),
-        ]))
+            }));
+        }
+        Ok(NodeStatement::Chain(chain))
     }
 
     /// The statements of a composite, or of the diagram itself.
     fn document(&mut self, depth: usize, max_depth: usize) -> Result<Vec<Statement>, Error> {
         let mut out: Vec<Statement> = Vec::new();
+        let mut open: Vec<(Vec<Statement>, Option<NodeStatement>)> = Vec::new();
         loop {
             match self.t() {
                 T::NodeId => {
@@ -297,12 +270,27 @@ impl<'a> Parser<'a> {
                     });
                 }
                 T::Columns => {
-                    let columns = self.tokens.texts[self.i].parse::<i64>().unwrap_or(-1);
+                    // JS accepts integer magnitudes beyond i64; only their sign matters once
+                    // the column count exceeds the source-limited number of blocks.
+                    let columns = self.tokens.texts[self.i].parse::<f64>().unwrap_or(f64::NAN);
+                    if !columns.is_finite() || columns.fract() != 0.0 {
+                        return Err(Error::new(
+                            crate::ErrorCode::Semantic,
+                            "Columns must be an integer !== 0.",
+                        ));
+                    }
+                    let columns = columns as i64;
+                    if columns == 0 {
+                        return Err(Error::new(
+                            crate::ErrorCode::Semantic,
+                            "Columns must be an integer !== 0.",
+                        ));
+                    }
                     self.i += 1;
                     out.push(Statement::Columns { columns });
                 }
                 T::SpaceBlock => {
-                    let width = self.tokens.texts[self.i].parse::<i64>().unwrap_or(1);
+                    let width = self.tokens.texts[self.i].parse::<i64>().unwrap_or(i64::MAX);
                     self.i += 1;
                     let id = self.generate_id();
                     out.push(Statement::Block(ParsedBlock {
@@ -314,8 +302,24 @@ impl<'a> Parser<'a> {
                     }));
                 }
                 T::Key | T::IdBlock => {
-                    let composite = self.block_statement(depth, max_depth)?;
-                    out.push(composite);
+                    if depth + open.len() >= max_depth {
+                        return Err(Error::new(
+                            ErrorCode::Limit,
+                            format!("Blocks are nested deeper than the limit of {max_depth}."),
+                        )
+                        .at(self.src, self.here()));
+                    }
+                    let named = self.t() == T::IdBlock;
+                    self.i += 1;
+                    let header = if named {
+                        if self.t() != T::NodeId {
+                            return self.fail("'NODE_ID'");
+                        }
+                        Some(self.node_statement()?)
+                    } else {
+                        None
+                    };
+                    open.push((std::mem::take(&mut out), header));
                 }
                 T::ClassDef => {
                     self.i += 1;
@@ -335,11 +339,46 @@ impl<'a> Parser<'a> {
                     let styles_str = self.expect(T::StyleDefinitionData)?.trim().to_string();
                     out.push(Statement::ApplyStyles { id, styles_str });
                 }
-                T::EndKeyword | T::Eof => break,
+                T::EndKeyword => {
+                    let Some((parent, header)) = open.pop() else {
+                        break;
+                    };
+                    if out.is_empty() {
+                        return self.fail(STATEMENT_START);
+                    }
+                    self.i += 1;
+                    self.ids += 1;
+                    let mut block = ParsedBlock {
+                        kind: Kind::Composite,
+                        children: std::mem::take(&mut out),
+                        ..ParsedBlock::default()
+                    };
+                    match header {
+                        Some(NodeStatement::Chain(_)) => {}
+                        Some(NodeStatement::One(header)) => {
+                            block.id = header.id;
+                            block.label = header.label;
+                            block.width_in_columns = header.width_in_columns;
+                            block.directions = header.directions;
+                        }
+                        None => {
+                            block.id = Some(format!("id-{}", self.ids));
+                            block.label = Some(String::new());
+                        }
+                    }
+                    out = parent;
+                    out.push(Statement::Block(block));
+                }
+                T::Eof => {
+                    if !open.is_empty() {
+                        return self.fail(&format!("{STATEMENT_START}, 'end'"));
+                    }
+                    break;
+                }
                 _ => {
                     let expected = if out.is_empty() {
                         STATEMENT_START.to_string()
-                    } else if depth > 0 {
+                    } else if depth + open.len() > 0 {
                         format!("{STATEMENT_START}, 'end'")
                     } else {
                         format!("{STATEMENT_START}, 'EOF'")
@@ -349,56 +388,6 @@ impl<'a> Parser<'a> {
             }
         }
         Ok(out)
-    }
-
-    /// A composite: a block that holds other blocks.
-    fn block_statement(&mut self, depth: usize, max_depth: usize) -> Result<Statement, Error> {
-        if depth >= max_depth {
-            return Err(Error::new(
-                ErrorCode::Limit,
-                format!("Blocks are nested deeper than the limit of {max_depth}."),
-            )
-            .at(self.src, self.here()));
-        }
-        let named = self.t() == T::IdBlock;
-        self.i += 1;
-        let header = if named {
-            if self.t() != T::NodeId {
-                return self.fail("'NODE_ID'");
-            }
-            Some(self.node_statement()?)
-        } else {
-            None
-        };
-        let children = self.document(depth + 1, max_depth)?;
-        if children.is_empty() {
-            // Mermaid's grammar needs a statement between the keyword and the `end`.
-            return self.fail(&format!("{STATEMENT_START}, 'end'"));
-        }
-        self.expect(T::EndKeyword)?;
-        // Mermaid makes an id for every composite, and throws away the one it makes for a
-        // composite that has a header of its own.
-        self.ids += 1;
-        let mut block = ParsedBlock {
-            kind: Kind::Composite,
-            children,
-            ..ParsedBlock::default()
-        };
-        match header {
-            // A composite whose header was a link has no id of its own.
-            Some(NodeStatement::Chain(_)) => {}
-            Some(NodeStatement::One(header)) => {
-                block.id = header.id;
-                block.label = header.label;
-                block.width_in_columns = header.width_in_columns;
-                block.directions = header.directions;
-            }
-            None => {
-                block.id = Some(format!("id-{}", self.ids));
-                block.label = Some(String::new());
-            }
-        }
-        Ok(Statement::Block(block))
     }
 }
 
@@ -450,7 +439,7 @@ pub(crate) fn parse_block(src: &str, max_depth: usize) -> Result<Parsed, Error> 
     let mut p = Parser::new(src, tokens);
     p.expect(T::Key)?;
     let statements = p.document(0, max_depth)?;
-    if p.t() != T::Eof {
+    if p.t() != T::Eof || statements.is_empty() {
         return p.fail(&format!("{STATEMENT_START}, 'EOF'"));
     }
     Ok(Parsed {

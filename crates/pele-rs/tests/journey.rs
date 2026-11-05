@@ -32,16 +32,16 @@ fn try_render(src: &str) -> Option<String> {
 fn draws_tasks_scores_and_people() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Journey);
-    assert_eq!(count(&out.svg, "pele-rs-node pele-rs-task"), 6);
-    assert_eq!(count(&out.svg, "pele-rs-cluster pele-rs-section"), 2);
-    assert_eq!(count(&out.svg, "pele-rs-face-happy"), 2);
-    assert_eq!(count(&out.svg, "pele-rs-face-sad"), 2);
-    assert_eq!(count(&out.svg, "pele-rs-legend-item"), 4);
+    assert_eq!(count(&out.svg, "pele-node pele-task"), 6);
+    assert_eq!(count(&out.svg, "pele-cluster pele-section"), 2);
+    assert_eq!(count(&out.svg, "pele-face-happy"), 2);
+    assert_eq!(count(&out.svg, "pele-face-sad"), 2);
+    assert_eq!(count(&out.svg, "pele-legend-item"), 4);
     for needle in [
         ">Make tea<",
         ">Go to work<",
         "<title>Cat</title>",
-        "pele-rs-title",
+        "pele-title",
     ] {
         assert!(out.svg.contains(needle), "{needle}");
     }
@@ -67,7 +67,7 @@ fn draws_the_face_the_score_asks_for() {
     ] {
         let svg = svg(&format!("journey\n task: {score}: me\n"));
         assert!(
-            svg.contains(&format!("pele-rs-face-{face}")),
+            svg.contains(&format!("pele-face-{face}")),
             "score {score}: {svg}"
         );
     }
@@ -201,7 +201,7 @@ fn an_icon_in_the_task_name_takes_the_place_of_the_people() {
     let out = render("journey\n task: :fa-car: 3: me\n");
     assert!(out.svg.contains("<title>fa-car</title>"), "{}", out.svg);
     assert!(!out.svg.contains(">me<"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-face-sad"), "{}", out.svg);
+    assert!(out.svg.contains("pele-face-sad"), "{}", out.svg);
 }
 
 #[test]

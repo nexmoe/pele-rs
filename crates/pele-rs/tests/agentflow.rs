@@ -53,11 +53,11 @@ fn draws_agents_flows_and_edges() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Agentflow);
     // The four agents of the flows and the connector.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-node "), 5);
+    assert_eq!(count(&out.svg, "<g class=\"pele-node "), 5);
     // The two flows.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-cluster "), 2);
+    assert_eq!(count(&out.svg, "<g class=\"pele-cluster "), 2);
     // The two edges.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-edge\""), 2);
+    assert_eq!(count(&out.svg, "<g class=\"pele-edge pele-edge-"), 2);
     // The labels are written.
     assert!(out.svg.contains(">Gather changes<"), "{}", out.svg);
     assert!(out.svg.contains(">Review Agent<"), "{}", out.svg);
@@ -69,10 +69,10 @@ fn draws_the_shapes_of_the_agents() {
     let out = render(
         "agentflow-beta TB\n  a[\"square\"]\n  b(\"round\")\n  c{\"diamond\"}\n  d{{\"hexagon\"}}\n  e[[\"sub\"]]\n  f>\"odd\"]\n",
     );
-    assert!(out.svg.contains("pele-rs-shape-rounded"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-shape-diam"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-shape-hex"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-shape-fr-rect"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-rounded"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-diam"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-hex"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-fr-rect"), "{}", out.svg);
 }
 
 #[test]
@@ -80,12 +80,12 @@ fn draws_the_shapes_the_metadata_asks_for() {
     let out = render(
         "agentflow-beta TB\n  a[\"A\"]@{ shape: task }\n  b[\"B\"]@{ shape: tool }\n  c[\"C\"]@{ shape: input }\n  d[\"D\"]@{ shape: decision }\n  e[\"E\"]@{ shape: refdoc }\n  f[\"F\"]@{ shape: action }\n",
     );
-    assert!(out.svg.contains("pele-rs-shape-rounded"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-shape-fr-rect"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-shape-lean-r"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-shape-diam"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-shape-lin-doc"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-shape-hex"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-rounded"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-fr-rect"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-lean-r"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-diam"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-lin-doc"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-hex"), "{}", out.svg);
 }
 
 #[test]
@@ -94,8 +94,8 @@ fn draws_a_collapsed_flow_as_one_box() {
         "agentflow-beta TB\n  flow f[\"F\"]@{ view: collapsed }\n    a[\"A\"]\n    b[\"B\"]\n  end\n",
     );
     // The flow is one box, and the agents inside it are not drawn.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-node "), 1);
-    assert!(out.svg.contains("pele-rs-collapsed-mark"), "{}", out.svg);
+    assert_eq!(count(&out.svg, "<g class=\"pele-node "), 1);
+    assert!(out.svg.contains("pele-collapsed-mark"), "{}", out.svg);
 }
 
 #[test]
@@ -103,16 +103,16 @@ fn draws_a_collapsed_flow_as_one_box_when_the_metadata_comes_later() {
     let out = render(
         "agentflow-beta TB\n  flow f[\"F\"]\n    a[\"A\"]\n    b[\"B\"]\n  end\n  f@{ view: collapsed }\n",
     );
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-node "), 1);
+    assert_eq!(count(&out.svg, "<g class=\"pele-node "), 1);
 }
 
 #[test]
 fn draws_the_kinds_of_edge() {
     let out = render("agentflow-beta TB\n  a --> b\n  a --x c\n  a -.- d\n");
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-edge\""), 3);
+    assert_eq!(count(&out.svg, "<g class=\"pele-edge pele-edge-"), 3);
     // The arrow of the first edge and the cross of the second are drawn; the reference edge
     // has no arrowhead.
-    assert_eq!(count(&out.svg, "pele-rs-marker"), 2);
+    assert_eq!(count(&out.svg, "pele-marker"), 2);
     // The reference edge is drawn with a dotted line.
     assert!(out.svg.contains("stroke-dasharray=\"3 4\""), "{}", out.svg);
 }
@@ -128,7 +128,7 @@ fn reads_the_direction() {
 fn draws_a_title() {
     let out = render("---\ntitle: An agent flow\n---\nagentflow-beta TB\n  a --> b\n");
     assert!(out.svg.contains(">An agent flow<"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-title"));
+    assert!(out.svg.contains("pele-title"));
 }
 
 #[test]
@@ -169,7 +169,7 @@ fn fits_a_narrow_host() {
     assert!(narrow.width <= 360.0, "{}", narrow.width);
     assert!(narrow.height > 0.0);
     // The agents are still drawn.
-    assert_eq!(count(&narrow.svg, "<g class=\"pele-rs-node "), 2);
+    assert_eq!(count(&narrow.svg, "<g class=\"pele-node "), 2);
 }
 
 #[test]

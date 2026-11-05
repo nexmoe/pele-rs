@@ -73,7 +73,7 @@ fn try_render(src: &str) -> Option<String> {
 fn draws_the_boxes_and_the_axes() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::QuadrantChart);
-    assert_eq!(count(&out.svg, "pele-rs-quadrant\""), 4);
+    assert_eq!(count(&out.svg, "pele-quadrant\""), 4);
     assert_eq!(count(&out.svg, "<rect "), 4);
     assert_eq!(count(&out.svg, "<circle "), 6);
     assert!(out.svg.contains(">We should expand<"), "{}", out.svg);
@@ -109,7 +109,7 @@ fn reads_the_styles_of_the_points() {
     assert!(out.svg.contains("stroke-width:5px"), "{}", out.svg);
     assert!(!out.svg.contains("stroke:#10f0f0"), "{}", out.svg);
     // The class of a point is written in its class list.
-    assert!(out.svg.contains("pele-rs-point class1"), "{}", out.svg);
+    assert!(out.svg.contains("pele-point class1"), "{}", out.svg);
 }
 
 #[test]
@@ -148,14 +148,13 @@ fn reads_the_accessible_text() {
     let out =
         render("quadrantChart\naccTitle: Sales\naccDescr: Revenue for Q1 to Q4\nquadrant-1 A\n");
     assert!(
-        out.svg
-            .contains("<title id=\"pele-rs-title\">Sales</title>"),
+        out.svg.contains("<title id=\"pele-title\">Sales</title>"),
         "{}",
         out.svg
     );
     assert!(
         out.svg
-            .contains("<desc id=\"pele-rs-desc\">Revenue for Q1 to Q4</desc>"),
+            .contains("<desc id=\"pele-desc\">Revenue for Q1 to Q4</desc>"),
         "{}",
         out.svg
     );
@@ -199,7 +198,7 @@ fn fits_a_narrow_host() {
     let narrow = narrow(FULL);
     assert!(narrow.width <= 360.0, "{}", narrow.width);
     assert!(narrow.height > 0.0);
-    assert_eq!(count(&narrow.svg, "pele-rs-quadrant\""), 4);
+    assert_eq!(count(&narrow.svg, "pele-quadrant\""), 4);
 }
 
 #[test]

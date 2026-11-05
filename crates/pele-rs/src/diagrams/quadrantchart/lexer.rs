@@ -424,12 +424,6 @@ impl Lexer {
                 self.p = self.line_end(self.p + 2);
                 continue;
             }
-            // Mermaid's second comment rule takes any character before `%%` with it, a line
-            // break included.
-            if c != 125 && next == Some(37) && self.units.get(self.p + 2) == Some(&37) {
-                self.p = self.line_end(self.p + 3);
-                continue;
-            }
             if c == 10 || c == 13 {
                 let mut e = self.p + 1;
                 while self.units.get(e).is_some_and(|&d| d == 10 || d == 13) {

@@ -123,7 +123,7 @@ pub(crate) fn render_cynefin(model: &CynefinModel, input: &Input<'_>) -> Result<
     let amplitude = setting(input.config, "boundaryAmplitude", 8.0, 0.0, 50.0);
     let seed = resolve_seed(
         setting(input.config, "seed", 0.0, -1e15, 1e15),
-        &options.id_prefix,
+        options.id_prefix.as_deref().unwrap_or("pele"),
     );
     let item_line = (item_size * 1.5).round();
 
@@ -361,15 +361,15 @@ pub(crate) fn render_cynefin(model: &CynefinModel, input: &Input<'_>) -> Result<
             .find(|(domain, _)| *domain == name)
             .map_or("", |(_, path)| path.as_str());
         fills.push_str(&format!(
-            "<path class=\"pele-rs-cynefin-region\" data-id=\"{}\" d=\"{path}\" fill=\"{}\" fill-opacity=\"0.14\"/>",
+            "<path class=\"pele-cynefin-region\" data-id=\"{}\" d=\"{path}\" fill=\"{}\" fill-opacity=\"0.14\"/>",
             name.as_str(),
             series_color(color)
         ));
     }
     let boundaries = format!(
-        "<g class=\"pele-rs-cynefin-boundaries\" fill=\"none\" stroke=\"var(--_b)\" stroke-dasharray=\"6 3\">\
+        "<g class=\"pele-cynefin-boundaries\" fill=\"none\" stroke=\"var(--_b)\" stroke-dasharray=\"6 3\">\
          <path d=\"{}\"/><path d=\"{}\"/><path d=\"{}\"/>\
-         <path class=\"pele-rs-cynefin-cliff\" d=\"{}\" stroke=\"var(--_l)\" stroke-width=\"2\" \
+         <path class=\"pele-cynefin-cliff\" d=\"{}\" stroke=\"var(--_l)\" stroke-width=\"2\" \
          stroke-dasharray=\"none\" stroke-linecap=\"round\"/></g>",
         curve_path(&fold),
         curve_path(&west),
@@ -379,7 +379,7 @@ pub(crate) fn render_cynefin(model: &CynefinModel, input: &Input<'_>) -> Result<
     let oval = ellipse_path(cx, cy, rx, ry);
     let ellipse = format!(
         "<path d=\"{oval}\" fill=\"var(--_bg)\"/>\
-         <path class=\"pele-rs-cynefin-region\" data-id=\"confusion\" d=\"{oval}\" fill=\"{}\" \
+         <path class=\"pele-cynefin-region\" data-id=\"confusion\" d=\"{oval}\" fill=\"{}\" \
          fill-opacity=\"0.18\" stroke=\"var(--_b)\" stroke-dasharray=\"4 2\"/>",
         series_color(CONFUSION_COLOR)
     );
@@ -544,11 +544,11 @@ pub(crate) fn render_cynefin(model: &CynefinModel, input: &Input<'_>) -> Result<
                 &label,
                 tx,
                 ly + ny * away,
-                &format!(" class=\"pele-rs-edge-label\" font-size=\"{}\"", num(small)),
+                &format!(" class=\"pele-edge-label\" font-size=\"{}\"", num(small)),
             ));
         }
         edges.push_str(&format!(
-            "<g class=\"pele-rs-edge\" data-id=\"{}-{}\">\
+            "<g class=\"pele-edge\" data-id=\"{}-{}\">\
              <path d=\"M{},{}Q{},{} {},{}\" fill=\"none\" stroke=\"var(--_l)\"/>{head}{text}</g>",
             transition.from.as_str(),
             transition.to.as_str(),
@@ -564,17 +564,17 @@ pub(crate) fn render_cynefin(model: &CynefinModel, input: &Input<'_>) -> Result<
     let total_width = (width.max(title.width) + 2.0 * pad).ceil();
     let total_height = (height + title_height + 2.0 * pad).ceil();
     let content = format!(
-        "{}<g class=\"pele-rs-cynefin-regions\">{fills}</g>{boundaries}{ellipse}{domains}{}",
+        "{}<g class=\"pele-cynefin-regions\">{fills}</g>{boundaries}{ellipse}{domains}{}",
         label_svg(
             &title,
             x0 + width / 2.0,
             pad + title.height / 2.0,
-            " class=\"pele-rs-title\" font-weight=\"var(--_tw)\""
+            " class=\"pele-title\" font-weight=\"var(--_tw)\""
         ),
         if edges.is_empty() {
             String::new()
         } else {
-            format!("<g class=\"pele-rs-edges\">{edges}</g>")
+            format!("<g class=\"pele-edges\">{edges}</g>")
         },
     );
 
@@ -605,7 +605,7 @@ fn draw_block(b: &Block, small: f64, item_size: f64) -> String {
         &b.title,
         b.cx,
         y + b.title.height / 2.0,
-        " class=\"pele-rs-label\" font-weight=\"var(--_hw)\"",
+        " class=\"pele-label\" font-weight=\"var(--_hw)\"",
     );
     y += b.title.height;
     for subtitle in &b.subtitles {
@@ -614,7 +614,7 @@ fn draw_block(b: &Block, small: f64, item_size: f64) -> String {
             b.cx,
             y + subtitle.height / 2.0,
             &format!(
-                " class=\"pele-rs-cynefin-subtitle\" font-size=\"{}\" font-style=\"italic\" fill=\"var(--_m)\"",
+                " class=\"pele-cynefin-subtitle\" font-size=\"{}\" font-style=\"italic\" fill=\"var(--_m)\"",
                 num(small)
             ),
         ));
@@ -624,9 +624,9 @@ fn draw_block(b: &Block, small: f64, item_size: f64) -> String {
     for item in &b.badges {
         y += ITEM_GAP;
         let class = if item.overflow {
-            "pele-rs-node pele-rs-cynefin-overflow"
+            "pele-node pele-cynefin-overflow"
         } else {
-            "pele-rs-node"
+            "pele-node"
         };
         let id = if item.overflow {
             String::new()
@@ -651,7 +651,7 @@ fn draw_block(b: &Block, small: f64, item_size: f64) -> String {
                 b.cx,
                 y + item.h / 2.0,
                 &format!(
-                    " class=\"pele-rs-label\" font-size=\"{}\"{}",
+                    " class=\"pele-label\" font-size=\"{}\"{}",
                     num(item_size),
                     if item.overflow {
                         " fill=\"var(--_m)\""
@@ -664,7 +664,7 @@ fn draw_block(b: &Block, small: f64, item_size: f64) -> String {
         y += item.h;
     }
     format!(
-        "<g class=\"pele-rs-cynefin-domain\" data-id=\"{}\">{out}</g>",
+        "<g class=\"pele-cynefin-domain\" data-id=\"{}\">{out}</g>",
         b.name.as_str()
     )
 }

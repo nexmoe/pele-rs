@@ -9,7 +9,7 @@
 //!
 //! ```text
 //! entry Architecture: NEWLINE* 'architecture-beta' (NEWLINE | TitleAndAccessibilities | Statement)*;
-//! TitleAndAccessibilities: ((accDescr=ACC_DESCR | accTitle=ACC_TITLE | title=TITLE) EOL)+;
+//! TitleAndAccessibilities: ((accDescr=ACC_DESCR | accTitle=ACC_TITLE | title=TITLE_NAME) EOL)+;
 //! Group: 'group' id=ID icon=ARCH_ICON? title=ARCH_TITLE? ('in' in=ID)? EOL;
 //! Service: 'service' id=ID (iconText=STRING | icon=ARCH_ICON)? title=ARCH_TITLE? ('in' in=ID)? EOL;
 //! Junction: 'junction' id=ID ('in' in=ID)? EOL;
@@ -23,7 +23,7 @@
 
 use crate::diagrams::common::tokens::{
     ACC_DESCR, ACC_TITLE, DIRECTIVE, END, Found, NEWLINE, Reader, SINGLE_LINE_COMMENT, STRING,
-    TITLE, TokenType, WHITESPACE, YAML, acc_descr_value, acc_title_value, literal_token,
+    TITLE_NAME, TokenType, WHITESPACE, YAML, acc_descr_value, acc_title_value, literal_token,
     match_token, string_value, title_value, tokenize, word_token,
 };
 use crate::error::Error;
@@ -82,7 +82,7 @@ const TYPES: &[TokenType] = &[
     match_token("ARROW_INTO", arrow_into),
     ACC_DESCR,
     ACC_TITLE,
-    TITLE,
+    TITLE_NAME,
     STRING,
     match_token("ID", identifier),
     NEWLINE,
@@ -496,19 +496,18 @@ fn arch_title_value(text: &str) -> String {
         inner = rest;
     }
     let inner = trim(inner);
-    let inner = if (inner.starts_with('"') && inner.ends_with('"'))
+    if (inner.starts_with('"') && inner.ends_with('"'))
         || (inner.starts_with('\'') && inner.ends_with('\''))
     {
-        if inner.len() <= 1 {
+        let inner = if inner.len() <= 1 {
             ""
         } else {
             &inner[1..inner.len() - 1]
-        }
+        };
+        trim(&inner.replace("\\\"", "\"").replace("\\'", "'")).to_string()
     } else {
-        inner
-    };
-    let inner = inner.replace("\\\"", "\"").replace("\\'", "'");
-    trim(&inner).to_string()
+        inner.to_string()
+    }
 }
 
 #[cfg(test)]

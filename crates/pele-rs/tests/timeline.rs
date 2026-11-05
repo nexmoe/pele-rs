@@ -32,15 +32,10 @@ fn try_render(src: &str) -> Option<String> {
 fn draws_periods_events_and_sections() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Timeline);
-    assert_eq!(count(&out.svg, "pele-rs-node pele-rs-period"), 5);
-    assert_eq!(count(&out.svg, "pele-rs-node pele-rs-event"), 7);
-    assert_eq!(count(&out.svg, "pele-rs-cluster pele-rs-section"), 2);
-    for needle in [
-        ">LinkedIn<",
-        ">Early days<",
-        "pele-rs-axis",
-        "pele-rs-title",
-    ] {
+    assert_eq!(count(&out.svg, "pele-node pele-period"), 5);
+    assert_eq!(count(&out.svg, "pele-node pele-event"), 7);
+    assert_eq!(count(&out.svg, "pele-cluster pele-section"), 2);
+    for needle in [">LinkedIn<", ">Early days<", "pele-axis", "pele-title"] {
         assert!(out.svg.contains(needle), "{needle}");
     }
     assert!(out.links.is_empty());
@@ -61,13 +56,13 @@ fn writes_the_accessible_title_and_description() {
     let out = render("timeline\naccTitle: the title\naccDescr: the description\n 2001 : a\n");
     assert!(
         out.svg
-            .contains("<title id=\"pele-rs-title\">the title</title>"),
+            .contains("<title id=\"pele-title\">the title</title>"),
         "{}",
         out.svg
     );
     assert!(
         out.svg
-            .contains("<desc id=\"pele-rs-desc\">the description</desc>"),
+            .contains("<desc id=\"pele-desc\">the description</desc>"),
         "{}",
         out.svg
     );

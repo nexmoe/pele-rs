@@ -49,11 +49,11 @@ fn try_render(src: &str) -> Option<String> {
 fn draws_columns_and_cards() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Kanban);
-    assert_eq!(count(&out.svg, "pele-rs-cluster pele-rs-column"), 4);
-    assert_eq!(count(&out.svg, "pele-rs-node pele-rs-card"), 8);
-    assert_eq!(count(&out.svg, "pele-rs-priority-very-high"), 1);
-    assert_eq!(count(&out.svg, "pele-rs-priority-very-low"), 1);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-priority\""), 4);
+    assert_eq!(count(&out.svg, "pele-cluster pele-column"), 4);
+    assert_eq!(count(&out.svg, "pele-node pele-card"), 8);
+    assert_eq!(count(&out.svg, "pele-priority-very-high"), 1);
+    assert_eq!(count(&out.svg, "pele-priority-very-low"), 1);
+    assert_eq!(count(&out.svg, "class=\"pele-priority\""), 4);
     for needle in [">Todo<", ">MC-2036<", ">knsv<", " done\"", ">Bold<"] {
         assert!(out.svg.contains(needle), "{needle}");
     }
@@ -100,19 +100,16 @@ fn reports_errors_with_positions() {
 fn marks_only_the_outermost_priorities() {
     // A priority of medium gets no stripe: the stripe is for the two outermost ones.
     let medium = svg("kanban\n Todo\n  c1@{ priority: 'Medium' }\n");
-    assert_eq!(count(&medium, "class=\"pele-rs-priority\""), 0, "{medium}");
+    assert_eq!(count(&medium, "class=\"pele-priority\""), 0, "{medium}");
 }
 
 #[test]
 fn puts_a_class_on_the_column_or_on_the_card() {
     // Where the class is written decides what it lands on.
     let column = svg("kanban\n Todo\n :::done\n  card\n");
-    assert!(
-        column.contains("pele-rs-cluster pele-rs-column done"),
-        "{column}"
-    );
+    assert!(column.contains("pele-cluster pele-column done"), "{column}");
     let card = svg("kanban\n Todo\n  card\n  :::done\n");
-    assert!(card.contains("pele-rs-node pele-rs-card done"), "{card}");
+    assert!(card.contains("pele-node pele-card done"), "{card}");
 }
 
 #[test]
@@ -233,11 +230,7 @@ fn an_accessibility_statement_becomes_a_column() {
     // Mermaid's kanban grammar has no accessibility statements, so a line that looks like one
     // is a column. Mermaid does the same, so this is ported as it is.
     let out = render("kanban\naccTitle: B\naccDescr: D\n Todo\n  card\n");
-    assert!(
-        out.svg.contains("pele-rs-cluster pele-rs-column"),
-        "{}",
-        out.svg
-    );
+    assert!(out.svg.contains("pele-cluster pele-column"), "{}", out.svg);
     assert!(out.svg.contains(">accTitle: B<"), "{}", out.svg);
     assert!(out.svg.contains(">accDescr: D<"), "{}", out.svg);
     assert!(!out.svg.contains("<title id="), "{}", out.svg);

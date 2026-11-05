@@ -45,7 +45,7 @@ fn draws_the_fields_and_the_bits() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Packet);
     // The three fields.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-node\""), 3);
+    assert_eq!(count(&out.svg, "<g class=\"pele-node\""), 3);
     // The names of the fields.
     assert!(out.svg.contains(">Source Port<"), "{}", out.svg);
     assert!(out.svg.contains(">Destination Port<"), "{}", out.svg);
@@ -57,7 +57,7 @@ fn draws_the_fields_and_the_bits() {
     assert!(out.svg.contains(">31</text>"), "{}", out.svg);
     // The field that is wider than a row is drawn over two rows.
     let wide = render("packet\n0-63: \"Wide\"\n");
-    assert_eq!(count(&wide.svg, "<g class=\"pele-rs-node\""), 2);
+    assert_eq!(count(&wide.svg, "<g class=\"pele-node\""), 2);
 }
 
 #[test]
@@ -93,7 +93,7 @@ fn draws_a_title() {
     // The title of the diagram, and the title of the front matter.
     let out = render("packet\ntitle A packet\n0-7: \"A\"\n");
     assert!(out.svg.contains(">A packet<"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-title"));
+    assert!(out.svg.contains("pele-title"));
     let front = render("---\ntitle: A packet\n---\npacket\n0-7: \"A\"\n");
     assert!(front.svg.contains(">A packet<"), "{}", front.svg);
 }
@@ -154,7 +154,7 @@ fn fits_a_narrow_host() {
     assert!(narrow.width <= 360.0, "{}", narrow.width);
     assert!(narrow.height > 0.0);
     // The fields are still drawn, and the field that is wider than a row is cut in two.
-    assert_eq!(count(&narrow.svg, "<g class=\"pele-rs-node\""), 4);
+    assert_eq!(count(&narrow.svg, "<g class=\"pele-node\""), 4);
 }
 
 #[test]

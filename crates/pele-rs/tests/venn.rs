@@ -42,7 +42,7 @@ fn draws_a_venn_diagram() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Venn);
     // One circle for every set.
-    assert_eq!(count(&out.svg, "class=\"pele-rs-venn-set\""), 3);
+    assert_eq!(count(&out.svg, "class=\"pele-venn-set\""), 3);
     assert!(out.svg.contains("data-id=\"Desirable\""), "{}", out.svg);
     // The name of every set, and the label of every overlap.
     assert!(out.svg.contains(">Desirable<"), "{}", out.svg);
@@ -56,7 +56,7 @@ fn draws_a_venn_diagram() {
         "{}",
         out.svg
     );
-    assert!(out.svg.contains("pele-rs-title"), "{}", out.svg);
+    assert!(out.svg.contains("pele-title"), "{}", out.svg);
 }
 
 #[test]
@@ -72,7 +72,7 @@ fn draws_the_texts_of_the_regions() {
     text AB1[\"OpenAPI\"]
 ",
     );
-    assert_eq!(count(&out.svg, "class=\"pele-rs-venn-text\""), 4);
+    assert_eq!(count(&out.svg, "class=\"pele-venn-text\""), 4);
     assert!(out.svg.contains(">React<"), "{}", out.svg);
     assert!(out.svg.contains(">OpenAPI<"), "{}", out.svg);
     // A text carries its own id, and the region it is written in carries the sets.
@@ -109,7 +109,7 @@ fn draws_the_styles() {
     assert!(out.svg.contains("fill:#ff6b6b"), "{}", out.svg);
     // A style of an overlap draws the outline of the overlap.
     let out = render("venn-beta\n  set A\n  set B\n  union A,B\n  style A,B fill:#333\n");
-    assert_eq!(count(&out.svg, "class=\"pele-rs-venn-overlap\""), 1);
+    assert_eq!(count(&out.svg, "class=\"pele-venn-overlap\""), 1);
     assert!(out.svg.contains("fill:#333"), "{}", out.svg);
     // A style of a text colors the text.
     let out = render("venn-beta\n  set A\n    text A1\n  style A1 color:red\n");
@@ -118,23 +118,17 @@ fn draws_the_styles() {
 
 #[test]
 fn reads_the_configuration() {
-    // The canvas of the configuration, with the diagram centred in it.
+    // Pele 1.13 sizes Venn output to its contents instead of using a fixed canvas.
     let small = render("venn-beta\nset A\nset B\n");
     let big = render(
         "---\nconfig:\n  venn:\n    width: 900\n    height: 700\n---\nvenn-beta\nset A\nset B\n",
     );
-    assert_eq!(big.width, 900.0);
-    assert_eq!(big.height, 700.0);
-    assert!(big.width > small.width);
-    // The padding of the configuration.
+    assert_eq!(big.width, small.width);
+    assert_eq!(big.height, small.height);
+    // Padding is a top-level render option, not a Venn configuration key.
     let tight = render("venn-beta\nset A\nset B\n");
     let loose = render("---\nconfig:\n  venn:\n    padding: 40\n---\nvenn-beta\nset A\nset B\n");
-    assert!(
-        loose.width > tight.width,
-        "{} vs {}",
-        loose.width,
-        tight.width
-    );
+    assert_eq!(loose.width, tight.width);
 }
 
 #[test]

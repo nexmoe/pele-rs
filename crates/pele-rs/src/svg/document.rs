@@ -23,7 +23,7 @@ pub(crate) fn svg_document(
     acc: &Accessible,
     content: &str,
 ) -> String {
-    let prefix = esc(&options.id_prefix);
+    let prefix = esc(options.id_prefix.as_deref().unwrap_or("pele"));
     let mut head = String::new();
     let mut aria = String::new();
     if let Some(title) = acc.title.as_deref().filter(|t| !t.is_empty()) {
@@ -34,7 +34,10 @@ pub(crate) fn svg_document(
         head += &format!("<desc id=\"{prefix}-desc\">{}</desc>", esc_text(descr));
         aria += &format!(" aria-describedby=\"{prefix}-desc\"");
     }
-    let fit = if options.responsive {
+    let fit = if options
+        .responsive
+        .unwrap_or_else(crate::palette::responsive)
+    {
         "max-width:100%;height:auto;"
     } else {
         ""
@@ -54,7 +57,7 @@ pub(crate) fn svg_document(
     }
     for (alias, name) in WEIGHTS {
         if !compat && content.contains(&format!("var(--_{alias})")) {
-            weights += &format!(";--_{alias}:var(--pele-rs-{name}-weight,bold)");
+            weights += &format!(";--_{alias}:var(--pele-{name}-weight,bold)");
         }
     }
     let font = font_style(
@@ -66,11 +69,12 @@ pub(crate) fn svg_document(
     let (w, h) = (num(width), num(height));
     let kind = kind.as_str();
     format!(
-        "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pele-rs pele-rs-{kind}\" \
-         viewBox=\"0 0 {w} {h}\" width=\"{w}\" height=\"{h}\" style=\"{fit}{root}{weights}{}\" \
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pele pele-{kind}\" \
+         viewBox=\"0 0 {w} {h}\" width=\"{w}\" height=\"{h}\" style=\"{fit}{root}{weights}{}{}\" \
          fill=\"var(--_fg)\" role=\"graphics-document document\" aria-roledescription=\"{kind}\"{aria}>\
          {head}{content}</svg>",
-        esc(&font)
+        esc(&font),
+        crate::palette::style()
     )
 }
 
@@ -81,7 +85,7 @@ mod tests {
     #[test]
     fn writes_the_root_element() {
         let options = RenderOptions {
-            id_prefix: "d\"1".to_string(),
+            id_prefix: Some("d\"1".to_string()),
             ..RenderOptions::default()
         };
         let acc = Accessible {
@@ -97,10 +101,10 @@ mod tests {
             &acc,
             "<g font-weight=\"var(--_tw)\"/>",
         );
-        assert!(svg.starts_with("<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pele-rs pele-rs-pie\" viewBox=\"0 0 100 50.5\""));
+        assert!(svg.starts_with("<svg xmlns=\"http://www.w3.org/2000/svg\" class=\"pele pele-pie\" viewBox=\"0 0 100 50.5\""));
         assert!(svg.contains("<title id=\"d&quot;1-title\">A &amp; B</title><g"));
         assert!(svg.contains(" aria-labelledby=\"d&quot;1-title\">"));
-        assert!(svg.contains(";--_tw:var(--pele-rs-title-weight,bold);--_fm:"));
+        assert!(svg.contains(";--_tw:var(--pele-title-weight,bold);--_fm:"));
         assert!(!svg.contains("--_r:"));
         assert!(svg.ends_with("</svg>"));
     }

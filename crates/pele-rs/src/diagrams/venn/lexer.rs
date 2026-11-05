@@ -236,9 +236,7 @@ impl Lexer {
             };
             // A comment runs to the end of the line. It also takes the character before it along,
             // whatever that is: a line break, or the last letter of a word.
-            if (c == '%' && self.unit(i + 1) == Some('%') && self.unit(i + 2) != Some('{'))
-                || (c != '}' && self.unit(i + 1) == Some('%') && self.unit(i + 2) == Some('%'))
-            {
+            if c == '%' && self.unit(i + 1) == Some('%') && self.unit(i + 2) != Some('{') {
                 self.at = self.line_end(i + 2);
                 continue;
             }

@@ -51,11 +51,11 @@ fn draws_shapes_and_relations() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::C4);
     // The three shapes: the customer, the system and the system in the inner boundary.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-node "), 3);
+    assert_eq!(count(&out.svg, "<g class=\"pele-node "), 3);
     // The two boundaries.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-cluster "), 2);
+    assert_eq!(count(&out.svg, "<g class=\"pele-cluster "), 2);
     // The relation between the customer and the system.
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-edge\""), 1);
+    assert_eq!(count(&out.svg, "<g class=\"pele-edge\""), 1);
     // The labels of the shapes are written.
     assert!(out.svg.contains(">Banking Customer A<"), "{}", out.svg);
     assert!(out.svg.contains(">Internet Banking System<"), "{}", out.svg);
@@ -70,11 +70,11 @@ fn gives_each_keyword_its_shape() {
         "C4Context\nPerson(p, \"P\")\nSystem(s, \"S\")\nContainer(c, \"C\")\n\
          Component(k, \"K\")\nSystemDb(d, \"D\")\nSystemQueue(q, \"Q\")\n",
     );
-    assert!(out.svg.contains("pele-rs-shape-person"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-shape-rounded"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-shape-fr-rect"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-shape-cyl"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-shape-h-cyl"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-person"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-rect"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-rect"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-cyl"), "{}", out.svg);
+    assert!(out.svg.contains("pele-shape-h-cyl"), "{}", out.svg);
     // The kind of the shape is written above its name.
     assert!(out.svg.contains(">«system»<"), "{}", out.svg);
     assert!(out.svg.contains(">«component»<"), "{}", out.svg);
@@ -87,7 +87,7 @@ fn draws_a_title_and_a_description() {
         "C4Context\ntitle A context diagram\naccDescr: What the diagram shows\nPerson(p, \"P\")\n",
     );
     assert!(out.svg.contains(">A context diagram<"), "{}", out.svg);
-    assert!(out.svg.contains("pele-rs-title"));
+    assert!(out.svg.contains("pele-title"));
     assert!(out.svg.contains("What the diagram shows"), "{}", out.svg);
     assert!(out.svg.contains("<desc"), "{}", out.svg);
 }
@@ -105,8 +105,8 @@ fn draws_a_deployment() {
         "C4Deployment\nDeployment_Node(node1, \"Node 1\", \"Node\") {\n  \
          Person(p, \"A person\")\n}\n",
     );
-    assert_eq!(count(&out.svg, "<g class=\"pele-rs-cluster "), 1);
-    assert!(out.svg.contains("pele-rs-c4-node"), "{}", out.svg);
+    assert_eq!(count(&out.svg, "<g class=\"pele-cluster "), 1);
+    assert!(out.svg.contains("pele-c4-node"), "{}", out.svg);
     assert!(out.svg.contains(">Node 1<"), "{}", out.svg);
 }
 
@@ -155,7 +155,7 @@ fn fits_a_narrow_host() {
     assert!(narrow.width <= 360.0, "{}", narrow.width);
     assert!(narrow.height > 0.0);
     // The shapes are still drawn.
-    assert_eq!(count(&narrow.svg, "<g class=\"pele-rs-node "), 3);
+    assert_eq!(count(&narrow.svg, "<g class=\"pele-node "), 3);
 }
 
 #[test]

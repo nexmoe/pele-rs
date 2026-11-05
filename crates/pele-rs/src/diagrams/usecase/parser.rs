@@ -1201,7 +1201,8 @@ pub(crate) fn parse_usecase(
                     ErrorCode::Syntax,
                     format!(
                         "Invalid JSON in a json node: {}",
-                        &text[offset..offset.saturating_add(1)]
+                        &text[offset
+                            ..offset + text[offset..].chars().next().map_or(0, char::len_utf8)]
                     ),
                 )
                 .at(&parser.src.text, byte));

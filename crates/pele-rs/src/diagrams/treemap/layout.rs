@@ -18,6 +18,8 @@ pub(crate) struct Box {
     pub value: f64,
     /// The boxes under this one.
     pub children: Vec<usize>,
+    pub headed: bool,
+    pub header: f64,
     pub x: f64,
     pub y: f64,
     pub w: f64,
@@ -31,6 +33,7 @@ pub(crate) struct Insets {
     pub gap: f64,
     /// The space a section keeps for its header.
     pub header: f64,
+    pub short: f64,
     /// The space a section keeps around its children on the other three sides.
     pub side: f64,
 }
@@ -88,25 +91,43 @@ pub(crate) fn layout_treemap(tree: &Tree, width: f64, height: f64, insets: Inset
                 let box_at = &boxes[index];
                 (box_at.x, box_at.y, box_at.w, box_at.h)
             };
-            place(
-                &mut boxes,
-                &children,
+            let top = if bh - insets.header - insets.side >= 12.0 {
+                insets.header
+            } else {
+                insets.short
+            };
+            let headed = bw > 24.0_f64.max(2.0 * insets.side) && bh - top - insets.side >= 8.0;
+            boxes[index].headed = headed;
+            boxes[index].header = if headed { top } else { 0.0 };
+            let rect = if headed {
                 Rect {
                     x: bx + insets.side,
-                    y: by + insets.header,
+                    y: by + top,
                     w: bw - 2.0 * insets.side,
-                    h: bh - insets.header - insets.side,
-                },
-                insets,
-                &mut placed,
-            );
+                    h: bh - top - insets.side,
+                }
+            } else {
+                Rect {
+                    x: bx,
+                    y: by,
+                    w: bw,
+                    h: bh,
+                }
+            };
+            place(&mut boxes, &children, rect, insets, &mut placed);
         }
         i += 1;
     }
 
+    let positions: std::collections::HashMap<usize, usize> =
+        placed.iter().enumerate().map(|(i, &at)| (at, i)).collect();
     placed
         .into_iter()
-        .map(|index| boxes[index].clone())
+        .map(|index| {
+            let mut b = boxes[index].clone();
+            b.parent = b.parent.and_then(|p| positions.get(&p).copied());
+            b
+        })
         .collect()
 }
 
@@ -129,6 +150,8 @@ fn new_box(
         series,
         value,
         children: Vec::new(),
+        headed: false,
+        header: 0.0,
         x: 0.0,
         y: 0.0,
         w: 0.0,
@@ -189,12 +212,22 @@ fn squarify(boxes: &mut [Box], order: &[usize], total: f64, rect: Rect, gap: f64
             };
             let bx = if w >= h { x } else { x + offset };
             let by = if w >= h { y + offset } else { y };
-            let x0 = round(bx + gap / 2.0);
-            let y0 = round(by + gap / 2.0);
-            boxes[index].x = x0;
-            boxes[index].y = y0;
-            boxes[index].w = round(bx + if w >= h { thickness } else { length } - gap / 2.0) - x0;
-            boxes[index].h = round(by + if w >= h { length } else { thickness } - gap / 2.0) - y0;
+            let bw = if w >= h { thickness } else { length };
+            let bh = if w >= h { length } else { thickness };
+            let gx = if round(bx + bw - gap / 2.0) > round(bx + gap / 2.0) {
+                gap / 2.0
+            } else {
+                0.0
+            };
+            let gy = if round(by + bh - gap / 2.0) > round(by + gap / 2.0) {
+                gap / 2.0
+            } else {
+                0.0
+            };
+            boxes[index].x = round(bx + gx);
+            boxes[index].y = round(by + gy);
+            boxes[index].w = round(bx + bw - gx) - boxes[index].x;
+            boxes[index].h = round(by + bh - gy) - boxes[index].y;
             offset += length;
             rest -= boxes[index].value;
         }
@@ -217,9 +250,6 @@ fn place(
     insets: Insets,
     placed: &mut Vec<usize>,
 ) {
-    if rect.w <= 0.0 || rect.h <= 0.0 {
-        return;
-    }
     let mut shown: Vec<usize> = children
         .iter()
         .copied()
@@ -239,22 +269,35 @@ fn place(
     if shown.is_empty() || !total.is_finite() {
         return;
     }
-    squarify(
-        boxes,
-        &shown,
-        total,
-        Rect {
-            x: rect.x - insets.gap / 2.0,
-            y: rect.y - insets.gap / 2.0,
-            w: rect.w + insets.gap,
-            h: rect.h + insets.gap,
-        },
-        insets.gap,
-    );
+    let rect = Rect {
+        w: rect.w.max(0.0),
+        h: rect.h.max(0.0),
+        ..rect
+    };
+    if rect.w > 0.0 && rect.h > 0.0 {
+        squarify(
+            boxes,
+            &shown,
+            total,
+            Rect {
+                x: rect.x - insets.gap / 2.0,
+                y: rect.y - insets.gap / 2.0,
+                w: rect.w + insets.gap,
+                h: rect.h + insets.gap,
+            },
+            insets.gap,
+        );
+    }
     for &index in &shown {
-        if boxes[index].w > 0.0 && boxes[index].h > 0.0 {
-            placed.push(index);
-        }
+        let b = &mut boxes[index];
+        let clamp = |v: f64, low: f64, high: f64| if v >= low { v.min(high) } else { low };
+        let x0 = clamp(b.x, rect.x, rect.x + rect.w);
+        let y0 = clamp(b.y, rect.y, rect.y + rect.h);
+        b.w = clamp(b.x + b.w, x0, rect.x + rect.w) - x0;
+        b.h = clamp(b.y + b.h, y0, rect.y + rect.h) - y0;
+        b.x = x0;
+        b.y = y0;
+        placed.push(index);
     }
 }
 
@@ -273,6 +316,7 @@ mod tests {
             Insets {
                 gap: 4.0,
                 header: 28.0,
+                short: 18.0,
                 side: 6.0,
             },
         )

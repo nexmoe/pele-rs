@@ -301,6 +301,25 @@ pub(crate) mod chars {
     }
 }
 
+/// V8's two-argument Math.hypot evaluation order. Iterative layouts can amplify
+/// the last-bit differences of the platform's hypot implementation.
+#[cfg(feature = "venn")]
+pub(crate) fn hypot(x: f64, y: f64) -> f64 {
+    let (a, b) = (x.abs(), y.abs());
+    if a.is_infinite() || b.is_infinite() {
+        return f64::INFINITY;
+    }
+    if a.is_nan() || b.is_nan() {
+        return f64::NAN;
+    }
+    let max = a.max(b);
+    if max == 0.0 {
+        return 0.0;
+    }
+    let (a, b) = (a / max, b / max);
+    (a * a + b * b).sqrt() * max
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

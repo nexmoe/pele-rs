@@ -194,7 +194,7 @@ fn draw(
         previous = end;
         if index > 0 {
             frame.push_str(&format!(
-                "<path class=\"pele-rs-wardley-stage\" d=\"M{},0V{}\" stroke=\"var(--_b)\" \
+                "<path class=\"pele-wardley-stage\" d=\"M{},0V{}\" stroke=\"var(--_b)\" \
                  stroke-dasharray=\"4 4\"/>",
                 num(start * plot_w),
                 num(plot_h)
@@ -222,7 +222,7 @@ fn draw(
             cx,
             cy,
             &format!(
-                " class=\"pele-rs-wardley-stage-label\" font-size=\"{}\" fill=\"var(--_m)\"",
+                " class=\"pele-wardley-stage-label\" font-size=\"{}\" fill=\"var(--_m)\"",
                 num(small)
             ),
         ));
@@ -232,7 +232,7 @@ fn draw(
     if show_grid(input.config) {
         for i in 1..4 {
             frame.push_str(&format!(
-                "<path class=\"pele-rs-wardley-grid\" d=\"M{},0V{}M0,{}H{}\" stroke=\"var(--_b)\" \
+                "<path class=\"pele-wardley-grid\" d=\"M{},0V{}M0,{}H{}\" stroke=\"var(--_b)\" \
                  stroke-dasharray=\"2 6\"/>",
                 num(plot_w * i as f64 / 4.0),
                 num(plot_h),
@@ -242,7 +242,7 @@ fn draw(
         }
     }
     frame.push_str(&format!(
-        "<path class=\"pele-rs-wardley-axis\" d=\"M0,0V{}H{}\" stroke=\"{LINE}\"/>",
+        "<path class=\"pele-wardley-axis\" d=\"M0,0V{}H{}\" stroke=\"{LINE}\"/>",
         num(plot_h),
         num(plot_w)
     ));
@@ -262,7 +262,7 @@ fn draw(
         Style::NONE,
     );
     let axis_attrs = format!(
-        " class=\"pele-rs-wardley-axis-label\" font-size=\"{}\" font-weight=\"var(--_hw)\"",
+        " class=\"pele-wardley-axis-label\" font-size=\"{}\" font-weight=\"var(--_hw)\"",
         num(small)
     );
     let axis_cx = plot_w / 2.0;
@@ -331,7 +331,7 @@ fn draw(
             top + 4.0 * R,
         );
         pipelines.push_str(&format!(
-            "<g class=\"pele-rs-wardley-pipeline\" data-id=\"{}\">",
+            "<g class=\"pele-wardley-pipeline\" data-id=\"{}\">",
             esc_text(&pipeline.node_id)
         ));
         pipelines.push_str(&format!(
@@ -472,15 +472,15 @@ fn draw(
                 cx,
                 cy,
                 &format!(
-                    " class=\"pele-rs-edge-label\" font-size=\"{}\" fill=\"var(--_m)\"",
+                    " class=\"pele-edge-label\" font-size=\"{}\" fill=\"var(--_m)\"",
                     num(tiny + 1.0)
                 ),
             );
         }
         links.push_str(&format!(
-            "<g class=\"pele-rs-edge{}\" data-id=\"{}-{}\">",
+            "<g class=\"pele-edge{}\" data-id=\"{}-{}\">",
             if link.dashed {
-                " pele-rs-wardley-dashed"
+                " pele-wardley-dashed"
             } else {
                 ""
             },
@@ -542,7 +542,7 @@ fn draw(
         }
         bounds.grow(tx - R, ty - R, tx + R, ty + R);
         trends.push_str(&format!(
-            "<g class=\"pele-rs-wardley-trend\" data-id=\"{}\">",
+            "<g class=\"pele-wardley-trend\" data-id=\"{}\">",
             esc_text(&trend.node_id)
         ));
         trends.push_str(&arrow);
@@ -572,7 +572,7 @@ fn draw(
                 _ => "var(--_bg)",
             };
             shape.push_str(&format!(
-                "<circle class=\"pele-rs-wardley-{strategy}\" cx=\"{}\" cy=\"{}\" r=\"{}\" \
+                "<circle class=\"pele-wardley-{strategy}\" cx=\"{}\" cy=\"{}\" r=\"{}\" \
                  fill=\"{fill}\" stroke=\"{LINE}\"/>",
                 num(x),
                 num(y),
@@ -623,7 +623,7 @@ fn draw(
             }) + 10.0
                 + if strategy.is_some() { R + 4.0 } else { 0.0 };
             shape.push_str(&format!(
-                "<rect class=\"pele-rs-wardley-inertia\" x=\"{}\" y=\"{}\" width=\"4\" \
+                "<rect class=\"pele-wardley-inertia\" x=\"{}\" y=\"{}\" width=\"4\" \
                  height=\"{}\" fill=\"{LINE}\"/>",
                 num(x + offset),
                 num(y - R),
@@ -669,13 +669,23 @@ fn draw(
                 cx,
                 cy,
                 &format!(
-                    " class=\"pele-rs-label\" font-size=\"{}\" font-weight=\"var(--_hw)\"",
+                    " class=\"pele-label\" font-size=\"{}\" font-weight=\"var(--_hw)\"",
                     num(small)
                 ),
             );
         } else {
-            let label = text(&node.label, measurer, small, WIDE, Style::NONE);
-            let attrs = format!(" class=\"pele-rs-label\" font-size=\"{}\"", num(small));
+            let label = text(
+                &node.label,
+                measurer,
+                small,
+                if tight {
+                    (plot_w / 2.0).clamp(64.0, 120.0)
+                } else {
+                    WIDE
+                },
+                Style::NONE,
+            );
+            let attrs = format!(" class=\"pele-label\" font-size=\"{}\"", num(small));
             let lift = LABEL_OFFSET + if strategy.is_some() { 10.0 } else { 0.0 };
             if ox.is_some() || oy.is_some() {
                 let lx = x + ox.unwrap_or(lift);
@@ -734,15 +744,15 @@ fn draw(
         }
         bounds.grow(x - 2.0 * R, y - 2.0 * R, x + 2.0 * R + 20.0, y + 2.0 * R);
         node_svg.push_str(&format!(
-            "<g class=\"pele-rs-node {}\" data-id=\"{}\">",
+            "<g class=\"pele-node {}\" data-id=\"{}\">",
             if anchor {
-                "pele-rs-wardley-anchor"
+                "pele-wardley-anchor"
             } else if node.is_pipeline_parent.unwrap_or(false) {
-                "pele-rs-wardley-pipeline-parent"
+                "pele-wardley-pipeline-parent"
             } else if node.in_pipeline.unwrap_or(false) {
-                "pele-rs-wardley-pipeline-component"
+                "pele-wardley-pipeline-component"
             } else {
-                "pele-rs-wardley-component"
+                "pele-wardley-component"
             },
             esc_text(&node.id)
         ));
@@ -780,7 +790,7 @@ fn draw(
             ));
         }
         annotations.push_str(&format!(
-            "<g class=\"pele-rs-wardley-annotation\" data-id=\"{}\">",
+            "<g class=\"pele-wardley-annotation\" data-id=\"{}\">",
             esc_text(&js_number(annotation.number))
         ));
         annotations.push_str(&marks);
@@ -848,7 +858,7 @@ fn draw(
             y += line.height;
         }
         annotations.push_str(&format!(
-            "<g class=\"pele-rs-wardley-annotations\"><rect x=\"{}\" y=\"{}\" width=\"{}\" \
+            "<g class=\"pele-wardley-annotations\"><rect x=\"{}\" y=\"{}\" width=\"{}\" \
              height=\"{}\" fill=\"var(--_bg)\" stroke=\"var(--_b)\"{ROUNDED}/>{rows}</g>",
             num(bx),
             num(by),
@@ -879,7 +889,7 @@ fn draw(
             x,
             y,
             &format!(
-                " class=\"pele-rs-wardley-note\" font-size=\"{}\" font-weight=\"var(--_hw)\"",
+                " class=\"pele-wardley-note\" font-size=\"{}\" font-weight=\"var(--_hw)\"",
                 num(small)
             ),
         ));
@@ -932,7 +942,7 @@ fn draw(
             cy + label.height / 2.0,
         );
         forces.push_str(&format!(
-            "<g class=\"pele-rs-wardley-{}\" data-id=\"{}\"><path d=\"{}\" fill=\"var(--_s)\" \
+            "<g class=\"pele-wardley-{}\" data-id=\"{}\"><path d=\"{}\" fill=\"var(--_s)\" \
              stroke=\"{LINE}\"/>{}</g>",
             if forward {
                 "accelerator"
@@ -977,7 +987,7 @@ fn draw(
         &title,
         tx + plot_w / 2.0,
         pad + title.height / 2.0,
-        " class=\"pele-rs-title\" font-weight=\"var(--_tw)\"",
+        " class=\"pele-title\" font-weight=\"var(--_tw)\"",
     );
     content.push_str(&format!(
         "<g transform=\"translate({},{})\">",
@@ -985,19 +995,19 @@ fn draw(
         num(ty)
     ));
     content.push_str(&format!(
-        "<g class=\"pele-rs-wardley-frame\" fill=\"none\">{frame}</g>"
+        "<g class=\"pele-wardley-frame\" fill=\"none\">{frame}</g>"
     ));
     content.push_str(&stage_labels);
     content.push_str(&axis_labels);
     content.push_str(&pipelines);
     if !links.is_empty() {
         content.push_str(&format!(
-            "<g class=\"pele-rs-edges\" fill=\"none\">{links}</g>"
+            "<g class=\"pele-edges\" fill=\"none\">{links}</g>"
         ));
     }
     if !trends.is_empty() {
         content.push_str(&format!(
-            "<g class=\"pele-rs-wardley-trends\" fill=\"none\">{trends}</g>"
+            "<g class=\"pele-wardley-trends\" fill=\"none\">{trends}</g>"
         ));
     }
     content.push_str(&node_svg);

@@ -320,8 +320,8 @@ pub(crate) fn render_xychart(db: &XyChartDb, input: &Input<'_>) -> Result<Output
         .iter()
         .filter(|plot| plot.kind == PlotKind::Bar)
         .count();
-    let mut lo: f64 = db.y_axis.min;
-    let mut hi: f64 = db.y_axis.max;
+    let mut lo: f64 = finite(db.y_axis.min).unwrap_or(f64::INFINITY);
+    let mut hi: f64 = finite(db.y_axis.max).unwrap_or(f64::NEG_INFINITY);
     let exact = db.has_set_y_axis && lo.is_finite() && hi.is_finite() && lo != hi;
     if exact {
         lo = finite(lo).unwrap_or_default();
@@ -739,9 +739,8 @@ pub(crate) fn render_xychart(db: &XyChartDb, input: &Input<'_>) -> Result<Output
                     esc(&label)
                 );
             }
-            series += &format!(
-                "<g class=\"pele-rs-xychart-series pele-rs-xychart-bars\"{id} fill=\"{color}\">{rects}</g>"
-            );
+            series +=
+                &format!("<g class=\"pele-series pele-bars\"{id} fill=\"{color}\">{rects}</g>");
             continue;
         }
 
@@ -822,7 +821,7 @@ pub(crate) fn render_xychart(db: &XyChartDb, input: &Input<'_>) -> Result<Output
             }
         }
         lines += &format!(
-            "<g class=\"pele-rs-xychart-series pele-rs-xychart-line\"{id} fill=\"{color}\">{}{dots}</g>",
+            "<g class=\"pele-series pele-line\"{id} fill=\"{color}\">{}{dots}</g>",
             if d.is_empty() {
                 String::new()
             } else {
@@ -879,7 +878,7 @@ pub(crate) fn render_xychart(db: &XyChartDb, input: &Input<'_>) -> Result<Output
             )
         };
         legend_out += &format!(
-            "<g class=\"pele-rs-xychart-legend-item\" data-id=\"{}\">{mark}{}</g>",
+            "<g class=\"pele-legend-item\" data-id=\"{}\">{mark}{}</g>",
             esc_text(&db.plots[*index].title),
             label_svg(label, lx + SWATCH + 8.0 + label.width / 2.0, y, "")
         );
@@ -888,36 +887,31 @@ pub(crate) fn render_xychart(db: &XyChartDb, input: &Input<'_>) -> Result<Output
 
     // The grid lies under the series, the axis over them.
     let content = format!(
-        "{}{}<g class=\"pele-rs-xychart-plot\">{series}{lines}</g>{}{}{}{}{}{}",
+        "{}{}<g class=\"pele-plot\">{series}{lines}</g>{}{}{}{}{}{}",
         label_svg(
             &title,
             width / 2.0,
             pad + title.height / 2.0,
-            " class=\"pele-rs-title\" font-weight=\"var(--_tw)\""
+            " class=\"pele-title\" font-weight=\"var(--_tw)\""
         ),
         if grid.is_empty() {
             String::new()
         } else {
-            format!("<path class=\"pele-rs-xychart-grid\" d=\"{grid}\" stroke=\"var(--_a)\"/>")
+            format!("<path class=\"pele-grid\" d=\"{grid}\" stroke=\"var(--_a)\"/>")
         },
         if axis_path.is_empty() {
             String::new()
         } else {
             format!(
-                "<path class=\"pele-rs-xychart-axis\" d=\"{axis_path}\" fill=\"none\" \
+                "<path class=\"pele-axis\" d=\"{axis_path}\" fill=\"none\" \
                  stroke=\"var(--_b)\"/>"
             )
         },
-        group_svg(
-            "pele-rs-xychart-axis-labels",
-            small,
-            &labels,
-            " fill=\"var(--_m)\""
-        ),
-        group_svg("pele-rs-xychart-axis-titles", small, &titles, ""),
-        group_svg("pele-rs-xychart-data-labels", tiny, &outside, ""),
-        group_svg("pele-rs-xychart-point-labels", tiny, &point_labels, ""),
-        group_svg("pele-rs-xychart-legend", small, &legend_out, ""),
+        group_svg("pele-axis-labels", small, &labels, " fill=\"var(--_m)\""),
+        group_svg("pele-axis-titles", small, &titles, ""),
+        group_svg("pele-data-labels", tiny, &outside, ""),
+        group_svg("pele-point-labels", tiny, &point_labels, ""),
+        group_svg("pele-legend", small, &legend_out, ""),
     );
 
     let acc = Accessible {

@@ -77,6 +77,9 @@ pub(crate) fn resolve_shape_alias(shape: &str) -> String {
 
 /// Whether a name is a shape Mermaid knows.
 pub(crate) fn is_valid_shape(name: &str) -> bool {
+    if name == "constructor" {
+        return true;
+    }
     // Mermaid checks the name against its whole shape map; these are the names it holds.
     const KNOWN: &[&str] = &[
         "rect",

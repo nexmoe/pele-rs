@@ -82,6 +82,7 @@ fn summary(db: &TreemapDb) -> String {
         Insets {
             gap: GAP,
             header: HEADER,
+            short: HEADER,
             side: SIDE,
         },
     ) {

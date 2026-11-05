@@ -24,8 +24,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: obsidianmd/pele
-          # pele 1.9.0, which the ports follow.
-          ref: e7f092a4de147cc32210913c20e36eaa5fcd0ef1
+          # Pele 1.13.0; keep in sync with upstream.json.
+          ref: 3a2f075ee0c3d914f0fad3545fc0f193693975ac
           path: pele
       - uses: actions/setup-node@v4
         with:

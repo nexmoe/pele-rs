@@ -72,7 +72,7 @@ fn count(svg: &str, needle: &str) -> usize {
 
 /// Task groups, leaving out the group that holds them.
 fn tasks(svg: &str) -> usize {
-    count(svg, "<g class=\"pele-rs-task") - count(svg, "<g class=\"pele-rs-tasks\"")
+    count(svg, "<g class=\"pele-task") - count(svg, "<g class=\"pele-tasks\"")
 }
 
 fn try_render(src: &str) -> Option<String> {
@@ -86,12 +86,12 @@ fn draws_tasks_sections_and_markers() {
     let out = render(FULL);
     assert_eq!(out.kind, DiagramKind::Gantt);
     assert_eq!(tasks(&out.svg), 13);
-    assert_eq!(count(&out.svg, " pele-rs-crit"), 4);
-    assert_eq!(count(&out.svg, "pele-rs-milestone"), 1);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-section-label\""), 3);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-vert\""), 1);
-    assert!(out.svg.contains("pele-rs-excluded"));
-    assert!(out.svg.contains("pele-rs-today"));
+    assert_eq!(count(&out.svg, " pele-crit"), 4);
+    assert_eq!(count(&out.svg, "pele-milestone"), 1);
+    assert_eq!(count(&out.svg, "class=\"pele-section-label\""), 3);
+    assert_eq!(count(&out.svg, "class=\"pele-vert\""), 1);
+    assert!(out.svg.contains("pele-excluded"));
+    assert!(out.svg.contains("pele-today"));
     assert!(out.svg.contains(">2014-01-15<"));
     assert_eq!(out.links.len(), 1);
     assert_eq!(out.links[0].href, "https://example.com/des2");
@@ -101,18 +101,18 @@ fn draws_tasks_sections_and_markers() {
 fn today_follows_the_given_time() {
     // At the default time, 1970-01-01, the chart is long past and has no marker.
     let out = pele_rs::render(FULL, &options(None)).unwrap();
-    assert!(!out.svg.contains("pele-rs-today"));
+    assert!(!out.svg.contains("pele-today"));
     // At the given time the marker is drawn, and `todayMarker off` takes it away. Without the
     // given time both statements hold whatever the chart says.
-    assert!(render(FULL).svg.contains("pele-rs-today"));
+    assert!(render(FULL).svg.contains("pele-today"));
     let off = FULL.replace("excludes weekends", "todayMarker off");
-    assert!(!svg(&off).contains("pele-rs-today"));
+    assert!(!svg(&off).contains("pele-today"));
 }
 
 #[test]
 fn the_today_marker_sits_on_the_given_day() {
     let out = render(FULL);
-    let marker = out.svg.split("pele-rs-today").nth(1).unwrap();
+    let marker = out.svg.split("pele-today").nth(1).unwrap();
     let x = marker.split('M').nth(1).unwrap().split(',').next().unwrap();
     let tick = out
         .svg
@@ -298,7 +298,7 @@ fn shades_the_excluded_weekends() {
     let out = render(FULL);
     let at = out
         .svg
-        .find("pele-rs-excluded")
+        .find("pele-excluded")
         .expect("the weekends are shaded");
     let segment = &out.svg[at..];
     let end = segment.find("</g>").expect("the group ends");
@@ -337,7 +337,7 @@ fn draws_a_milestone_as_a_diamond() {
     );
     assert!(
         out.svg
-            .contains("pele-rs-milestone\" data-id=\"isadded\"><path"),
+            .contains("pele-milestone\" data-id=\"isadded\"><path"),
         "{}",
         out.svg
     );

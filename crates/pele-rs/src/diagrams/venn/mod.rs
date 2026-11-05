@@ -5,6 +5,7 @@ mod layout;
 mod lexer;
 mod parser;
 mod render;
+mod trig;
 
 #[cfg(test)]
 mod compat;

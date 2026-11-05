@@ -194,7 +194,7 @@ pub(crate) fn find_spot(circles: &[Circle], inside: &[usize], outside: &[usize])
             if m <= s.margin - r * 1e-9 || m.is_nan() {
                 return false;
             }
-            let distance = (px - cx).hypot(py - cy);
+            let distance = crate::util::hypot(px - cx, py - cy);
             if m > s.margin + r * 1e-9 || distance < s.off - r * 1e-9 {
                 s.margin = m;
                 s.off = distance;
@@ -228,8 +228,8 @@ pub(crate) fn find_spot(circles: &[Circle], inside: &[usize], outside: &[usize])
             let mut moved = false;
             for k in 0..8 {
                 let angle = (k as f64 * TAU) / 8.0;
-                let px = search.x + angle.cos() * step;
-                let py = search.y + angle.sin() * step;
+                let px = search.x + super::trig::cos(angle) * step;
+                let py = search.y + super::trig::sin(angle) * step;
                 if consider(px, py, &mut search) {
                     moved = true;
                 }
@@ -375,8 +375,8 @@ pub(crate) fn layout_circles(subsets: &[VennSubset]) -> Vec<Circle> {
         let ring = total / TAU;
         for (i, c) in circles.iter_mut().enumerate() {
             let angle = (i as f64 * TAU) / n as f64 - std::f64::consts::PI / 2.0;
-            c.x = angle.cos() * ring;
-            c.y = angle.sin() * ring;
+            c.x = super::trig::cos(angle) * ring;
+            c.y = super::trig::sin(angle) * ring;
         }
     } else {
         let columns = (n as f64).sqrt().ceil() as usize;
@@ -399,13 +399,13 @@ pub(crate) fn layout_circles(subsets: &[VennSubset]) -> Vec<Circle> {
                 let apart = circles[a].r + circles[b].r + gap;
                 let mut ux = circles[b].x - circles[a].x;
                 let mut uy = circles[b].y - circles[a].y;
-                let mut length = ux.hypot(uy);
+                let mut length = crate::util::hypot(ux, uy);
                 if overlap.is_none() && length >= apart {
                     continue;
                 }
                 if length < 1e-9 {
-                    ux = (a as f64 + b as f64).cos();
-                    uy = (a as f64 + b as f64).sin();
+                    ux = super::trig::cos(a as f64 + b as f64);
+                    uy = super::trig::sin(a as f64 + b as f64);
                     length = 1.0;
                 }
                 let target = overlap.unwrap_or(apart);
@@ -444,7 +444,7 @@ fn within(circles: &[Circle], x: f64, y: f64, skip_a: usize, skip_b: usize) -> b
         if i == skip_a || i == skip_b {
             continue;
         }
-        if (x - c.x).hypot(y - c.y) > c.r * (1.0 + 1e-9) {
+        if crate::util::hypot(x - c.x, y - c.y) > c.r * (1.0 + 1e-9) {
             return false;
         }
     }
@@ -478,7 +478,7 @@ pub(crate) fn region_path<F: Fn(f64) -> String>(circles: &[Circle], format: F) -
         for j in (i + 1)..circles.len() {
             let a = &circles[i];
             let b = &circles[j];
-            let d = (b.x - a.x).hypot(b.y - a.y);
+            let d = crate::util::hypot(b.x - a.x, b.y - a.y);
             if d >= a.r + b.r || d <= (a.r - b.r).abs() || d == 0.0 {
                 continue;
             }
@@ -508,7 +508,9 @@ pub(crate) fn region_path<F: Fn(f64) -> String>(circles: &[Circle], format: F) -
             if i == smallest_at {
                 continue;
             }
-            if (c.x - smallest.x).hypot(c.y - smallest.y) + smallest.r > c.r * (1.0 + 1e-9) {
+            if crate::util::hypot(c.x - smallest.x, c.y - smallest.y) + smallest.r
+                > c.r * (1.0 + 1e-9)
+            {
                 return String::new();
             }
         }
@@ -547,9 +549,9 @@ pub(crate) fn region_path<F: Fn(f64) -> String>(circles: &[Circle], format: F) -
             if sweep <= 0.0 {
                 sweep += TAU;
             }
-            let mx = circle.x + circle.r * (start + sweep / 2.0).cos();
-            let my = circle.y + circle.r * (start + sweep / 2.0).sin();
-            let width = (mx - (from.x + to.x) / 2.0).hypot(my - (from.y + to.y) / 2.0);
+            let mx = circle.x + circle.r * super::trig::cos(start + sweep / 2.0);
+            let my = circle.y + circle.r * super::trig::sin(start + sweep / 2.0);
+            let width = crate::util::hypot(mx - (from.x + to.x) / 2.0, my - (from.y + to.y) / 2.0);
             if width < narrowest {
                 narrowest = width;
                 arc = Some(c);

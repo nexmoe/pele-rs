@@ -544,6 +544,41 @@ pub(crate) fn route_crossings(nodes: &[CNode], edges: &[CEdge], style: Style) ->
     total
 }
 
+/// Groups crossed by an edge inherit their parent's direction, as in Mermaid and Pele.
+pub(crate) fn inherit_crossed_directions(
+    nodes: &mut [CNode],
+    ends: impl IntoIterator<Item = (usize, usize)>,
+) {
+    let ancestors = |nodes: &[CNode], mut i: usize| {
+        let mut found = Vec::new();
+        while nodes[i].parent >= 0 {
+            i = nodes[i].parent as usize;
+            if found.contains(&i) {
+                break;
+            }
+            found.push(i);
+        }
+        found
+    };
+    for (src, dst) in ends {
+        if src == dst || src >= nodes.len() || dst >= nodes.len() {
+            continue;
+        }
+        let a = ancestors(nodes, src);
+        let b = ancestors(nodes, dst);
+        for &g in &a {
+            if !b.contains(&g) {
+                nodes[g].dir = None;
+            }
+        }
+        for &g in &b {
+            if !a.contains(&g) {
+                nodes[g].dir = None;
+            }
+        }
+    }
+}
+
 pub(crate) fn shift_layout(nodes: &mut [CNode], edges: &mut [CEdge], ox: f64, oy: f64) {
     for c in nodes {
         c.x += ox;

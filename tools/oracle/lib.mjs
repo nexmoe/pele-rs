@@ -16,6 +16,7 @@ export function assertPeleReference(peleDir) {
   if (version !== pin.version || commit !== pin.commit) {
     throw new Error(`Reference is Pele ${version} at ${commit}; expected ${pin.version} at ${pin.commit}. Update upstream.json deliberately before regenerating fixtures.`);
   }
+  execFileSync('git', ['-C', peleDir, 'diff', '--exit-code', 'HEAD', '--', 'src', 'tests', 'scripts', 'package.json', 'package-lock.json'], { stdio: 'pipe' });
   return pin;
 }
 

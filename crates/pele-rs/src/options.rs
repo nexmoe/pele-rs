@@ -32,7 +32,7 @@ impl Default for Limits {
 
 /// The colors of a diagram, for a viewer that does not read CSS custom properties.
 ///
-/// By default the SVG takes its colors from `var(--pele-rs-*, fallback)` so that the page can
+/// By default the SVG takes its colors from `var(--pele-*, fallback)` so that the page can
 /// theme it. Renderers such as resvg ignore `var()`, so a host that cannot theme the SVG
 /// through CSS sets [`RenderOptions::palette`]: every color is then written out as a plain
 /// value and the SVG holds no `var()` of its own.
@@ -55,25 +55,25 @@ impl Default for Limits {
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Palette {
-    /// The page behind the diagram (`--pele-rs-bg`).
+    /// The page behind the diagram (`--pele-bg`).
     pub bg: String,
-    /// Text (`--pele-rs-fg`).
+    /// Text (`--pele-fg`).
     pub fg: String,
-    /// Secondary text and axes (`--pele-rs-muted`).
+    /// Secondary text and axes (`--pele-muted`).
     pub muted: String,
-    /// Lines and arrows (`--pele-rs-line`).
+    /// Lines and arrows (`--pele-line`).
     pub line: String,
-    /// The fill of nodes (`--pele-rs-surface`).
+    /// The fill of nodes (`--pele-surface`).
     pub surface: String,
-    /// The fill of nested or alternate areas (`--pele-rs-surface-alt`).
+    /// The fill of nested or alternate areas (`--pele-surface-alt`).
     pub surface_alt: String,
-    /// Outlines (`--pele-rs-border`).
+    /// Outlines (`--pele-border`).
     pub border: String,
-    /// The accent color (`--pele-rs-accent`).
+    /// The accent color (`--pele-accent`).
     pub accent: String,
-    /// What a diagram marks as critical (`--pele-rs-critical`).
+    /// What a diagram marks as critical (`--pele-critical`).
     pub critical: String,
-    /// The colors of data series, cycling (`--pele-rs-series-1` to `-8`).
+    /// The colors of data series, cycling (`--pele-series-1` to `-8`).
     pub series: [String; 8],
 }
 
@@ -120,7 +120,7 @@ impl Palette {
         }
     }
 
-    /// The color of a `--pele-rs-*` token by its suffix, if the palette has one.
+    /// The color of a `--pele-*` token by its suffix, if the palette has one.
     pub(crate) fn token(&self, name: &str) -> Option<&str> {
         Some(match name {
             "bg" => &self.bg,
@@ -140,6 +140,15 @@ impl Palette {
     }
 }
 
+/// Label categories the host can choose to draw in a monospace font.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MonospacePart {
+    Members,
+    Attributes,
+    Files,
+    Messages,
+}
+
 /// How a diagram is rendered. Every field has a default, so set only what you need:
 ///
 /// ```
@@ -149,15 +158,16 @@ impl Palette {
 /// };
 /// ```
 pub struct RenderOptions {
-    /// The fonts labels are drawn in where the page sets no `--pele-rs-font`. Text is measured
+    /// The fonts labels are drawn in where the page sets no `--pele-font`. Text is measured
     /// with `measurer` regardless.
     pub font_family: Option<String>,
-    /// Like `font_family`, for monospaced text and `--pele-rs-font-mono`.
+    /// Like `font_family`, for monospaced text and `--pele-font-mono`.
     pub font_family_mono: Option<String>,
+    pub monospace: Vec<MonospacePart>,
     /// Font size in pixels. Each diagram type has its own default, usually 16.
     pub font_size: Option<f64>,
     /// Prefix of the ids in the SVG, so that several diagrams can share a page.
-    pub id_prefix: String,
+    pub id_prefix: Option<String>,
     /// The width the host has for the diagram, in pixels. A type that can draw itself narrower
     /// does, so that its text is not shrunk with it.
     pub max_width: Option<f64>,
@@ -168,7 +178,7 @@ pub struct RenderOptions {
     /// Space around the drawing in pixels. Each diagram type has its own default.
     pub padding: Option<f64>,
     /// Whether the SVG scales down to fit its container.
-    pub responsive: bool,
+    pub responsive: Option<bool>,
     pub limits: Limits,
     /// Schemes a link may use besides a relative address. `None` allows `http`, `https`,
     /// `mailto` and `tel`; an empty list allows only relative links.
@@ -210,13 +220,14 @@ impl Default for RenderOptions {
         Self {
             font_family: None,
             font_family_mono: None,
+            monospace: Vec::new(),
             font_size: None,
-            id_prefix: "pele-rs".to_string(),
+            id_prefix: None,
             max_width: None,
             auto_direction: true,
             direction_breakpoint: None,
             padding: None,
-            responsive: true,
+            responsive: None,
             limits: Limits::default(),
             link_schemes: None,
             image_schemes: None,

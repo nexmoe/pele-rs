@@ -299,7 +299,7 @@ pub(crate) fn edge_label_svg(id: &str, label: &Label, x: f64, y: f64, attrs: &st
     let w = label.width + 8.0;
     let h = label.height;
     format!(
-        "<g class=\"pele-rs-edge-label\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" rx=\"3\" fill=\"var(--_bg)\"/>{}</g>",
+        "<g class=\"pele-edge-label\" data-id=\"{}\"><rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" rx=\"3\" fill=\"var(--_bg)\"/>{}</g>",
         esc_text(id),
         num(x - w / 2.0),
         num(y - h / 2.0),

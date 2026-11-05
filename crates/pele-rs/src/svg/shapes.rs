@@ -961,6 +961,10 @@ pub(crate) fn shape_has_label(shape: &str) -> bool {
     )
 }
 
+pub(crate) fn shape_filled(shape: &str) -> bool {
+    !matches!(shape, "text" | "brace" | "brace-r" | "braces")
+}
+
 /// The side of a node's layout box that a route end lies on: 0 top, 1 right, 2 bottom, 3 left,
 /// or `None`.
 #[cfg(any(

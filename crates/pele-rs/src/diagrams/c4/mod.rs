@@ -19,7 +19,10 @@ pub(crate) struct C4;
 impl Diagram for C4 {
     fn parse(&self, input: &Input<'_>) -> Result<Box<dyn Parsed>, Error> {
         let actions = parser::parse_c4(&input.source)?;
-        let model = db::build(actions);
+        let mut model = db::build(actions);
+        if model.title.is_none() {
+            model.title = input.title.map(str::to_string);
+        }
         Ok(Box::new(move |input: &Input<'_>| {
             render::render_c4(&model, input)
         }))

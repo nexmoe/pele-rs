@@ -37,16 +37,16 @@ fn draws_the_version() {
     let out = render("info\n");
     assert_eq!(out.kind, DiagramKind::Info);
     // The version of the library, under the title.
-    assert_eq!(count(&out.svg, "class=\"pele-rs-version\""), 1);
-    assert!(out.svg.contains(">pele-rs v"), "{}", out.svg);
+    assert_eq!(count(&out.svg, "class=\"pele-version\""), 1);
+    assert!(out.svg.contains(">Pele v1.13.0<"), "{}", out.svg);
     // There is no title to draw.
-    assert_eq!(count(&out.svg, "class=\"pele-rs-title\""), 0);
+    assert_eq!(count(&out.svg, "class=\"pele-title\""), 0);
 }
 
 #[test]
 fn draws_a_title() {
     let out = render("info\ntitle An information diagram\n");
-    assert_eq!(count(&out.svg, "class=\"pele-rs-title\""), 1);
+    assert_eq!(count(&out.svg, "class=\"pele-title\""), 1);
     assert!(out.svg.contains(">An information diagram<"), "{}", out.svg);
 
     // The title of the front matter is the title of the diagram.
@@ -64,13 +64,13 @@ fn draws_the_accessible_text() {
     let out = render("info\naccTitle: An information diagram\naccDescr: A description\n");
     assert!(
         out.svg
-            .contains("<title id=\"pele-rs-title\">An information diagram</title>"),
+            .contains("<title id=\"pele-title\">An information diagram</title>"),
         "{}",
         out.svg
     );
     assert!(
         out.svg
-            .contains("<desc id=\"pele-rs-desc\">A description</desc>"),
+            .contains("<desc id=\"pele-desc\">A description</desc>"),
         "{}",
         out.svg
     );

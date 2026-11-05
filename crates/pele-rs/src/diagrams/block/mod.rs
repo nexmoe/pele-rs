@@ -22,7 +22,7 @@ impl Diagram for Block {
 
     fn parse(&self, input: &Input<'_>) -> Result<Box<dyn Parsed>, Error> {
         let parsed = parser::parse_block(&input.source, input.options.limits.max_depth)?;
-        let model = db::build_block(&parsed, input.title)?;
+        let model = db::build_block(parsed, input.title)?;
         Ok(Box::new(move |input: &Input<'_>| {
             render::render_block(&model, input)
         }))

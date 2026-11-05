@@ -10,7 +10,7 @@
 //! also matches is the terminal, as in Chevrotain's `LONGER_ALT`.
 
 use crate::diagrams::common::tokens::{
-    ACC_DESCR, ACC_TITLE, DIRECTIVE, END, Found, Pattern, Reader, SINGLE_LINE_COMMENT, TITLE,
+    ACC_DESCR, ACC_TITLE, DIRECTIVE, END, Found, Pattern, Reader, SINGLE_LINE_COMMENT, TITLE_DASH,
     TokenType, YAML, acc_descr_value, acc_title_value, title_value, tokenize,
 };
 use crate::error::{Error, ErrorCode};
@@ -363,7 +363,7 @@ const IR_TOKENS: &[TokenType] = &[
     tok("(", Pattern::Literal("(")),
     tok(",", Pattern::Literal(",")),
     tok(")", Pattern::Literal(")")),
-    TITLE,
+    TITLE_DASH,
     ACC_TITLE,
     ACC_DESCR,
     tok("RR_ID", Pattern::Match(identifier)),
@@ -396,7 +396,7 @@ const EBNF_TOKENS: &[TokenType] = &[
     tok("*", Pattern::Literal("*")),
     tok("+", Pattern::Literal("+")),
     tok_longer("-", Pattern::Literal("-"), &[EBNF_YAML]),
-    TITLE,
+    TITLE_DASH,
     ACC_TITLE,
     ACC_DESCR,
     tok("EBNF_ID", Pattern::Match(identifier)),
@@ -423,7 +423,7 @@ const ABNF_TOKENS: &[TokenType] = &[
     tok(")", Pattern::Literal(")")),
     tok("[", Pattern::Literal("[")),
     tok("]", Pattern::Literal("]")),
-    TITLE,
+    TITLE_DASH,
     ACC_TITLE,
     ACC_DESCR,
     tok("ABNF_RULENAME", Pattern::Match(rule_name)),
@@ -455,7 +455,7 @@ const PEG_TOKENS: &[TokenType] = &[
     tok("(", Pattern::Literal("(")),
     tok(")", Pattern::Literal(")")),
     tok(".", Pattern::Literal(".")),
-    TITLE,
+    TITLE_DASH,
     ACC_TITLE,
     ACC_DESCR,
     tok("PEG_ID", Pattern::Match(identifier)),
@@ -542,9 +542,7 @@ fn read_meta(
         match reader.kind() {
             k if k == title => {
                 let value = title_of(reader.take(), decode_title);
-                if !value.is_empty() {
-                    meta.title = Some(value);
-                }
+                meta.title = Some(value);
             }
             k if k == acc_title => {
                 let value = acc_title_value(reader.take());
@@ -767,8 +765,8 @@ fn ir_expression(reader: &mut Reader<'_>, max_depth: usize) -> Result<Node, Erro
                     stack.pop();
                     value = match wrap {
                         IrWrap::Optional => Node::Optional(Box::new(value)),
-                        IrWrap::OneOrMore => Node::repetition(value, 1, None),
-                        IrWrap::ZeroOrMore => Node::repetition(value, 0, None),
+                        IrWrap::OneOrMore => Node::repetition(value, 1.0, None),
+                        IrWrap::ZeroOrMore => Node::repetition(value, 0.0, None),
                     };
                 }
             }
@@ -906,12 +904,12 @@ fn ebnf_definition(reader: &mut Reader<'_>, max_depth: usize) -> Result<Node, Er
                     EBNF_STAR => {
                         reader.i += 1;
                         let term = top.term.take().expect("a term");
-                        top.term = Some(Node::repetition(term, 0, None));
+                        top.term = Some(Node::repetition(term, 0.0, None));
                     }
                     EBNF_PLUS => {
                         reader.i += 1;
                         let term = top.term.take().expect("a term");
-                        top.term = Some(Node::repetition(term, 1, None));
+                        top.term = Some(Node::repetition(term, 1.0, None));
                     }
                     _ => break,
                 }
@@ -933,7 +931,7 @@ fn ebnf_definition(reader: &mut Reader<'_>, max_depth: usize) -> Result<Node, Er
                     .ok_or_else(|| reader.fail("a closing bracket"))?;
                 primary = match bracket {
                     Some(EbnfBracket::Optional) => Node::Optional(Box::new(choice)),
-                    Some(EbnfBracket::Repetition) => Node::repetition(choice, 0, None),
+                    Some(EbnfBracket::Repetition) => Node::repetition(choice, 0.0, None),
                     _ => choice,
                 };
                 except = was_except;
@@ -1024,9 +1022,9 @@ fn abnf_element(repeat: Option<String>, primary: Node) -> Node {
     };
     let (min, max) = if let Some(star) = repeat.find('*') {
         let min = if star > 0 {
-            repeat[..star].parse().unwrap_or(u64::MAX)
+            repeat[..star].parse().unwrap_or(f64::INFINITY)
         } else {
-            0
+            0.0
         };
         let max = if star + 1 < repeat.len() {
             repeat[star + 1..].parse().ok()
@@ -1035,10 +1033,10 @@ fn abnf_element(repeat: Option<String>, primary: Node) -> Node {
         };
         (min, max)
     } else {
-        let exact = repeat.parse().unwrap_or(u64::MAX);
+        let exact = repeat.parse().unwrap_or(f64::INFINITY);
         (exact, Some(exact))
     };
-    if min == 0 && max == Some(1) {
+    if min == 0.0 && max == Some(1.0) {
         return Node::Optional(Box::new(primary));
     }
     Node::repetition(primary, min, max)
@@ -1223,8 +1221,8 @@ fn peg_definition(reader: &mut Reader<'_>, max_depth: usize) -> Result<Node, Err
             }
             let inner = match suffix {
                 Some('?') => Node::Optional(Box::new(primary)),
-                Some('*') => Node::repetition(primary, 0, None),
-                Some('+') => Node::repetition(primary, 1, None),
+                Some('*') => Node::repetition(primary, 0.0, None),
+                Some('+') => Node::repetition(primary, 1.0, None),
                 _ => primary,
             };
             let value = match operator {

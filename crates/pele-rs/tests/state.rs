@@ -48,7 +48,7 @@ fn corpus() -> Vec<&'static str> {
 
 /// The y of every node the drawing places, in the order they are drawn.
 fn ys_of(svg: &str) -> Vec<String> {
-    svg.split("pele-rs-node pele-rs-state")
+    svg.split("pele-node pele-state")
         .skip(1)
         .filter_map(|part| part.split_once("translate("))
         .filter_map(|(_, rest)| rest.split_once(','))
@@ -77,12 +77,12 @@ fn draws_states_transitions_and_pseudo_states() {
         "stateDiagram-v2\n [*] --> Still\n Still --> Moving : push\n Moving --> Still\n state c <<choice>>\n Moving --> c\n c --> Crash : fast\n c --> [*]\n state f <<fork>>\n Crash --> f\n",
     );
     assert_eq!(out.kind, DiagramKind::State);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-node pele-rs-state\""), 3);
-    assert_eq!(count(&out.svg, "pele-rs-state-start"), 1);
-    assert_eq!(count(&out.svg, "pele-rs-state-end"), 1);
-    assert_eq!(count(&out.svg, "pele-rs-state-choice"), 1);
-    assert_eq!(count(&out.svg, "pele-rs-state-fork"), 1);
-    assert_eq!(count(&out.svg, "pele-rs-transition"), 7);
+    assert_eq!(count(&out.svg, "class=\"pele-node pele-state\""), 3);
+    assert_eq!(count(&out.svg, "pele-state-start"), 1);
+    assert_eq!(count(&out.svg, "pele-state-end"), 1);
+    assert_eq!(count(&out.svg, "pele-state-choice"), 1);
+    assert_eq!(count(&out.svg, "pele-state-fork"), 1);
+    assert_eq!(count(&out.svg, "pele-transition"), 7);
     assert!(out.svg.contains(">push<"));
 }
 
@@ -92,19 +92,19 @@ fn draws_composites_regions_and_notes() {
         "stateDiagram-v2\n state Active {\n direction LR\n [*] --> A\n A --> B\n --\n [*] --> C\n }\n Active --> Done\n note right of Done : all\n note left of Active\n two\n lines\n end note\n",
     );
     for needle in [
-        "pele-rs-state-composite",
-        "pele-rs-divider",
-        "class=\"pele-rs-note\"",
-        "pele-rs-note-edge",
+        "pele-state-composite",
+        "pele-divider",
+        "class=\"pele-note\"",
+        "pele-note-edge",
         ">all<",
     ] {
         assert!(svg.contains(needle), "{needle}");
     }
     // The composite is split in two regions, each with its own start.
-    assert_eq!(count(&svg, "pele-rs-state-composite"), 1);
-    assert_eq!(count(&svg, "pele-rs-state-start"), 2, "{svg}");
-    assert_eq!(count(&svg, "class=\"pele-rs-note\""), 2, "{svg}");
-    assert_eq!(count(&svg, "pele-rs-note-edge"), 2, "{svg}");
+    assert_eq!(count(&svg, "pele-state-composite"), 1);
+    assert_eq!(count(&svg, "pele-state-start"), 2, "{svg}");
+    assert_eq!(count(&svg, "class=\"pele-note\""), 2, "{svg}");
+    assert_eq!(count(&svg, "pele-note-edge"), 2, "{svg}");
     assert!(svg.contains(">two<"), "the note has its text");
     assert_inert(&svg, "composites");
 }
@@ -425,36 +425,32 @@ fn stays_fast_on_large_and_hostile_input() {
 #[test]
 fn draws_join_and_fork_pseudo_states() {
     let svg = svg("stateDiagram-v2\n state f <<fork>>\n state j <<join>>\n f --> j\n j --> done\n");
-    assert_eq!(count(&svg, "pele-rs-state-fork"), 1, "{svg}");
-    assert_eq!(count(&svg, "pele-rs-state-join"), 1, "{svg}");
+    assert_eq!(count(&svg, "pele-state-fork"), 1, "{svg}");
+    assert_eq!(count(&svg, "pele-state-join"), 1, "{svg}");
 }
 
 #[test]
 fn draws_concurrency_regions() {
     let svg = svg("stateDiagram-v2\n state C {\n [*] --> a\n --\n [*] --> b\n }\n");
-    assert_eq!(count(&svg, "pele-rs-state-composite"), 1, "{svg}");
-    assert_eq!(
-        count(&svg, "class=\"pele-rs-node pele-rs-state\""),
-        2,
-        "{svg}"
-    );
-    assert_eq!(count(&svg, "pele-rs-state-start"), 2, "{svg}");
-    assert!(svg.contains("pele-rs-divider"), "{svg}");
+    assert_eq!(count(&svg, "pele-state-composite"), 1, "{svg}");
+    assert_eq!(count(&svg, "class=\"pele-node pele-state\""), 2, "{svg}");
+    assert_eq!(count(&svg, "pele-state-start"), 2, "{svg}");
+    assert!(svg.contains("pele-divider"), "{svg}");
 }
 
 #[test]
 fn renders_accessibility_text() {
     let svg = svg("stateDiagram-v2\n accTitle: My Title\n accDescr: My Description\n a --> b\n");
     assert!(
-        svg.contains("<title id=\"pele-rs-title\">My Title</title>"),
+        svg.contains("<title id=\"pele-title\">My Title</title>"),
         "{svg}"
     );
     assert!(
-        svg.contains("<desc id=\"pele-rs-desc\">My Description</desc>"),
+        svg.contains("<desc id=\"pele-desc\">My Description</desc>"),
         "{svg}"
     );
-    assert!(svg.contains("aria-labelledby=\"pele-rs-title\""), "{svg}");
-    assert!(svg.contains("aria-describedby=\"pele-rs-desc\""), "{svg}");
+    assert!(svg.contains("aria-labelledby=\"pele-title\""), "{svg}");
+    assert!(svg.contains("aria-describedby=\"pele-desc\""), "{svg}");
 }
 
 #[test]
@@ -462,7 +458,7 @@ fn applies_class_defs_and_styles_to_states() {
     let svg = svg(
         "stateDiagram-v2\n a --> b\n classDef hot fill:red,stroke:blue\n class a hot\n style b fill:green\n",
     );
-    assert!(svg.contains("pele-rs-node pele-rs-state hot"), "{svg}");
+    assert!(svg.contains("pele-node pele-state hot"), "{svg}");
     assert!(svg.contains("fill:red"), "{svg}");
     assert!(svg.contains("stroke:blue"), "{svg}");
     assert!(svg.contains("fill:green"), "{svg}");
@@ -487,11 +483,11 @@ fn places_notes_to_the_left_and_to_the_right() {
     let right = svg("stateDiagram-v2\n a --> b\n note right of a : x\n");
     assert_ne!(left, right);
     assert!(
-        x_of(&left, "class=\"pele-rs-note\"") < x_of(&left, "pele-rs-node pele-rs-state\""),
+        x_of(&left, "class=\"pele-note\"") < x_of(&left, "pele-node pele-state\""),
         "the note is to the left of the state"
     );
     assert!(
-        x_of(&right, "class=\"pele-rs-note\"") > x_of(&right, "pele-rs-node pele-rs-state\""),
+        x_of(&right, "class=\"pele-note\"") > x_of(&right, "pele-node pele-state\""),
         "the note is to the right of the state"
     );
 }

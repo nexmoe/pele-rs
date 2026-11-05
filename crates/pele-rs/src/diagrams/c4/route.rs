@@ -17,8 +17,6 @@ pub(crate) enum Form {
     HCyl,
     /// A box with rounded corners, for a system or a container.
     Rounded,
-    /// A box with a folded corner, for a component.
-    FrRect,
 }
 
 impl Form {
@@ -27,8 +25,7 @@ impl Form {
             Form::Person => "person",
             Form::Cyl => "cyl",
             Form::HCyl => "h-cyl",
-            Form::Rounded => "rounded",
-            Form::FrRect => "fr-rect",
+            Form::Rounded => "rect",
         }
     }
 }
@@ -233,7 +230,7 @@ fn hit(box_: &Frame, px: f64, py: f64, qx: f64, qy: f64) -> f64 {
             ))
         }
         // A box with rounded corners and a box with a folded corner are met at their frame.
-        Form::Rounded | Form::FrRect => hit_rect(
+        Form::Rounded => hit_rect(
             box_.x,
             box_.y,
             box_.x + box_.w,

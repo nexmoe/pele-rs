@@ -5,8 +5,8 @@
 //! assert_eq!(err.code, pele_rs::ErrorCode::Unsupported);
 //! ```
 //!
-//! The output takes its colors and fonts from CSS custom properties (`--pele-rs-bg`,
-//! `--pele-rs-fg`, `--pele-rs-line`, `--pele-rs-accent`, `--pele-rs-series-1` to `-8`, …), so
+//! The output takes its colors and fonts from CSS custom properties (`--pele-bg`,
+//! `--pele-fg`, `--pele-line`, `--pele-accent`, `--pele-series-1` to `-8`, …), so
 //! a page can re-theme a diagram without rendering it again.
 //!
 //! Behavior, layout and limits follow [pele](https://github.com/obsidianmd/pele).
@@ -24,6 +24,7 @@ mod error;
     feature = "block",
     feature = "usecase",
     feature = "agentflow",
+    feature = "c4",
 ))]
 #[allow(
     dead_code,
@@ -62,7 +63,7 @@ mod util;
 
 pub use detect::DiagramKind;
 pub use error::{Error, ErrorCode};
-pub use options::{Limits, Link, Palette, RenderOptions, Rendered};
+pub use options::{Limits, Link, MonospacePart, Palette, RenderOptions, Rendered};
 pub use text::{
     CachingMeasurer, IconResolver, MathMarkup, MathResolver, MetricsMeasurer, Style, TextMeasurer,
 };
@@ -183,3 +184,6 @@ mod tests {
         assert_eq!(detect_type("nothing"), None);
     }
 }
+
+#[cfg(all(test, feature = "all"))]
+mod official_units;

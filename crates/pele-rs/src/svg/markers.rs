@@ -26,7 +26,7 @@ pub(crate) fn marker(kind: &str, x: f64, y: f64, dx: f64, dy: f64, color: &str) 
             let by = y - dy * ARROW;
             let half = ARROW * 0.42;
             format!(
-                "<path class=\"pele-rs-marker\" d=\"M{},{}L{},{}L{},{}Z\" fill=\"{color}\" stroke=\"none\"/>",
+                "<path class=\"pele-marker\" d=\"M{},{}L{},{}L{},{}Z\" fill=\"{color}\" stroke=\"none\"/>",
                 num(x),
                 num(y),
                 num(bx + nx * half),
@@ -36,7 +36,7 @@ pub(crate) fn marker(kind: &str, x: f64, y: f64, dx: f64, dy: f64, color: &str) 
             )
         }
         "arrow_circle" => format!(
-            "<circle class=\"pele-rs-marker\" cx=\"{}\" cy=\"{}\" r=\"3.5\" fill=\"{color}\" stroke=\"none\"/>",
+            "<circle class=\"pele-marker\" cx=\"{}\" cy=\"{}\" r=\"3.5\" fill=\"{color}\" stroke=\"none\"/>",
             num(x - dx * 4.0),
             num(y - dy * 4.0)
         ),
@@ -47,7 +47,7 @@ pub(crate) fn marker(kind: &str, x: f64, y: f64, dx: f64, dy: f64, color: &str) 
             let (ux, uy) = ((dx + nx) * a, (dy + ny) * a);
             let (vx, vy) = ((dx - nx) * a, (dy - ny) * a);
             format!(
-                "<path class=\"pele-rs-marker\" d=\"M{},{}L{},{}M{},{}L{},{}\"/>",
+                "<path class=\"pele-marker\" d=\"M{},{}L{},{}M{},{}L{},{}\"/>",
                 num(cx - ux),
                 num(cy - uy),
                 num(cx + ux),

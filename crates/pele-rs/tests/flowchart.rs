@@ -82,12 +82,12 @@ fn draws_nodes_edges_and_labels() {
     let out =
         render("flowchart TD\n A[Start] -->|yes| B{Choose}\n B --> C((End))\n B -.-> D>Flag]\n");
     assert_eq!(out.kind, DiagramKind::Flowchart);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-node "), 4);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-edge\""), 3);
-    assert_eq!(count(&out.svg, "class=\"pele-rs-edge-label\""), 1);
-    assert!(out.svg.contains("pele-rs-shape-diam"));
-    assert!(out.svg.contains("pele-rs-shape-circle"));
-    assert!(out.svg.contains("pele-rs-shape-odd"));
+    assert_eq!(count(&out.svg, "class=\"pele-node "), 4);
+    assert_eq!(count(&out.svg, "class=\"pele-edge\""), 3);
+    assert_eq!(count(&out.svg, "class=\"pele-edge-label\""), 1);
+    assert!(out.svg.contains("pele-shape-diam"));
+    assert!(out.svg.contains("pele-shape-circle"));
+    assert!(out.svg.contains("pele-shape-odd"));
     assert!(out.svg.contains("stroke-dasharray=\"3 4\""));
     assert!(out.svg.contains(">yes<"));
 }
@@ -150,7 +150,7 @@ fn draws_every_documented_shape() {
         "odd",
     ] {
         let svg = svg(&format!("flowchart LR\n A@{{ shape: {shape} }} --> B\n"));
-        assert!(svg.contains(&format!("pele-rs-shape-{shape}")), "{shape}");
+        assert!(svg.contains(&format!("pele-shape-{shape}")), "{shape}");
         // The class says which shape it is; the drawing has to be that shape and not the
         // rectangle a shape without a drawing of its own falls back to.
         assert!(!is_plain_rect(&shape_of(&svg, "A")), "{shape}");
@@ -186,7 +186,7 @@ fn resolves_the_shape_aliases() {
             "{alias} is not drawn as {canonical}"
         );
         assert!(
-            alias_svg.contains(&format!("pele-rs-shape-{canonical}")),
+            alias_svg.contains(&format!("pele-shape-{canonical}")),
             "{alias}"
         );
     }
@@ -197,7 +197,7 @@ fn draws_subgraphs_with_their_own_direction() {
     let svg = svg(
         "flowchart TB\n c1-->a2\n subgraph one\n a1-->a2\n end\n subgraph two\n direction LR\n b1-->b2\n end\n one --> two\n",
     );
-    assert_eq!(count(&svg, "class=\"pele-rs-cluster\""), 2);
+    assert_eq!(count(&svg, "class=\"pele-cluster\""), 2);
     assert!(svg.contains(">one<") && svg.contains(">two<"));
     // The subgraph that sets a direction lays its own nodes out in it: the two nodes of `two`
     // are in one row, the two nodes of `one` are not.
@@ -214,12 +214,12 @@ fn applies_classes_and_styles_safely() {
         "flowchart LR\n A:::hot --> B\n classDef hot fill:#f96,stroke:#333,color:#fff\n style B fill:javascript:alert,stroke:red\n linkStyle 0 stroke:#0a0\n",
     );
     assert!(svg.contains("fill:#f96;stroke:#333;"));
-    assert!(svg.contains("pele-rs-node pele-rs-shape-rect hot"));
+    assert!(svg.contains("pele-node pele-shape-rect hot"));
     assert!(!svg.contains("javascript"));
     assert!(svg.contains("stroke:red;"));
     // The colour belongs to the edge, not to the arrowhead that happens to carry it as well.
     assert!(
-        svg.contains("<g class=\"pele-rs-edge\" data-id=\"L_A_B_0\" style=\"stroke:#0a0;\">"),
+        svg.contains("<g class=\"pele-edge\" data-id=\"L_A_B_0\" style=\"stroke:#0a0;\">"),
         "{svg}"
     );
 }
@@ -477,25 +477,21 @@ fn stays_fast_on_large_and_hostile_input() {
 #[test]
 fn draws_the_arrowhead_each_edge_kind_asks_for() {
     let point = svg("flowchart LR\n A --> B\n");
-    assert!(point.contains("<path class=\"pele-rs-marker\""), "{point}");
+    assert!(point.contains("<path class=\"pele-marker\""), "{point}");
     let cross = svg("flowchart LR\n A --x B\n");
     assert!(
-        cross.contains("<path class=\"pele-rs-marker\" d=\"M")
+        cross.contains("<path class=\"pele-marker\" d=\"M")
             && !cross.contains("fill=\"var(--_l)\""),
         "{cross}"
     );
     let circle = svg("flowchart LR\n A o--o B\n");
     assert_eq!(
-        count(&circle, "<circle class=\"pele-rs-marker\""),
+        count(&circle, "<circle class=\"pele-marker\""),
         2,
         "{circle}"
     );
     let double = svg("flowchart LR\n A <--> B\n");
-    assert_eq!(
-        count(&double, "<path class=\"pele-rs-marker\""),
-        2,
-        "{double}"
-    );
+    assert_eq!(count(&double, "<path class=\"pele-marker\""), 2, "{double}");
     assert!(svg("flowchart LR\n A ==> B\n").contains("stroke-width=\"2.5\""));
 }
 
@@ -504,7 +500,7 @@ fn an_invisible_link_takes_room_but_draws_nothing() {
     let plain = render("flowchart LR\n A --> B\n");
     let hidden = render("flowchart LR\n A ~~~ B\n");
     assert!(
-        !hidden.svg.contains("class=\"pele-rs-edge\""),
+        !hidden.svg.contains("class=\"pele-edge\""),
         "{}",
         hidden.svg
     );
@@ -523,11 +519,7 @@ fn styles_every_edge_with_linkstyle_default_and_keeps_only_known_properties() {
 #[test]
 fn applies_a_class_to_several_nodes() {
     let svg = svg("flowchart LR\n A --> B\n classDef hot fill:#f96\n class A,B hot\n");
-    assert_eq!(
-        count(&svg, "pele-rs-node pele-rs-shape-rect hot"),
-        2,
-        "{svg}"
-    );
+    assert_eq!(count(&svg, "pele-node pele-shape-rect hot"), 2, "{svg}");
 }
 
 #[test]
@@ -536,8 +528,7 @@ fn names_edges_and_marks_callback_clicks_without_a_link() {
     assert!(out.svg.contains("data-id=\"e1\""), "{}", out.svg);
     assert!(out.links.is_empty());
     assert!(
-        out.svg
-            .contains("pele-rs-node pele-rs-shape-rect clickable"),
+        out.svg.contains("pele-node pele-shape-rect clickable"),
         "{}",
         out.svg
     );
@@ -578,21 +569,21 @@ fn reads_the_flowchart_config_from_an_init_directive() {
 fn writes_the_accessible_title_and_description() {
     let svg = svg("flowchart LR\n accTitle: the title\n accDescr: the description\n A --> B\n");
     assert!(
-        svg.contains("<title id=\"pele-rs-title\">the title</title>"),
+        svg.contains("<title id=\"pele-title\">the title</title>"),
         "{svg}"
     );
     assert!(
-        svg.contains("<desc id=\"pele-rs-desc\">the description</desc>"),
+        svg.contains("<desc id=\"pele-desc\">the description</desc>"),
         "{svg}"
     );
-    assert!(svg.contains("aria-labelledby=\"pele-rs-title\""), "{svg}");
-    assert!(svg.contains("aria-describedby=\"pele-rs-desc\""), "{svg}");
+    assert!(svg.contains("aria-labelledby=\"pele-title\""), "{svg}");
+    assert!(svg.contains("aria-describedby=\"pele-desc\""), "{svg}");
 }
 
 #[test]
 fn draws_nested_subgraphs_and_stops_at_the_source_limit() {
     let svg = svg("flowchart TB\n subgraph outer\n subgraph inner\n a-->b\n end\n end\n");
-    assert_eq!(count(&svg, "class=\"pele-rs-cluster\""), 2, "{svg}");
+    assert_eq!(count(&svg, "class=\"pele-cluster\""), 2, "{svg}");
     let err = pele_rs::render(
         &format!("flowchart TD\n{}", "A".repeat(60_000)),
         &RenderOptions::default(),

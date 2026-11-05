@@ -32,20 +32,20 @@ pub(crate) fn er_marker(kind: Cardinality, x: f64, y: f64, dx: f64, dy: f64) -> 
     };
     let ring = |back: f64| {
         format!(
-            "<circle class=\"pele-rs-marker\" cx=\"{}\" cy=\"{}\" r=\"{}\" fill=\"var(--_bg)\"/>",
+            "<circle class=\"pele-marker\" cx=\"{}\" cy=\"{}\" r=\"{}\" fill=\"var(--_bg)\"/>",
             num(x - dx * back),
             num(y - dy * back),
             num(RING)
         )
     };
-    let path = |d: String| format!("<path class=\"pele-rs-marker\" d=\"{d}\"/>");
+    let path = |d: String| format!("<path class=\"pele-marker\" d=\"{d}\"/>");
     match kind {
         Cardinality::OnlyOne => path(bar(6.0) + &bar(10.0)),
         Cardinality::ZeroOrOne => path(bar(6.0)) + &ring(13.5),
         Cardinality::OneOrMore => path(foot() + &bar(FOOT_LENGTH + 3.5)),
         Cardinality::ZeroOrMore => path(foot()) + &ring(FOOT_LENGTH + RING + 0.5),
         Cardinality::MdParent => format!(
-            "<path class=\"pele-rs-marker\" d=\"M{}L{}L{}L{}Z\" fill=\"var(--_bg)\"/>",
+            "<path class=\"pele-marker\" d=\"M{}L{}L{}L{}Z\" fill=\"var(--_bg)\"/>",
             at(0.0, 0.0),
             at(6.0, 4.0),
             at(12.0, 0.0),
