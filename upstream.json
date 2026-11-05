@@ -1,0 +1,13 @@
+{
+  "fermaid": {
+    "repository": "https://github.com/tenyi/fermaid",
+    "version": "0.5.1",
+    "commit": "a92da98d33bb7d086d19b295b0c5f77f0d66be1f"
+  },
+  "pele": {
+    "repository": "https://github.com/obsidianmd/pele",
+    "version": "1.9.0",
+    "commit": "e7f092a4de147cc32210913c20e36eaa5fcd0ef1"
+  },
+  "mermaid_syntax": "12.2.0"
+}

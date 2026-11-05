@@ -1,12 +1,18 @@
-# fermaid
+# pele-rs
 
 [English](README.md) | [繁體中文](README.zh-TW.md) | [简体中文](README.zh-CN.md) | **日本語**
 
-[![crates.io](https://img.shields.io/crates/v/fermaid.svg)](https://crates.io/crates/fermaid)
-[![docs.rs](https://img.shields.io/docsrs/fermaid.svg)](https://docs.rs/fermaid)
-[![license](https://img.shields.io/crates/l/fermaid.svg)](https://crates.io/crates/fermaid)
+[fermaid](https://github.com/tenyi/fermaid) から派生した独立プロジェクトで、ネイティブエディター向けに最適化しています。元の Git 履歴、著作者、ライセンスを保持しています。Obsidian の公式プロジェクトではありません。現在のバージョンは Git からインストールしてください。
 
-fermaid は [Mermaid](https://mermaid.js.org) のダイアグラムを純粋な Rust で SVG に変換します。JavaScript ランタイム、ヘッドレスブラウザ、Node.js は不要です。小さく依存関係のない TypeScript 製レンダラー [pele](https://github.com/obsidianmd/pele) の移植で、Mermaid 12.2.0 の構文を対象とし、pele 独自のレイアウトとビジュアルスタイルを採用しています。
+```toml
+[dependencies]
+pele-rs = { git = "https://github.com/nexmoe/pele-rs" }
+```
+
+全図種で再利用できる `parse` / `ParsedDiagram::render`、上限付き `CachingMeasurer`、元ソースへのエラー位置の対応、配色設定の互換性、数値検証を追加しました。オプションの `scene` 機能は usvg による `SvgScene` と resvg に一致する `FontMeasurer` を提供します。既定のビルドには実行時依存関係がありません。[ネイティブ統合ガイド](docs/NATIVE.md)を参照してください。crates.io にはまだ公開していません。
+
+
+pele-rs は [Mermaid](https://mermaid.js.org) のダイアグラムを純粋な Rust で SVG に変換します。JavaScript ランタイム、ヘッドレスブラウザ、Node.js は不要です。小さく依存関係のない TypeScript 製レンダラー [pele](https://github.com/obsidianmd/pele) の移植で、Mermaid 12.2.0 の構文を対象とし、pele 独自のレイアウトとビジュアルスタイルを採用しています。
 
 > **ステータス:** alpha。Mermaid 12.1.0 のすべてのダイアグラムに対応しています。下の表は、それぞれが読み取る記法をまとめたものです。[ロードマップ](docs/ROADMAP.md)を参照してください。
 
@@ -57,11 +63,11 @@ fermaid は [Mermaid](https://mermaid.js.org) のダイアグラムを純粋な 
 ## ライブラリ
 
 ```rust
-let options = fermaid::RenderOptions {
+let options = pele_rs::RenderOptions {
     font_size: Some(14.0),
     ..Default::default()
 };
-match fermaid::render("pie\n  \"Rust\": 70\n  \"Other\": 30", &options) {
+match pele_rs::render("pie\n  \"Rust\": 70\n  \"Other\": 30", &options) {
     Ok(rendered) => println!("{}", rendered.svg),
     Err(e) => eprintln!("{}:{}: {}\n{}", e.line, e.column, e.message, e.snippet),
 }
@@ -69,18 +75,18 @@ match fermaid::render("pie\n  \"Rust\": 70\n  \"Other\": 30", &options) {
 
 `render` は SVG とそのサイズ・リンクを返すか、エラーコード（`Unsupported`、`Syntax`、`Semantic`、`Limit`）、行番号と列番号、問題箇所を示すスニペットを含む `Error` を返します。`detect_type` はレンダリングせずにダイアグラムの種類を判定します。`max_width` にホストで使える幅を指定すると、幅を詰められるダイアグラムは狭く描かれます（円グラフは凡例をグラフの下に移します）。`click` 文のリンクはサニタイズされ、許可されたスキーム（`link_schemes`、デフォルトは `http`、`https`、`mailto`、`tel`）のものだけが残ります。横向きのフローチャートは `max_width` に収まらないときに縦向きで描かれます。ダイアグラムの種類ごとに Cargo feature（`flowchart`、`pie` など）があり、デフォルトの `all` feature にはすべての種類が含まれます。ガントチャートの「今日」は `now`（1970-01-01 UTC からのミリ秒）で決まります。デフォルトは 1970-01-01 で、出力が時計に左右されることはありません。
 
-アイコンと数式はホストが提供します。fermaid 自身はアイコンセットも組版エンジンも持たないためです。`RenderOptions::icons` は名前からアイコンの SVG マークアップを返し（ラベル内の `fa:fa-car` やノードの `icon`）、`RenderOptions::math` はフローチャート、スイムレーン、ステート、クラス、ER、要求、ブロック、シーケンス、ユースケース、かんばん、マインドマップのラベルにある `$$` の間の TeX を組版します。提供されない場合、アイコンは省かれ、TeX は書かれたままになります。ホストが返す内容はそのまま SVG に入るため、信頼できるものでなければなりません。
+アイコンと数式はホストが提供します。pele-rs 自身はアイコンセットも組版エンジンも持たないためです。`RenderOptions::icons` は名前からアイコンの SVG マークアップを返し（ラベル内の `fa:fa-car` やノードの `icon`）、`RenderOptions::math` はフローチャート、スイムレーン、ステート、クラス、ER、要求、ブロック、シーケンス、ユースケース、かんばん、マインドマップのラベルにある `$$` の間の TeX を組版します。提供されない場合、アイコンは省かれ、TeX は書かれたままになります。ホストが返す内容はそのまま SVG に入るため、信頼できるものでなければなりません。
 
 ## コマンドライン
 
 ```sh
-cargo install fermaid-cli                # crates.io からインストール
-cargo install --path crates/fermaid-cli  # チェックアウトからインストール
-fermaid diagram.mmd -o diagram.svg
-cat diagram.mmd | fermaid --font-size 14 --max-width 360 --id-prefix fig1 > diagram.svg
-fermaid plan.mmd --now 1700000000000 -o plan.svg   # 今日のマーカー付きのガントチャート
-fermaid page.mmd --config '{"theme": "dark"}' --no-links --no-images -o page.svg
-fermaid page.mmd --palette dark -o page.svg   # var() を読めないビューア（resvg など）向けに色を実値で出力
+cargo install --git https://github.com/nexmoe/pele-rs pele-rs-cli
+cargo install --path crates/pele-rs-cli  # チェックアウトからインストール
+pele-rs diagram.mmd -o diagram.svg
+cat diagram.mmd | pele-rs --font-size 14 --max-width 360 --id-prefix fig1 > diagram.svg
+pele-rs plan.mmd --now 1700000000000 -o plan.svg   # 今日のマーカー付きのガントチャート
+pele-rs page.mmd --config '{"theme": "dark"}' --no-links --no-images -o page.svg
+pele-rs page.mmd --palette dark -o page.svg   # var() を読めないビューア（resvg など）向けに色を実値で出力
 ```
 
 ## テーマ
@@ -89,23 +95,23 @@ SVG の色とフォントは CSS カスタムプロパティから取得され�
 
 ```css
 svg {
-  --fermaid-bg: #1e1e1e;
-  --fermaid-fg: #dcddde;
-  --fermaid-line: #999;
-  --fermaid-accent: #7f6df2;
-  --fermaid-font: "Inter", sans-serif;
+  --pele-rs-bg: #1e1e1e;
+  --pele-rs-fg: #dcddde;
+  --pele-rs-line: #999;
+  --pele-rs-accent: #7f6df2;
+  --pele-rs-font: "Inter", sans-serif;
 }
 ```
 
-使用できる変数：`--fermaid-bg`、`--fermaid-fg`、`--fermaid-muted`、`--fermaid-line`、`--fermaid-surface`、`--fermaid-surface-alt`、`--fermaid-border`、`--fermaid-accent`、`--fermaid-radius`、`--fermaid-font`、`--fermaid-font-mono`、そして円グラフの扇形などデータ系列の色に使う `--fermaid-series-1` から `--fermaid-series-8`。
+使用できる変数：`--pele-rs-bg`、`--pele-rs-fg`、`--pele-rs-muted`、`--pele-rs-line`、`--pele-rs-surface`、`--pele-rs-surface-alt`、`--pele-rs-border`、`--pele-rs-accent`、`--pele-rs-radius`、`--pele-rs-font`、`--pele-rs-font-mono`、そして円グラフの扇形などデータ系列の色に使う `--pele-rs-series-1` から `--pele-rs-series-8`。
 
 ### CSS 変数を読めないビューア
 
 resvg や librsvg などの SVG レンダラーは `var()` を読み取らないため、既定の SVG は黒一色で描画されます。`RenderOptions::palette` を設定すると、すべての色が実際の値で書き出され、SVG に `var()` は残りません（出力は決定的なままで、パレットを設定しなければ従来と完全に同じです）。
 
 ```rust
-let options = fermaid::RenderOptions {
-    palette: Some(fermaid::Palette::dark()), // または Palette::light()、独自の色
+let options = pele_rs::RenderOptions {
+    palette: Some(pele_rs::Palette::dark()), // または Palette::light()、独自の色
     ..Default::default()
 };
 ```
@@ -129,7 +135,7 @@ node tools/oracle/diff.mjs ../pele   # Mermaid 自身のパーサーとの差分
 
 ## クレジット
 
-fermaid のアルゴリズム、テキスト計測データ、制限は、Obsidian チームの kepano による [pele](https://github.com/obsidianmd/pele)（MIT）から移植しています。ダイアグラムの構文と、テストに使うパーサー仕様は [Mermaid](https://github.com/mermaid-js/mermaid)（MIT）に由来します。詳しくは [NOTICE](NOTICE) を参照してください。
+pele-rs のアルゴリズム、テキスト計測データ、制限は、Obsidian チームの kepano による [pele](https://github.com/obsidianmd/pele)（MIT）から移植しています。ダイアグラムの構文と、テストに使うパーサー仕様は [Mermaid](https://github.com/mermaid-js/mermaid)（MIT）に由来します。詳しくは [NOTICE](NOTICE) を参照してください。
 
 ## ライセンス
 

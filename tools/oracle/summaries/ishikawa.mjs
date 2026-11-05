@@ -44,7 +44,7 @@ export const ishikawaReference = async (peleDir, src) => {
     // Mermaid's Diagram.fromText encodes entities and adds a line break.
     parser.parse(bundle.encodeEntities(src) + '\n');
   } catch (e) {
-    // Mermaid's own parser refuses the source; fermaid refuses it as a syntax error as well.
+    // Mermaid's own parser refuses the source; pele-rs refuses it as a syntax error as well.
     throw Object.assign(new Error(e.message), { code: 'syntax' });
   }
   return ishikawaSummary(db);

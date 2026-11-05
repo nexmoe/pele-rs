@@ -1,3 +1,7 @@
+# Historical fermaid roadmap
+
+This is the unmodified upstream roadmap at fermaid 0.5.1. Package names, release claims and completed milestones below refer to fermaid. Current pele-rs behavior and integration are documented in [NATIVE.md](NATIVE.md).
+
 # fermaid Roadmap
 
 fermaid renders Mermaid diagram text to SVG in pure Rust. Behavior, layout

@@ -4,9 +4,9 @@
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|src: &str| {
-    let options = fermaid::RenderOptions::default();
-    if let Ok(rendered) = fermaid::render(src, &options) {
+    let options = pele_rs::RenderOptions::default();
+    if let Ok(rendered) = pele_rs::render(src, &options) {
         assert!(rendered.svg.chars().count() <= options.limits.output);
     }
-    let _ = fermaid::detect_type(src);
+    let _ = pele_rs::detect_type(src);
 });

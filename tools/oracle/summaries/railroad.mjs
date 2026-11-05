@@ -371,7 +371,7 @@ export const railroadReference = async (peleDir, src) => {
       rules: notation.rules(ast),
     });
   } catch (e) {
-    // Mermaid's parser refuses the source; fermaid refuses it as well.
+    // Mermaid's parser refuses the source; pele-rs refuses it as well.
     const err = new Error(e.message);
     err.code = 'syntax';
     throw err;

@@ -4,8 +4,6 @@ name: fuzz
 # is too long to wait for on every push, so the run happens nightly and on demand instead. The
 # regular CI keeps the format, the lints and the tests, which take a couple of minutes.
 on:
-  schedule:
-    - cron: "43 2 * * *"
   workflow_dispatch:
     inputs:
       seconds:

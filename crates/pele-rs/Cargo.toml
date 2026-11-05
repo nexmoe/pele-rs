@@ -1,0 +1,58 @@
+[package]
+name = "pele-rs"
+description = "Render Mermaid diagram text to SVG in pure Rust"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+keywords = ["mermaid", "svg", "diagram"]
+categories = ["visualization", "rendering"]
+
+[features]
+default = ["all"]
+scene = ["dep:usvg"]
+# Every diagram type. Each type gets its own feature as it lands.
+all = ["class", "er", "flowchart", "pie", "requirement", "sequence", "state", "timeline", "journey", "kanban", "mindmap", "gantt", "sankey", "xychart", "quadrantchart", "git", "block", "architecture", "packet", "radar", "treemap", "c4", "usecase", "info", "venn", "treeview", "cynefin", "ishikawa", "eventmodeling", "wardley", "railroad", "swimlane", "agentflow"]
+class = []
+er = []
+requirement = []
+flowchart = []
+pie = []
+sequence = []
+state = []
+timeline = []
+journey = []
+kanban = []
+mindmap = []
+gantt = []
+sankey = []
+xychart = []
+quadrantchart = []
+git = []
+block = []
+agentflow = []
+# The swimlane diagram is a flowchart whose subgraphs are the lanes, so it reads the flowchart.
+swimlane = ["flowchart"]
+railroad = []
+wardley = []
+eventmodeling = []
+ishikawa = []
+cynefin = []
+treeview = []
+venn = []
+info = []
+usecase = []
+c4 = []
+treemap = []
+radar = []
+packet = []
+architecture = []
+
+[dependencies]
+usvg = { version = "0.49", default-features = false, features = ["text"], optional = true }
+
+[dev-dependencies]
+insta = "1"
+usvg = "0.49"

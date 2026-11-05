@@ -1,12 +1,18 @@
-# fermaid
+# pele-rs
 
 **English** | [繁體中文](README.zh-TW.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
-[![crates.io](https://img.shields.io/crates/v/fermaid.svg)](https://crates.io/crates/fermaid)
-[![docs.rs](https://img.shields.io/docsrs/fermaid.svg)](https://docs.rs/fermaid)
-[![license](https://img.shields.io/crates/l/fermaid.svg)](https://crates.io/crates/fermaid)
+An independent derivative of [fermaid](https://github.com/tenyi/fermaid), optimized for native editors. The original Git history, authorship and licenses are retained; this is not an official Obsidian project. Install this version from Git:
 
-fermaid renders [Mermaid](https://mermaid.js.org) diagrams to SVG in pure Rust — no JavaScript runtime, no headless browser, no Node.js. It is a port of [pele](https://github.com/obsidianmd/pele), a small, dependency-free TypeScript renderer, and targets Mermaid 12.1.0 syntax with pele's own layout and visual style.
+```toml
+[dependencies]
+pele-rs = { git = "https://github.com/nexmoe/pele-rs" }
+```
+
+New in this derivative: reusable `parse` / `ParsedDiagram::render` for every diagram type; bounded `CachingMeasurer`; original-source diagnostics; chart palette compatibility; numeric validation; and optional `scene::SvgScene` / `scene::FontMeasurer` for native painters. The `scene` feature uses usvg; default builds remain dependency-free. See [native integration](docs/NATIVE.md) for API boundaries and examples. This version has not been published to crates.io.
+
+
+pele-rs renders [Mermaid](https://mermaid.js.org) diagrams to SVG in pure Rust — no JavaScript runtime, no headless browser, no Node.js. It is a port of [pele](https://github.com/obsidianmd/pele), a small, dependency-free TypeScript renderer, and targets Mermaid 12.1.0 syntax with pele's own layout and visual style.
 
 > **Status:** alpha. Every diagram type of Mermaid 12.2.0 is supported; the table below says what each one reads. See the [roadmap](docs/ROADMAP.md).
 
@@ -57,11 +63,11 @@ fermaid renders [Mermaid](https://mermaid.js.org) diagrams to SVG in pure Rust �
 ## Library
 
 ```rust
-let options = fermaid::RenderOptions {
+let options = pele_rs::RenderOptions {
     font_size: Some(14.0),
     ..Default::default()
 };
-match fermaid::render("pie\n  \"Rust\": 70\n  \"Other\": 30", &options) {
+match pele_rs::render("pie\n  \"Rust\": 70\n  \"Other\": 30", &options) {
     Ok(rendered) => println!("{}", rendered.svg),
     Err(e) => eprintln!("{}:{}: {}\n{}", e.line, e.column, e.message, e.snippet),
 }
@@ -69,18 +75,18 @@ match fermaid::render("pie\n  \"Rust\": 70\n  \"Other\": 30", &options) {
 
 `render` returns the SVG with its size and links, or an `Error` with a code (`Unsupported`, `Syntax`, `Semantic`, `Limit`), a line and column, and a snippet that points at the problem. `detect_type` tells the diagram type without rendering. Set `max_width` to the width the host has, and a diagram that can draw itself narrower does (a pie chart moves its legend below the chart). Links from `click` statements are sanitized and kept only when their scheme is allowed (`link_schemes`, by default `http`, `https`, `mailto` and `tel`); a flowchart that runs across turns to run down when it does not fit `max_width`. Each diagram type is a Cargo feature (`flowchart`, `pie`, …); the default feature `all` includes every type. A gantt chart dates "today" from `now`, in milliseconds since 1970-01-01 UTC; it defaults to 1970-01-01 so that output never depends on the clock.
 
-Icons and math come from the host, as fermaid has neither an icon set nor a typesetter. `RenderOptions::icons` gives the SVG markup of an icon by its name (`fa:fa-car` in a label, the `icon` of a node), and `RenderOptions::math` typesets the TeX between `$$` in the labels of flowcharts, swimlanes, state, class, ER, requirement, block, sequence, use case, kanban and mind map diagrams. Without them an icon is left out and the TeX stays as written. What the host returns is put into the SVG as it is, so it has to come from a source you trust.
+Icons and math come from the host, as pele-rs has neither an icon set nor a typesetter. `RenderOptions::icons` gives the SVG markup of an icon by its name (`fa:fa-car` in a label, the `icon` of a node), and `RenderOptions::math` typesets the TeX between `$$` in the labels of flowcharts, swimlanes, state, class, ER, requirement, block, sequence, use case, kanban and mind map diagrams. Without them an icon is left out and the TeX stays as written. What the host returns is put into the SVG as it is, so it has to come from a source you trust.
 
 ## Command line
 
 ```sh
-cargo install fermaid-cli                # from crates.io
-cargo install --path crates/fermaid-cli  # from a checkout
-fermaid diagram.mmd -o diagram.svg
-cat diagram.mmd | fermaid --font-size 14 --max-width 360 --id-prefix fig1 > diagram.svg
-fermaid plan.mmd --now 1700000000000 -o plan.svg   # a gantt chart with today's marker
-fermaid page.mmd --config '{"theme": "dark"}' --no-links --no-images -o page.svg
-fermaid page.mmd --palette dark -o page.svg   # plain colors, for resvg and other viewers without var()
+cargo install --git https://github.com/nexmoe/pele-rs pele-rs-cli
+cargo install --path crates/pele-rs-cli  # from a checkout
+pele-rs diagram.mmd -o diagram.svg
+cat diagram.mmd | pele-rs --font-size 14 --max-width 360 --id-prefix fig1 > diagram.svg
+pele-rs plan.mmd --now 1700000000000 -o plan.svg   # a gantt chart with today's marker
+pele-rs page.mmd --config '{"theme": "dark"}' --no-links --no-images -o page.svg
+pele-rs page.mmd --palette dark -o page.svg   # plain colors, for resvg and other viewers without var()
 ```
 
 ## Theming
@@ -89,23 +95,23 @@ The SVG takes its colors and fonts from CSS custom properties, with built-in fal
 
 ```css
 svg {
-  --fermaid-bg: #1e1e1e;
-  --fermaid-fg: #dcddde;
-  --fermaid-line: #999;
-  --fermaid-accent: #7f6df2;
-  --fermaid-font: "Inter", sans-serif;
+  --pele-rs-bg: #1e1e1e;
+  --pele-rs-fg: #dcddde;
+  --pele-rs-line: #999;
+  --pele-rs-accent: #7f6df2;
+  --pele-rs-font: "Inter", sans-serif;
 }
 ```
 
-Available variables: `--fermaid-bg`, `--fermaid-fg`, `--fermaid-muted`, `--fermaid-line`, `--fermaid-surface`, `--fermaid-surface-alt`, `--fermaid-border`, `--fermaid-accent`, `--fermaid-radius`, `--fermaid-font`, `--fermaid-font-mono`, and `--fermaid-series-1` to `--fermaid-series-8` for the colors of chart series such as pie slices.
+Available variables: `--pele-rs-bg`, `--pele-rs-fg`, `--pele-rs-muted`, `--pele-rs-line`, `--pele-rs-surface`, `--pele-rs-surface-alt`, `--pele-rs-border`, `--pele-rs-accent`, `--pele-rs-radius`, `--pele-rs-font`, `--pele-rs-font-mono`, and `--pele-rs-series-1` to `--pele-rs-series-8` for the colors of chart series such as pie slices.
 
 ### Viewers without CSS variables
 
 resvg, librsvg and other SVG renderers do not read `var()`, so a default SVG is drawn black in them. Set `RenderOptions::palette` and every color is written out as a plain value, with no `var()` left in the SVG (the output stays deterministic, and without a palette it is exactly as before):
 
 ```rust
-let options = fermaid::RenderOptions {
-    palette: Some(fermaid::Palette::dark()), // or Palette::light(), or your own colors
+let options = pele_rs::RenderOptions {
+    palette: Some(pele_rs::Palette::dark()), // or Palette::light(), or your own colors
     ..Default::default()
 };
 ```
@@ -129,7 +135,7 @@ The minimum supported Rust version is 1.85.
 
 ## Credits
 
-fermaid's algorithms, text metrics and limits are ported from [pele](https://github.com/obsidianmd/pele) by kepano (MIT), from the Obsidian team. The diagram syntax and the parser specifications used as tests come from [Mermaid](https://github.com/mermaid-js/mermaid) (MIT). See [NOTICE](NOTICE).
+pele-rs's algorithms, text metrics and limits are ported from [pele](https://github.com/obsidianmd/pele) by kepano (MIT), from the Obsidian team. The diagram syntax and the parser specifications used as tests come from [Mermaid](https://github.com/mermaid-js/mermaid) (MIT). See [NOTICE](NOTICE).
 
 ## License
 

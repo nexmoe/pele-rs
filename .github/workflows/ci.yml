@@ -41,42 +41,42 @@ jobs:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check
-      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo clippy --all-targets --all-features -- -D warnings
       # Only the library: the CLI turns its default features back on.
-      - run: cargo clippy -p fermaid --all-targets --no-default-features -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features pie -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features flowchart -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features sequence -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features state -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features class -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features er -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features requirement -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features timeline -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features journey -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features kanban -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features mindmap -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features gantt -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features sankey -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features xychart -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features quadrantchart -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features git -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features block -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features architecture -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features packet -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features radar -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features treemap -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features ishikawa -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features c4 -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features usecase -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features info -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features venn -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features treeview -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features cynefin -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features eventmodeling -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features wardley -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features railroad -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features swimlane -- -D warnings
-      - run: cargo clippy -p fermaid --all-targets --no-default-features --features agentflow -- -D warnings
-      - run: cargo build -p fermaid --target wasm32-unknown-unknown
-      - run: cargo test
-      - run: cargo test -p fermaid --no-default-features
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features pie -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features flowchart -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features sequence -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features state -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features class -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features er -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features requirement -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features timeline -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features journey -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features kanban -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features mindmap -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features gantt -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features sankey -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features xychart -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features quadrantchart -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features git -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features block -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features architecture -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features packet -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features radar -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features treemap -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features ishikawa -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features c4 -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features usecase -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features info -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features venn -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features treeview -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features cynefin -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features eventmodeling -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features wardley -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features railroad -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features swimlane -- -D warnings
+      - run: cargo clippy -p pele-rs --all-targets --no-default-features --features agentflow -- -D warnings
+      - run: cargo build -p pele-rs --target wasm32-unknown-unknown
+      - run: cargo test --all-features
+      - run: cargo test -p pele-rs --no-default-features

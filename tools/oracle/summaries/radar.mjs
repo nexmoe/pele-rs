@@ -84,7 +84,7 @@ export const radarReference = async (peleDir, src) => {
     // sees it, and adds a line break to the text it parses.
     ast = await pele.langiumParse('radar', pele.encodeEntities(src) + '\n');
   } catch (e) {
-    // Mermaid refuses the text in its grammar; fermaid calls that a syntax error.
+    // Mermaid refuses the text in its grammar; pele-rs calls that a syntax error.
     const error = new Error(String(e.message ?? e));
     error.code = 'syntax';
     throw error;

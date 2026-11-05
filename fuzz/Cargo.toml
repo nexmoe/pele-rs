@@ -1,5 +1,5 @@
 [package]
-name = "fermaid-fuzz"
+name = "pele-rs-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2024"
@@ -12,7 +12,7 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-fermaid = { path = "../crates/fermaid" }
+pele_rs = { package = "pele-rs", path = "../crates/pele-rs" }
 
 [[bin]]
 name = "render"

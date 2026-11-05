@@ -2,7 +2,7 @@
 //
 // Mermaid parses a treemap with its own Langium parser, so the model is filled from Mermaid's own
 // syntax tree. The tree and the classes are built by pele's port of Mermaid's treemap database,
-// and the boxes are laid out by pele's squarified treemap, which is the layout fermaid draws.
+// and the boxes are laid out by pele's squarified treemap, which is the layout pele-rs draws.
 //
 // This module is the shape every summary module of this directory has: the summary of the model,
 // the modules of a pele checkout the reference needs, what a corpus entry of the type starts
@@ -102,7 +102,7 @@ export const treemapReference = async (peleDir, src) => {
     });
     return treemapSummary(model);
   } catch (e) {
-    // Mermaid's parser refuses the source; fermaid refuses it as well.
+    // Mermaid's parser refuses the source; pele-rs refuses it as well.
     const err = new Error(e.message);
     err.code = 'syntax';
     throw err;

@@ -90,7 +90,7 @@ export const treeviewReference = async (peleDir, src) => {
     const model = b.buildTreeView(ast, undefined);
     return treeviewSummary(model);
   } catch (e) {
-    // Mermaid's parser refuses the source; fermaid refuses it as well.
+    // Mermaid's parser refuses the source; pele-rs refuses it as well.
     const err = new Error(String(e.message ?? e));
     err.code = 'syntax';
     throw err;

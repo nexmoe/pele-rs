@@ -1,0 +1,5 @@
+---
+source: crates/pele-rs/tests/pie.rs
+expression: svg(src)
+---
+<svg xmlns="http://www.w3.org/2000/svg" class="pele-rs pele-rs-pie" viewBox="0 0 256 256" width="256" height="256" style="max-width:100%;height:auto;--_bg:var(--pele-rs-bg,#fff);--_fg:var(--pele-rs-fg,#1f1f1f);--_m:var(--pele-rs-muted,#6e6e6e);--_l:var(--pele-rs-line,#1f1f1f);--_s:var(--pele-rs-surface,#f3f3f3);--_a:var(--pele-rs-surface-alt,#e6e6e6);--_b:var(--pele-rs-border,#8a8a8a);--_c:var(--pele-rs-accent,#5b7bd5);color:var(--_fg);--_fm:var(--pele-rs-font-mono,monospace);font:16px sans-serif;letter-spacing:normal;word-spacing:normal;text-transform:none;direction:ltr;font-family:var(--pele-rs-font,sans-serif)" fill="var(--_fg)" role="graphics-document document" aria-roledescription="pie"><g class="pele-rs-slices" transform="translate(128,128)" stroke="var(--_bg)" stroke-width="1" stroke-linejoin="round"><circle class="pele-rs-slice" r="120" fill="none" stroke="var(--_b)"/></g></svg>

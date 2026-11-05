@@ -1,4 +1,4 @@
-// Dev-only differential fuzzing: parses inputs with Mermaid's own parsers and with fermaid's,
+// Dev-only differential fuzzing: parses inputs with Mermaid's own parsers and with pele-rs's,
 // and reports every input on which the two disagree.
 //
 //   node tools/oracle/diff.mjs <pele checkout> [--count N] [--seed S] [pie] [flowchart] [sequence] [state] [class] [er] [requirement] [gantt] [timeline] [journey] [kanban] [mindmap] [url]
@@ -9,7 +9,7 @@
 // Mermaid's flowchart, sequence, state, class, ER, gantt, timeline, journey, kanban and mind map
 // grammars, which pele vendors, driving pele's port of Mermaid's model. `url` checks the link
 // sanitizer against `@braintree/sanitize-url`, which Mermaid applies to click targets, on
-// addresses mutated from a list below. fermaid's side runs as the ignored `oracle_dump` test of
+// addresses mutated from a list below. pele-rs's side runs as the ignored `oracle_dump` test of
 // each type. Both sides are reduced to the summaries in `lib.mjs`, and errors to just "error".
 //
 // Differences that are intended are listed in KNOWN.md, as a type and a JSON-quoted input on
@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 import { asYy, classSummary, erSummary, flowSummary, ganttSummary, gitSummary, loadPele, pieSummary, requirementSummary, timelineSummary, journeySummary, kanbanSummary, mindmapSummary, sankeySummary, seqSummary, stateSummary, xychartSummary, quadrantSummary } from './lib.mjs';
 import { loadSummaries } from './summaries/index.mjs';
 
-// Gantt dates are local time in pele and UTC in fermaid, so the run pins the zone to UTC,
+// Gantt dates are local time in pele and UTC in pele-rs, so the run pins the zone to UTC,
 // as tools/oracle/golden.mjs does.
 process.env.TZ = 'UTC';
 
@@ -329,7 +329,7 @@ const known = new Set(
 );
 
 process.chdir(pele);
-const work = mkdtempSync(join(tmpdir(), 'fermaid-diff-'));
+const work = mkdtempSync(join(tmpdir(), 'pele-rs-diff-'));
 const runs = {};
 for (const type of types) {
   const spec = TYPES[type];
@@ -338,7 +338,7 @@ for (const type of types) {
   const next = m.mutator(corpus, [...m.PAYLOADS.slice(0, 8), ...spec.fragments], m.random(seed));
   const inputs = [...corpus];
   for (let i = 0; i < count; i++) inputs.push(next());
-  // fermaid reads the inputs as JSON into Rust strings, which cannot hold a lone surrogate.
+  // pele-rs reads the inputs as JSON into Rust strings, which cannot hold a lone surrogate.
   const kept = inputs.filter((s) => s.length <= 2000 && s.isWellFormed());
   const expected = [];
   for (const src of kept) {
@@ -352,14 +352,14 @@ for (const type of types) {
   runs[type] = { kept, expected, corpus: corpus.length };
 }
 
-execFileSync('cargo', ['test', '-q', '-p', 'fermaid', '--lib', 'oracle_dump', '--', '--ignored'], {
+execFileSync('cargo', ['test', '-q', '-p', 'pele-rs', '--lib', 'oracle_dump', '--', '--ignored'], {
   cwd: root,
-  env: { ...process.env, FERMAID_ORACLE: work },
+  env: { ...process.env, PELE_RS_ORACLE: work },
   stdio: ['ignore', 'ignore', 'inherit'],
 });
 
 // Node's URL parser (ada) leaves `.` and `..` segments in a path that has a segment starting
-// with a dot; the WHATWG standard, which browsers and fermaid follow, resolves them. An address
+// with a dot; the WHATWG standard, which browsers and pele-rs follow, resolves them. An address
 // on which only that differs is a known difference.
 function resolveDots(url) {
   const m = /^(https?:\/\/[^/?#]*)([^?#]*)(.*)$/s.exec(url);
@@ -402,7 +402,7 @@ for (const type of types) {
       `${listed} known differences, ${differ.length} unexplained`
   );
   for (const { src, want, have } of differ.slice(0, 10)) {
-    console.log(`  ${JSON.stringify(src)}\n    mermaid: ${JSON.stringify(want)}\n    fermaid: ${JSON.stringify(have)}`);
+    console.log(`  ${JSON.stringify(src)}\n    mermaid: ${JSON.stringify(want)}\n    pele-rs: ${JSON.stringify(have)}`);
   }
 }
 process.exit(unexplained ? 1 : 0);

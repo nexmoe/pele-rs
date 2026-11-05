@@ -1,0 +1,16 @@
+[package]
+name = "pele-rs-cli"
+description = "Command-line tool that renders Mermaid diagram text to SVG"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "../../README.md"
+
+[[bin]]
+name = "pele-rs"
+path = "src/main.rs"
+
+[dependencies]
+pele_rs = { package = "pele-rs", path = "../pele-rs", version = "0.6.0" }

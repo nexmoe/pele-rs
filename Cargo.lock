@@ -122,21 +122,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
-name = "fermaid"
-version = "0.5.1"
-dependencies = [
- "insta",
- "usvg",
-]
-
-[[package]]
-name = "fermaid-cli"
-version = "0.5.1"
-dependencies = [
- "fermaid",
-]
-
-[[package]]
 name = "flate2"
 version = "1.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -293,6 +278,21 @@ name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
+
+[[package]]
+name = "pele-rs"
+version = "0.6.0"
+dependencies = [
+ "insta",
+ "usvg",
+]
+
+[[package]]
+name = "pele-rs-cli"
+version = "0.6.0"
+dependencies = [
+ "pele-rs",
+]
 
 [[package]]
 name = "pico-args"

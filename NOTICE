@@ -1,3 +1,11 @@
+pele-rs
+Independent derivative of tenyi/fermaid v0.5.1
+Upstream: https://github.com/tenyi/fermaid
+Base commit: a92da98d33bb7d086d19b295b0c5f77f0d66be1f
+Changes Copyright (c) 2026 Nexmoe
+
+Original upstream notices follow unchanged.
+
 fermaid
 Copyright (c) 2026 The fermaid Authors
 Multi-licensed under MIT, Apache-2.0, BSD-3-Clause, or 0BSD (see LICENSE).

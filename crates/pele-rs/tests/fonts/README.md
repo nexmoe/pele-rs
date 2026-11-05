@@ -1,0 +1,1 @@
+The tiny Pele Test font is an original test fixture generated with FontTools. Each glyph is a rectangle with a 600-unit advance. It contains no third-party font outlines and is covered by this repository's licenses. It makes font and scene tests independent of system fonts.

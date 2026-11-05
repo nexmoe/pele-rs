@@ -93,7 +93,7 @@ export const vennReference = async (peleDir, src) => {
     // sees it, and adds a line break.
     parser.parse(bundle.encodeEntities(src) + '\n');
   } catch (e) {
-    // Mermaid refuses the text in its grammar; fermaid calls that a syntax error. A union of
+    // Mermaid refuses the text in its grammar; pele-rs calls that a syntax error. A union of
     // one identifier is the exception: the text follows the grammar but says something invalid,
     // which is a semantic error.
     const message = String(e.message ?? e);

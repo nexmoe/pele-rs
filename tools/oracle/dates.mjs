@@ -3,7 +3,7 @@
 //   node tools/oracle/dates.mjs
 //
 // The reference is V8 itself: `new Date(text)` in Node, with the zone pinned to UTC, since
-// fermaid reads and draws dates in UTC.
+// pele-rs reads and draws dates in UTC.
 process.env.TZ = 'UTC';
 
 import { execFileSync } from 'node:child_process';
@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const target = join(root, 'crates/fermaid/src/diagrams/gantt/date_cases.rs');
+const target = join(root, 'crates/pele-rs/src/diagrams/gantt/date_cases.rs');
 
 // The forms the parser has to read, and the ones it has to refuse.
 const seeds = [

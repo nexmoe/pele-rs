@@ -1,10 +1,10 @@
 // Dev-only: writes what the reference makes of each generated Mermaid spec case, as golden data
 // for the compat tests. pele passes Mermaid's own specs (less what its SKIPPED.md lists), so a
-// case on which fermaid's model matches the reference's passes the spec too.
+// case on which pele-rs's model matches the reference's passes the spec too.
 //
 //   node tools/oracle/golden.mjs <pele checkout> <type>
 //
-// The checkout needs `npm ci` for esbuild. Writes crates/fermaid/tests/compat/<type>/expected.rs.
+// The checkout needs `npm ci` for esbuild. Writes crates/pele-rs/tests/compat/<type>/expected.rs.
 // A type that has a module in `summaries/` is read with its own reference; the others are read
 // with the reference written here.
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { asYy, classSummary, erSummary, flowSummary, ganttSummary, gitSummary, memberSummary, loadPele, journeySummary, kanbanSummary, mindmapSummary, requirementSummary, timelineSummary, seqSummary, stateSummary, sankeySummary, xychartSummary, quadrantSummary } from './lib.mjs';
 import { loadSummaries } from './summaries/index.mjs';
 
-// Gantt dates are local time in pele and UTC in fermaid.
+// Gantt dates are local time in pele and UTC in pele-rs.
 process.env.TZ = 'UTC';
 const [peleDir, type] = process.argv.slice(2);
 const summaries = await loadSummaries();
@@ -87,7 +87,7 @@ function rustString(lit) {
   return out;
 }
 
-const casesRs = readFileSync(join(root, `crates/fermaid/tests/compat/${type}/cases.rs`), 'utf8');
+const casesRs = readFileSync(join(root, `crates/pele-rs/tests/compat/${type}/cases.rs`), 'utf8');
 const cases = [...casesRs.matchAll(/name: ("(?:[^"\\]|\\.)*"),\n\s*src: ("(?:[^"\\]|\\.)*"),/g)].map((m) => ({
   name: rustString(m[1]),
   src: rustString(m[2]),
@@ -183,10 +183,13 @@ for (const { name, src } of cases) {
   }
   body += `    (${JSON.stringify(name)}, ${JSON.stringify(result)}),\n`;
 }
-const target = join(root, `crates/fermaid/tests/compat/${type}/expected.rs`);
+const target = join(root, `crates/pele-rs/tests/compat/${type}/expected.rs`);
+if (cases.length === 0) throw new Error(`No ${type} cases found; refusing to replace the golden file.`);
+const reference = JSON.parse(readFileSync(join(root, 'upstream.json'), 'utf8')).pele;
 writeFileSync(
   target,
   `// What pele 1.9.0 makes of each case in cases.rs, as summarized by tools/oracle/golden.mjs.\n` +
+    `// Reference: ${reference.repository} at ${reference.commit}.\n` +
     `// Generated; do not edit.\n\nconst EXPECTED: &[(&str, &str)] = &[\n${body}];\n`
 );
 console.log(`wrote ${cases.length} results to ${target}`);

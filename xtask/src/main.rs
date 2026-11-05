@@ -1,6 +1,6 @@
 //! Development tasks. `cargo xtask compat <TYPE> --pele <DIR>` reads the Mermaid spec cases that
 //! pele ports into `tests/compat/<TYPE>` and writes them out as Rust test data, in
-//! `crates/fermaid/tests/compat/<TYPE>/cases.rs`.
+//! `crates/pele-rs/tests/compat/<TYPE>/cases.rs`.
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
@@ -10,7 +10,7 @@ const USAGE: &str = "\
 Usage: cargo xtask compat <TYPE> --pele <DIR>
 
 Converts pele's ported Mermaid spec cases for TYPE (a folder name in pele's tests/compat,
-such as pie) into crates/fermaid/tests/compat/TYPE/cases.rs.";
+such as pie) into crates/pele-rs/tests/compat/TYPE/cases.rs.";
 
 fn main() -> ExitCode {
     match run(std::env::args().skip(1).collect()) {
@@ -91,7 +91,7 @@ fn compat(kind: &str, pele: &Path) -> Result<String, String> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .ok_or("no workspace root")?;
-    let target = root.join("crates/fermaid/tests/compat").join(kind);
+    let target = root.join("crates/pele-rs/tests/compat").join(kind);
     std::fs::create_dir_all(&target).map_err(|e| format!("{}: {e}", target.display()))?;
     let target = target.join("cases.rs");
     std::fs::write(&target, out).map_err(|e| format!("{}: {e}", target.display()))?;

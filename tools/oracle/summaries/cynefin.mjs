@@ -69,7 +69,7 @@ export const cynefinReference = async (peleDir, src) => {
     const ast = await b.mermaidParse('cynefin', b.encodeEntities(src) + '\n');
     return cynefinSummary(b.buildCynefin(ast, undefined));
   } catch (e) {
-    // Mermaid's parser refuses the source; fermaid refuses it as well.
+    // Mermaid's parser refuses the source; pele-rs refuses it as well.
     const err = new Error(e.message);
     err.code = 'syntax';
     throw err;

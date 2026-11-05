@@ -1,5 +1,0 @@
----
-source: crates/fermaid/tests/info.rs
-expression: svg(&src)
----
-<svg xmlns="http://www.w3.org/2000/svg" class="fermaid fermaid-info" viewBox="0 0 118 40" width="118" height="40" style="max-width:100%;height:auto;--_bg:var(--fermaid-bg,#fff);--_fg:var(--fermaid-fg,#1f1f1f);--_m:var(--fermaid-muted,#6e6e6e);--_l:var(--fermaid-line,#1f1f1f);--_s:var(--fermaid-surface,#f3f3f3);--_a:var(--fermaid-surface-alt,#e6e6e6);--_b:var(--fermaid-border,#8a8a8a);--_c:var(--fermaid-accent,#5b7bd5);color:var(--_fg);--_fm:var(--fermaid-font-mono,monospace);font:16px sans-serif;letter-spacing:normal;word-spacing:normal;text-transform:none;direction:ltr;font-family:var(--fermaid-font,sans-serif)" fill="var(--_fg)" role="graphics-document document" aria-roledescription="info" aria-labelledby="fermaid-title" aria-describedby="fermaid-desc"><title id="fermaid-title">An information diagram</title><desc id="fermaid-desc">It shows the version of the library.</desc><text class="fermaid-version" fill="var(--_m)" x="59" y="25.6" text-anchor="middle">fermaid v0.5.1</text></svg>

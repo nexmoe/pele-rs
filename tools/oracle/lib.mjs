@@ -1,12 +1,23 @@
 // Dev-only helpers shared by the oracle scripts: a bundle of the parts of a pele checkout they
 // use, and the model summaries the compat tests and the differential run compare.
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 // The bundles already built, by the checkout and by what they export.
 const bundles = new Map();
+
+// Regeneration must use the recorded upstream, not whichever reference is beside the repo.
+export function assertPeleReference(peleDir) {
+  const pin = JSON.parse(readFileSync(new URL('../../upstream.json', import.meta.url), 'utf8')).pele;
+  const version = JSON.parse(readFileSync(join(peleDir, 'package.json'), 'utf8')).version;
+  const commit = execFileSync('git', ['-C', peleDir, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  if (version !== pin.version || commit !== pin.commit) {
+    throw new Error(`Reference is Pele ${version} at ${commit}; expected ${pin.version} at ${pin.commit}. Update upstream.json deliberately before regenerating fixtures.`);
+  }
+  return pin;
+}
 
 // Bundles the named modules of a pele checkout (`npm ci` done, for esbuild) and imports them.
 // `exports` maps a path in the checkout, or a package name, to the names it exports. Packages
@@ -14,11 +25,12 @@ const bundles = new Map();
 // they resolve. The same bundle is built once, so a reference may ask for it for every input.
 export async function loadPele(peleDir, exports) {
   const pele = resolve(peleDir);
+  assertPeleReference(pele);
   const key = `${pele}|${JSON.stringify(exports)}`;
   const cached = bundles.get(key);
   if (cached) return cached;
   mkdirSync(join(pele, 'node_modules/.cache'), { recursive: true });
-  const work = mkdtempSync(join(pele, 'node_modules/.cache/fermaid-oracle-'));
+  const work = mkdtempSync(join(pele, 'node_modules/.cache/pele-rs-oracle-'));
   const entry = join(work, 'entry.ts');
   writeFileSync(
     entry,
@@ -50,7 +62,7 @@ export function gitSummary(model) {
   const out = [`dir:${q(model.direction)}`];
   const commits = [...model.commits.values()].sort((a, b) => a.seq - b.seq);
   for (const c of commits) {
-    // Mermaid ends the id of a commit it made up with seven random digits; fermaid derives them,
+    // Mermaid ends the id of a commit it made up with seven random digits; pele-rs derives them,
     // so only the number of the commit is compared.
     const id = c.id.startsWith(`${c.seq}-`) ? `${c.seq}-*` : c.id;
     const parents = c.parents.map((p) => {
@@ -137,7 +149,7 @@ export function seqSummary(db) {
 }
 
 
-// The fields of a Langium pie tree that fermaid's parser keeps.
+// The fields of a Langium pie tree that pele-rs's parser keeps.
 export function pieSummary(ast) {
   const out = [`show:${ast.showData === true}|t:${q(ast.title)}|at:${q(ast.accTitle)}|ad:${q(ast.accDescr)}`];
   for (const s of ast.sections ?? []) out.push(`section:${q(s.label)}|${s.value}`);

@@ -1,10 +1,10 @@
-// Dev-only: draws the same charts with pele and with fermaid, and compares the two pictures.
+// Dev-only: draws the same charts with pele and with pele-rs, and compares the two pictures.
 // The model of a chart is compared by tools/oracle/diff.mjs; this compares what is drawn, which
 // is the layout port.
 //
 //   node tools/oracle/render-compare.mjs <pele checkout> <type>   (xychart, quadrantchart, git, architecture)
 //
-// The names of the classes and of the CSS variables are fermaid's, not pele's, so they are
+// The names of the classes and of the CSS variables are pele-rs's, not pele's, so they are
 // normalized away before the two are compared. The checkout needs `npm ci`.
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -29,18 +29,18 @@ const TYPES = {
       'src/diagrams/xychart/render.ts': ['renderXyChart'],
     },
     names: [
-      ['pele-series pele-bars', 'fermaid-xychart-series fermaid-xychart-bars'],
-      ['pele-series pele-line', 'fermaid-xychart-series fermaid-xychart-line'],
-      ['pele-legend-item', 'fermaid-xychart-legend-item'],
-      ['pele-legend', 'fermaid-xychart-legend'],
-      ['pele-axis-labels', 'fermaid-xychart-axis-labels'],
-      ['pele-axis-titles', 'fermaid-xychart-axis-titles'],
-      ['pele-data-labels', 'fermaid-xychart-data-labels'],
-      ['pele-point-labels', 'fermaid-xychart-point-labels'],
-      ['pele-axis', 'fermaid-xychart-axis'],
-      ['pele-grid', 'fermaid-xychart-grid'],
-      ['pele-plot', 'fermaid-xychart-plot'],
-      ['pele-title', 'fermaid-title'],
+      ['pele-series pele-bars', 'pele-rs-xychart-series pele-rs-xychart-bars'],
+      ['pele-series pele-line', 'pele-rs-xychart-series pele-rs-xychart-line'],
+      ['pele-legend-item', 'pele-rs-xychart-legend-item'],
+      ['pele-legend', 'pele-rs-xychart-legend'],
+      ['pele-axis-labels', 'pele-rs-xychart-axis-labels'],
+      ['pele-axis-titles', 'pele-rs-xychart-axis-titles'],
+      ['pele-data-labels', 'pele-rs-xychart-data-labels'],
+      ['pele-point-labels', 'pele-rs-xychart-point-labels'],
+      ['pele-axis', 'pele-rs-xychart-axis'],
+      ['pele-grid', 'pele-rs-xychart-grid'],
+      ['pele-plot', 'pele-rs-xychart-plot'],
+      ['pele-title', 'pele-rs-title'],
     ],
     cases: {
       full: [
@@ -107,24 +107,24 @@ const TYPES = {
       'src/diagrams/git/render.ts': ['renderGit'],
     },
     names: [
-      ['pele-branches', 'fermaid-branches'],
-      ['pele-branch', 'fermaid-branch'],
-      ['pele-lane', 'fermaid-lane'],
-      ['pele-edges', 'fermaid-edges'],
-      ['pele-edge-merge', 'fermaid-edge-merge'],
-      ['pele-edge-cherry-pick', 'fermaid-edge-cherry-pick'],
-      ['pele-edge', 'fermaid-edge'],
-      ['pele-commits', 'fermaid-commits'],
-      ['pele-commit-cherry-pick', 'fermaid-commit-cherry-pick'],
-      ['pele-commit-highlight', 'fermaid-commit-highlight'],
-      ['pele-commit-reverse', 'fermaid-commit-reverse'],
-      ['pele-commit-normal', 'fermaid-commit-normal'],
-      ['pele-commit-merge', 'fermaid-commit-merge'],
-      ['pele-commit-label', 'fermaid-commit-label'],
-      ['pele-commit', 'fermaid-commit'],
-      ['pele-tag', 'fermaid-tag'],
-      ['pele-label', 'fermaid-label'],
-      ['pele-title', 'fermaid-title'],
+      ['pele-branches', 'pele-rs-branches'],
+      ['pele-branch', 'pele-rs-branch'],
+      ['pele-lane', 'pele-rs-lane'],
+      ['pele-edges', 'pele-rs-edges'],
+      ['pele-edge-merge', 'pele-rs-edge-merge'],
+      ['pele-edge-cherry-pick', 'pele-rs-edge-cherry-pick'],
+      ['pele-edge', 'pele-rs-edge'],
+      ['pele-commits', 'pele-rs-commits'],
+      ['pele-commit-cherry-pick', 'pele-rs-commit-cherry-pick'],
+      ['pele-commit-highlight', 'pele-rs-commit-highlight'],
+      ['pele-commit-reverse', 'pele-rs-commit-reverse'],
+      ['pele-commit-normal', 'pele-rs-commit-normal'],
+      ['pele-commit-merge', 'pele-rs-commit-merge'],
+      ['pele-commit-label', 'pele-rs-commit-label'],
+      ['pele-commit', 'pele-rs-commit'],
+      ['pele-tag', 'pele-rs-tag'],
+      ['pele-label', 'pele-rs-label'],
+      ['pele-title', 'pele-rs-title'],
     ],
     cases: {
       history: [
@@ -194,14 +194,14 @@ const TYPES = {
       'src/diagrams/quadrant/render.ts': ['renderQuadrant'],
     },
     names: [
-      ['pele-quadrants', 'fermaid-quadrants'],
-      ['pele-quadrant', 'fermaid-quadrant'],
-      ['pele-axis-labels', 'fermaid-axis-labels'],
-      ['pele-point-labels', 'fermaid-point-labels'],
-      ['pele-points', 'fermaid-points'],
-      ['pele-point', 'fermaid-point'],
-      ['pele-label', 'fermaid-label'],
-      ['pele-title', 'fermaid-title'],
+      ['pele-quadrants', 'pele-rs-quadrants'],
+      ['pele-quadrant', 'pele-rs-quadrant'],
+      ['pele-axis-labels', 'pele-rs-axis-labels'],
+      ['pele-point-labels', 'pele-rs-point-labels'],
+      ['pele-points', 'pele-rs-points'],
+      ['pele-point', 'pele-rs-point'],
+      ['pele-label', 'pele-rs-label'],
+      ['pele-title', 'pele-rs-title'],
     ],
     cases: {
       campaigns: [
@@ -284,7 +284,7 @@ TYPES.architecture = {
     'src/diagrams/architecture/parser.ts': ['parseArchitecture'],
     'src/diagrams/architecture/render.ts': ['renderArchitecture'],
   },
-  // Every class of pele's becomes fermaid's.
+  // Every class of pele's becomes pele-rs's.
   generic: true,
   names: [],
   cases: {
@@ -383,7 +383,7 @@ function draw(src, config) {
   return renderQuadrant(db, config, {}).svg;
 }
 
-/// The configuration of a chart, as the front matter fermaid reads it.
+/// The configuration of a chart, as the front matter pele-rs reads it.
 function frontMatter(config) {
   const sections = Object.entries(config);
   if (!sections.length) return '';
@@ -408,16 +408,16 @@ function normalize(svg) {
       .split(`${a} `)
       .join(`${b} `);
   }
-  if (spec.generic) out = out.split('pele-').join('fermaid-').replace(/class="pele /g, 'class="fermaid ');
-  out = out.split('--pele-').join('--fermaid-');
-  out = out.replace(/var\(--fermaid-series-\d+/g, 'var(--fermaid-series-N');
-  out = out.replace(/class="pele pele-([^"]+)"/g, 'class="fermaid fermaid-$1"');
-  out = out.replace(/id="pele-/g, 'id="fermaid-');
-  out = out.replace(/aria-(labelledby|describedby)="pele-/g, 'aria-$1="fermaid-');
+  if (spec.generic) out = out.replace(/\bpele-(?!rs-)/g, 'pele-rs-').replace(/class="pele /g, 'class="pele-rs ');
+  out = out.replace(/--pele-(?!rs-)/g, '--pele-rs-');
+  out = out.replace(/var\(--pele-rs-series-\d+/g, 'var(--pele-rs-series-N');
+  out = out.replace(/class="pele pele-([^"]+)"/g, 'class="pele-rs pele-rs-$1"');
+  out = out.replace(/id="pele-(?!rs-)/g, 'id="pele-rs-');
+  out = out.replace(/aria-(labelledby|describedby)="pele-(?!rs-)/g, 'aria-$1="pele-rs-');
   return out;
 }
 
-const work = mkdtempSync(join(tmpdir(), 'fermaid-render-'));
+const work = mkdtempSync(join(tmpdir(), 'pele-rs-render-'));
 let differ = 0;
 for (const [name, [src, config]] of Object.entries(spec.cases)) {
   const pele = normalize(draw(src, config));
@@ -425,21 +425,21 @@ for (const [name, [src, config]] of Object.entries(spec.cases)) {
   const input = join(work, `${name}.mmd`);
   const output = join(work, `${name}.svg`);
   writeFileSync(input, frontMatter(config) + src);
-  execFileSync('cargo', ['run', '-q', '-p', 'fermaid-cli', '--', input, '-o', output], {
+  execFileSync('cargo', ['run', '-q', '-p', 'pele-rs-cli', '--', input, '-o', output], {
     cwd: root,
     stdio: ['ignore', 'ignore', 'inherit'],
   });
-  const fermaid = normalize(readFileSync(output, 'utf8'));
+  const rustSvg = normalize(readFileSync(output, 'utf8'));
 
-  if (pele === fermaid) {
+  if (pele === rustSvg) {
     console.log(`${name}: the same picture`);
     continue;
   }
   differ++;
   let at = 0;
-  while (at < pele.length && at < fermaid.length && pele[at] === fermaid[at]) at++;
+  while (at < pele.length && at < rustSvg.length && pele[at] === rustSvg[at]) at++;
   console.log(`${name}: different at ${at}`);
   console.log(`  pele:    ${pele.slice(Math.max(0, at - 60), at + 120)}`);
-  console.log(`  fermaid: ${fermaid.slice(Math.max(0, at - 60), at + 120)}`);
+  console.log(`  pele-rs: ${rustSvg.slice(Math.max(0, at - 60), at + 120)}`);
 }
 process.exit(differ ? 1 : 0);

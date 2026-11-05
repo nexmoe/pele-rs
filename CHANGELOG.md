@@ -3,6 +3,28 @@
 All notable changes are recorded here. fermaid follows [Semantic Versioning](https://semver.org);
 before 1.0, a minor version may break the API.
 
+## 0.6.0 - 2026-11-05
+
+### Added
+
+- Independent `pele-rs` library and CLI derived from fermaid 0.5.1, with history and legal notices retained.
+- Reusable, immutable `ParsedDiagram` models for every diagram type, safe to share across workers.
+- Bounded host font measurement caching and optional usvg-backed `FontMeasurer` / `SvgScene` adapters for native painters.
+- Original-source error mapping through front matter, comments, directives, entities and line-ending normalization.
+- Mermaid chart palette keys, including author colors preserved under literal host palettes.
+- Validation of non-finite geometry and invalid host font measurements.
+
+### Fixed
+
+- Subnormal Sankey flows no longer overflow during normalization and silently collapse to zero-width bands.
+- EOF diagnostics point at actual source tokens rather than synthetic trailing lines.
+
+### Changed
+
+- Package/import names are `pele-rs` / `pele_rs`; CLI and SVG namespaces are `pele-rs`.
+- `scene` is opt-in; default builds retain zero runtime dependencies. This version is distributed through Git only.
+- Historical releases below describe fermaid, not publications of pele-rs.
+
 ## 0.5.1 - 2026-10-29
 
 - Fix builds with default features disabled.

@@ -1,0 +1,66 @@
+#![cfg(all(feature = "scene", feature = "flowchart"))]
+use pele_rs::{
+    CachingMeasurer, ErrorCode, ParseOptions, RenderOptions, Style, TextMeasurer,
+    scene::{FontMeasurer, SvgScene, usvg},
+};
+use std::sync::Arc;
+
+fn fonts() -> Arc<usvg::fontdb::Database> {
+    let mut db = usvg::fontdb::Database::new();
+    db.load_font_data(include_bytes!("fonts/test.ttf").to_vec());
+    db.set_sans_serif_family("Pele Test");
+    db.set_serif_family("Pele Test");
+    db.set_monospace_family("Pele Test");
+    Arc::new(db)
+}
+
+#[test]
+fn matches_real_font_advances_including_spaces_and_cjk() {
+    let measurer = CachingMeasurer::new(
+        FontMeasurer::new(fonts(), "Pele Test", "Pele Test").unwrap(),
+        32,
+    );
+    for text in ["AB", "A B", "中文", " AB ", "  "] {
+        let width = measurer.width(text, 20., Style::NONE);
+        assert!(
+            (width - text.chars().count() as f64 * 12.).abs() < 0.01,
+            "{text}: {width}"
+        );
+    }
+    assert!((measurer.width("AB", 20., Style::SUB) - 20.).abs() < 0.01);
+}
+
+#[test]
+fn scene_retains_vectors_and_export_and_can_be_shared() {
+    fn shared<T: Send + Sync>() {}
+    shared::<SvgScene>();
+    let parsed =
+        pele_rs::parse("flowchart LR\nA[AB] --> B[中文]", &ParseOptions::default()).unwrap();
+    let fonts = fonts();
+    let options = RenderOptions {
+        measurer: Some(Box::new(CachingMeasurer::new(
+            FontMeasurer::new(fonts.clone(), "Pele Test", "Pele Test").unwrap(),
+            32,
+        ))),
+        font_family: Some("Pele Test".into()),
+        ..Default::default()
+    };
+    let scene = parsed.scene(&options, fonts).unwrap();
+    assert!(!scene.tree().root().children().is_empty());
+    assert!(!scene.rendered().svg.contains("var("));
+    assert!((f64::from(scene.tree().size().width()) - scene.rendered().width).abs() < 0.01);
+    let svg = scene.rendered().svg.clone();
+    assert_eq!(svg, scene.into_rendered().svg);
+}
+
+#[test]
+fn missing_fonts_and_unsupported_resources_are_explicit_errors() {
+    let rendered = pele_rs::render("flowchart LR\nA[AB]", &Default::default()).unwrap();
+    assert!(
+        matches!(SvgScene::new(rendered, Arc::new(usvg::fontdb::Database::new())), Err(e) if e.code == ErrorCode::Semantic)
+    );
+    assert!(FontMeasurer::new(Arc::new(usvg::fontdb::Database::new()), "A", "B").is_err());
+    let mut rendered = pele_rs::render("flowchart LR\nA[AB]", &Default::default()).unwrap();
+    rendered.svg = "<svg><image href=\"/secret\"/></svg>".into();
+    assert!(matches!(SvgScene::new(rendered, fonts()), Err(e) if e.code == ErrorCode::Unsupported));
+}

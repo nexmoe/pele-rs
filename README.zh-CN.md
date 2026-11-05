@@ -1,12 +1,18 @@
-# fermaid
+# pele-rs
 
 [English](README.md) | [繁體中文](README.zh-TW.md) | **简体中文** | [日本語](README.ja.md)
 
-[![crates.io](https://img.shields.io/crates/v/fermaid.svg)](https://crates.io/crates/fermaid)
-[![docs.rs](https://img.shields.io/docsrs/fermaid.svg)](https://docs.rs/fermaid)
-[![license](https://img.shields.io/crates/l/fermaid.svg)](https://crates.io/crates/fermaid)
+这是 [fermaid](https://github.com/tenyi/fermaid) 的独立衍生项目，面向原生编辑器优化，保留原始 Git 历史、署名和许可证，并非 Obsidian 官方项目。当前版本请从 Git 安装：
 
-fermaid 以纯 Rust 将 [Mermaid](https://mermaid.js.org) 图表转换为 SVG，无需 JavaScript 运行时、无头浏览器或 Node.js。它移植自 [pele](https://github.com/obsidianmd/pele)（一个小巧、无依赖的 TypeScript 渲染器），支持 Mermaid 12.2.0 语法，并采用 pele 自己的布局与视觉风格。
+```toml
+[dependencies]
+pele-rs = { git = "https://github.com/nexmoe/pele-rs" }
+```
+
+新增所有图种的 `parse` / `ParsedDiagram::render` 复用接口、有界 `CachingMeasurer`、原始源码错误定位、图表调色板兼容和数值校验。可选 `scene` 功能通过 usvg 提供 `SvgScene` 矢量树及匹配 resvg 的 `FontMeasurer`，默认构建仍无运行时依赖。参见[原生集成说明](docs/NATIVE.md)。当前版本尚未发布到 crates.io。
+
+
+pele-rs 以纯 Rust 将 [Mermaid](https://mermaid.js.org) 图表转换为 SVG，无需 JavaScript 运行时、无头浏览器或 Node.js。它移植自 [pele](https://github.com/obsidianmd/pele)（一个小巧、无依赖的 TypeScript 渲染器），支持 Mermaid 12.2.0 语法，并采用 pele 自己的布局与视觉风格。
 
 > **状态：** alpha。已支持 Mermaid 12.1.0 的所有图表类型，下表列出各类型可读取的语法。请参阅[开发路线图](docs/ROADMAP.md)。
 
@@ -57,11 +63,11 @@ fermaid 以纯 Rust 将 [Mermaid](https://mermaid.js.org) 图表转换为 SVG，
 ## 库
 
 ```rust
-let options = fermaid::RenderOptions {
+let options = pele_rs::RenderOptions {
     font_size: Some(14.0),
     ..Default::default()
 };
-match fermaid::render("pie\n  \"Rust\": 70\n  \"Other\": 30", &options) {
+match pele_rs::render("pie\n  \"Rust\": 70\n  \"Other\": 30", &options) {
     Ok(rendered) => println!("{}", rendered.svg),
     Err(e) => eprintln!("{}:{}: {}\n{}", e.line, e.column, e.message, e.snippet),
 }
@@ -69,18 +75,18 @@ match fermaid::render("pie\n  \"Rust\": 70\n  \"Other\": 30", &options) {
 
 `render` 返回 SVG 及其尺寸和链接，或返回一个 `Error`，其中包含错误代码（`Unsupported`、`Syntax`、`Semantic`、`Limit`）、行号和列号，以及指出问题位置的代码片段。`detect_type` 无需渲染即可判断图表类型。将 `max_width` 设为宿主可用的宽度，能画得更窄的图表就会变窄（饼图会把图例移到图的下方）。`click` 语句中的链接会经过清理，且只保留允许的 scheme（`link_schemes`，默认为 `http`、`https`、`mailto` 和 `tel`）；横向的流程图在放不进 `max_width` 时会改为纵向。每种图表类型都是一个 Cargo feature（`flowchart`、`pie`、…）；默认的 `all` feature 包含所有类型。甘特图的“今天”取自 `now`（自 1970-01-01 UTC 起的毫秒数）；默认为 1970-01-01，使输出永远不受时钟影响。
 
-图标与数学公式由宿主提供，因为 fermaid 本身没有图标集，也没有排版引擎。`RenderOptions::icons` 按名称提供图标的 SVG 标记（标签里的 `fa:fa-car`，或节点的 `icon`），`RenderOptions::math` 则排版流程图、泳道图、状态图、类图、ER 图、需求图、块图、序列图、用例图、看板和思维导图标签中 `$$` 之间的 TeX。未提供时，图标会被省略，TeX 保持原文。宿主返回的内容会原样放进 SVG，所以必须来自你信任的来源。
+图标与数学公式由宿主提供，因为 pele-rs 本身没有图标集，也没有排版引擎。`RenderOptions::icons` 按名称提供图标的 SVG 标记（标签里的 `fa:fa-car`，或节点的 `icon`），`RenderOptions::math` 则排版流程图、泳道图、状态图、类图、ER 图、需求图、块图、序列图、用例图、看板和思维导图标签中 `$$` 之间的 TeX。未提供时，图标会被省略，TeX 保持原文。宿主返回的内容会原样放进 SVG，所以必须来自你信任的来源。
 
 ## 命令行
 
 ```sh
-cargo install fermaid-cli                # 从 crates.io 安装
-cargo install --path crates/fermaid-cli  # 从源码安装
-fermaid diagram.mmd -o diagram.svg
-cat diagram.mmd | fermaid --font-size 14 --max-width 360 --id-prefix fig1 > diagram.svg
-fermaid plan.mmd --now 1700000000000 -o plan.svg   # 画出今天标记的甘特图
-fermaid page.mmd --config '{"theme": "dark"}' --no-links --no-images -o page.svg
-fermaid page.mmd --palette dark -o page.svg   # 输出纯颜色值，供 resvg 等不支持 var() 的查看器使用
+cargo install --git https://github.com/nexmoe/pele-rs pele-rs-cli
+cargo install --path crates/pele-rs-cli  # 从源码安装
+pele-rs diagram.mmd -o diagram.svg
+cat diagram.mmd | pele-rs --font-size 14 --max-width 360 --id-prefix fig1 > diagram.svg
+pele-rs plan.mmd --now 1700000000000 -o plan.svg   # 画出今天标记的甘特图
+pele-rs page.mmd --config '{"theme": "dark"}' --no-links --no-images -o page.svg
+pele-rs page.mmd --palette dark -o page.svg   # 输出纯颜色值，供 resvg 等不支持 var() 的查看器使用
 ```
 
 ## 主题
@@ -89,23 +95,23 @@ SVG 的颜色和字体取自 CSS 自定义属性，并内置默认值，因此�
 
 ```css
 svg {
-  --fermaid-bg: #1e1e1e;
-  --fermaid-fg: #dcddde;
-  --fermaid-line: #999;
-  --fermaid-accent: #7f6df2;
-  --fermaid-font: "Inter", sans-serif;
+  --pele-rs-bg: #1e1e1e;
+  --pele-rs-fg: #dcddde;
+  --pele-rs-line: #999;
+  --pele-rs-accent: #7f6df2;
+  --pele-rs-font: "Inter", sans-serif;
 }
 ```
 
-可用的变量：`--fermaid-bg`、`--fermaid-fg`、`--fermaid-muted`、`--fermaid-line`、`--fermaid-surface`、`--fermaid-surface-alt`、`--fermaid-border`、`--fermaid-accent`、`--fermaid-radius`、`--fermaid-font`、`--fermaid-font-mono`，以及用于饼图扇区等数据系列颜色的 `--fermaid-series-1` 到 `--fermaid-series-8`。
+可用的变量：`--pele-rs-bg`、`--pele-rs-fg`、`--pele-rs-muted`、`--pele-rs-line`、`--pele-rs-surface`、`--pele-rs-surface-alt`、`--pele-rs-border`、`--pele-rs-accent`、`--pele-rs-radius`、`--pele-rs-font`、`--pele-rs-font-mono`，以及用于饼图扇区等数据系列颜色的 `--pele-rs-series-1` 到 `--pele-rs-series-8`。
 
 ### 不支持 CSS 变量的查看器
 
 resvg、librsvg 等 SVG 渲染器不会读取 `var()`，所以默认的 SVG 在其中会变成一片黑。设置 `RenderOptions::palette` 后，所有颜色都会直接写成实际数值，SVG 中不再有 `var()`（输出仍是确定性的；不设置调色板时输出与之前完全相同）：
 
 ```rust
-let options = fermaid::RenderOptions {
-    palette: Some(fermaid::Palette::dark()), // 或 Palette::light()，或自定义颜色
+let options = pele_rs::RenderOptions {
+    palette: Some(pele_rs::Palette::dark()), // 或 Palette::light()，或自定义颜色
     ..Default::default()
 };
 ```
@@ -129,7 +135,7 @@ node tools/oracle/diff.mjs ../pele   # 与 Mermaid 自身的解析器做差异�
 
 ## 致谢
 
-fermaid 的算法、文本测量数据与限制移植自 Obsidian 团队 kepano 的 [pele](https://github.com/obsidianmd/pele)（MIT）。图表语法以及用作测试的解析器规范来自 [Mermaid](https://github.com/mermaid-js/mermaid)（MIT）。详见 [NOTICE](NOTICE)。
+pele-rs 的算法、文本测量数据与限制移植自 Obsidian 团队 kepano 的 [pele](https://github.com/obsidianmd/pele)（MIT）。图表语法以及用作测试的解析器规范来自 [Mermaid](https://github.com/mermaid-js/mermaid)（MIT）。详见 [NOTICE](NOTICE)。
 
 ## 许可证
 
